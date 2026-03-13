@@ -1,0 +1,11 @@
+.idea
+.vs
+.vscode/settings.json
+.vscode
+.cache
+.xmake
+build
+cmake-build*
+
+*.dll
+*.pdb
