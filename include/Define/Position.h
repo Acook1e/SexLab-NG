@@ -9,14 +9,17 @@ namespace Define
 class Position
 {
 public:
-  Position() = default;
+  using Offset = std::array<float, 4>;
+
+  Position(const Race& race, const Gender& gender) : race(race), gender(gender) {}
+  Position(Race&& race, Gender&& gender) : race(std::move(race)), gender(std::move(gender)) {}
 
 private:
   Race race;
   Gender gender;
-  Strip strip;
-  std::string event;
-  std::array<float, 4> offset{0.0f, 0.0f, 0.0f, 0.0f};
-  float schlong{0.0f};
+  std::vector<Strip> strips;
+  std::vector<std::string> events;
+  std::vector<Offset> offsets;
+  std::vector<std::int8_t> schlongAngles;
 };
 }  // namespace Define

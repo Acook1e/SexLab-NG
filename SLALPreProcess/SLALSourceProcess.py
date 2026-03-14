@@ -1,0 +1,248 @@
+import ast
+import json
+import os
+from turtle import position
+from typing import Any, Dict, List
+
+# ------------------------------------------------------------
+# AST 节点转换器：将 ast 节点转为 Python 基本类型，并保留结构信息
+# ------------------------------------------------------------
+def convert_node(node: ast.AST) -> Any:
+    """
+    将 AST 节点转换为可 JSON 序列化的 Python 对象。
+    对 Female/Male/CreatureMale/CreatureFemale 和 Stage 调用返回带有 __type__ 标记的字典。
+    """
+    if isinstance(node, ast.Constant):
+        return node.value
+    elif isinstance(node, ast.Name):
+        return node.id
+    elif isinstance(node, ast.List):
+        return [convert_node(elt) for elt in node.elts]
+    elif isinstance(node, ast.Tuple):
+        return [convert_node(elt) for elt in node.elts]
+    elif isinstance(node, ast.Dict):
+        keys = [convert_node(k) for k in node.keys]
+        values = [convert_node(v) for v in node.values]
+        return dict(zip(keys, values))
+    elif isinstance(node, ast.Call):
+        func_name = convert_node(node.func)
+        args = [convert_node(arg) for arg in node.args]
+        keywords = {kw.arg: convert_node(kw.value) for kw in node.keywords if kw.arg}
+        # 显式支持所有角色类型
+        if func_name in ('Female', 'Male', 'CreatureMale', 'CreatureFemale'):
+            return {'__type__': func_name, **keywords}
+        elif func_name == 'Stage':
+            return {'__type__': 'Stage', 'args': args, **keywords}
+        else:
+            # 其他函数调用（理论上不会出现，但保留完整性）
+            print(f"Warning: Unhandled function call '{func_name}'")
+            return {'__type__': func_name, 'args': args, **keywords}
+    elif isinstance(node, ast.UnaryOp):
+        if isinstance(node.op, ast.USub):
+            return -convert_node(node.operand)
+        elif isinstance(node.op, ast.UAdd):
+            return +convert_node(node.operand)
+        else:
+            print(f"Warning: Unhandled unary operator '{type(node.op).__name__}'")
+            return f"<UnaryOp {type(node.op).__name__}>"
+    elif isinstance(node, ast.BinOp):
+        left = convert_node(node.left)
+        right = convert_node(node.right)
+        op = type(node.op).__name__
+        return f"<BinOp {left} {op} {right}>"
+    elif isinstance(node, ast.Attribute):
+        return f"{convert_node(node.value)}.{node.attr}"
+    else:
+        print(f"Warning: Unhandled AST node type '{type(node).__name__}'")
+        return f"<{type(node).__name__}>"
+
+# ------------------------------------------------------------
+# 解析主函数
+# ------------------------------------------------------------
+def parse_animation_file(content: str) -> dict:
+    tree = ast.parse(content)
+
+    config = {
+        'id_prefix': None,
+        'name_prefix': None,
+        'pack_tags': None
+    }
+    animations = []
+
+    # 第一遍：收集配置和 Animation 调用
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            call = stmt.value
+            func_name = convert_node(call.func)
+            if func_name == 'anim_id_prefix' and call.args:
+                config['id_prefix'] = convert_node(call.args[0])
+            elif func_name == 'anim_name_prefix' and call.args:
+                config['name_prefix'] = convert_node(call.args[0])
+            elif func_name == 'common_tags' and call.args:
+                tags_str = convert_node(call.args[0])
+                # 分割并转为小写
+                raw_tags = [t.strip() for t in tags_str.split(',') if t.strip()]
+                config['pack_tags'] = [t.lower() for t in raw_tags]
+            elif func_name == 'Animation':
+                anim_data = {kw.arg: convert_node(kw.value) for kw in call.keywords if kw.arg}
+                animations.append(anim_data)
+
+    animations_dict = {}
+    for anim in animations:
+        anim_id = anim.get('id')
+        if not anim_id:
+            continue
+
+        anim_out = {
+            'name': anim.get('name', ''),
+            'tags': [],
+            'sound': anim.get('sound', '')
+        }
+        # 处理 tags：字符串 -> 小写列表
+        tags_str = anim.get('tags', '')
+        if isinstance(tags_str, str):
+            raw_tags = [t.strip() for t in tags_str.split(',') if t.strip()]
+            anim_out['tags'] = [t.lower() for t in raw_tags]
+
+        # 收集全局 stage_params，转换为字典 {阶段号: 参数}
+        global_stages = {}
+        if 'stage_params' in anim:
+            global_list = anim['stage_params']
+            if isinstance(global_list, list):
+                for stage_call in global_list:
+                    if isinstance(stage_call, dict) and stage_call.get('__type__') == 'Stage':
+                        args = stage_call.get('args', [])
+                        if args:
+                            stage_num = str(args[0])
+                            params = {k: v for k, v in stage_call.items() if k not in ('__type__', 'args')}
+                            global_stages[stage_num] = params
+
+        # 处理所有 actor（actor1, actor2, ...）
+        # 找出所有以 'actor' 开头的字段，且值为角色类型（带有 __type__ 标记的字典）
+        actor_keys = [
+            k for k in anim.keys()
+            if k.startswith('actor')
+            and isinstance(anim[k], dict)
+            and anim[k].get('__type__') is not None
+        ]
+        for actor_key in actor_keys:
+            actor_data = anim[actor_key]
+            actor_type = actor_data.get('__type__', '')
+
+            # 根据类型名判断性别：如果包含 'male'（不区分大小写）则为 male，否则 female
+            if 'Male' == actor_type:
+                gender = 'male'
+            elif 'CreatureMale' == actor_type:
+                gender = 'creature_male'
+            elif 'Female' == actor_type:
+                gender = 'female'
+            elif 'CreatureFemale' == actor_type:
+                gender = 'creature_female'
+            else:
+                gender = 'female'
+
+            actor_out = {'gender': gender}
+            # 复制角色调用的其他属性（如 strap_on, add_cum 等）
+            for attr, value in actor_data.items():
+                if attr != '__type__':
+                    actor_out[attr] = value
+
+            # 提取 actor 编号
+            try:
+                actor_num = int(actor_key.replace('actor', ''))
+            except ValueError:
+                continue
+
+            # 构建该 actor 自己的 stage_params
+            stage_params_key = f'a{actor_num}_stage_params'
+            actor_stages = {}
+            if stage_params_key in anim:
+                stage_list = anim[stage_params_key]
+                if isinstance(stage_list, list):
+                    for stage_call in stage_list:
+                        if isinstance(stage_call, dict) and stage_call.get('__type__') == 'Stage':
+                            args = stage_call.get('args', [])
+                            if args:
+                                stage_num = str(args[0])
+                                params = {k: v for k, v in stage_call.items() if k not in ('__type__', 'args')}
+                                actor_stages[stage_num] = params
+
+            # 合并全局 stage_params：对每个全局阶段号，如果 actor 已有则更新，否则创建新阶段
+            for stage_num, global_params in global_stages.items():
+                if stage_num in actor_stages:
+                    # 合并（全局参数可覆盖 actor 的同名参数）
+                    actor_stages[stage_num].update(global_params)
+                else:
+                    # 创建新阶段，仅包含全局参数
+                    actor_stages[stage_num] = global_params.copy()
+
+            # 如果有阶段参数，添加到 actor_out
+            if actor_stages:
+                actor_out['stage_params'] = actor_stages
+
+            anim_out[actor_key] = actor_out
+
+        animations_dict[anim_id] = anim_out
+
+    result = {
+        'id_prefix': config.get('id_prefix'),
+        'name_prefix': config.get('name_prefix'),
+        'pack_tags': config.get('pack_tags', []),
+        'animations': animations_dict
+    }
+    return result
+
+def tags_process(raw_tags: List[str]) -> List[List[str]]:
+    return []
+
+def prase_raw_data(raw_data):
+    result = {}
+    id_prefix = raw_data.get("id_prefix", "")
+    name_prefix = raw_data.get("name_prefix", "")
+    pack_tags = raw_data.get("pack_tags", [])
+    for id, anim in raw_data["animations"].items():
+        name = name_prefix + anim["name"]
+        id = id_prefix + id
+        total_stages = 0
+        positions = []
+        for actor_key in range(1, 10):
+            key = f"actor{actor_key}"
+            if key in anim:
+                position = {}
+                position["gender"] = anim[key]["gender"]
+                position["race"] = anim[key]["race"]
+                position["be_cumed"] = anim[key].get("add_cum", "None")
+                positions.append(position)
+        result[name] = {
+            "event_prefix": id,
+            "tags": anim["tags"],
+            "total_stages": total_stages,
+            "positions": positions
+        }
+    return result
+
+def preprocess_slal_source(file_path: str):
+    with open(file_path, 'r', encoding='utf-8-sig') as f:
+        file_content = f.read()
+        try:
+            parsed_data = parse_animation_file(file_content)
+            processed_data = prase_raw_data(parsed_data)
+        except Exception as e:
+            print(f"Error parsing {file_path}: {e}")
+            raise e
+    return processed_data
+
+# ------------------------------------------------------------
+# 使用示例
+# ------------------------------------------------------------
+if __name__ == "__main__":
+    
+    for root, dirs, files in os.walk('./source'):
+        for filename in files:
+            if filename.endswith('.txt'):
+                filepath = os.path.join(root, filename)
+                with open(filepath, 'r', encoding='utf-8-sig') as f:
+                    result = preprocess_slal_source(filepath)
+
+                with open(os.path.join(root, filename.replace('.txt', '.json')), 'w', encoding='utf-8') as f:
+                    json.dump(result, f, indent=2, ensure_ascii=False)

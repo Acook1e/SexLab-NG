@@ -2,10 +2,10 @@
 
 namespace Define
 {
-class Tags
+class InteractTags
 {
 public:
-  enum class SLSB : uint64_t
+  enum class Type : uint64_t
   {
     SixtyNine         = 1ULL << 0,
     Anal              = 1ULL << 1,
@@ -66,30 +66,33 @@ public:
     Oviposition = 1ULL << 54,
   };
 
-  Tags() = default;
+  InteractTags() = default;
 
   template <typename E>
   bool HasTag(E tag) const
   {
-    if (std::is_same_v<SLSB, E>())
+    if (std::is_same_v<Type, E>())
       return slsbTags.all(tag);
   }
 
   template <typename E>
   void AddTag(E tag)
   {
-    if (std::is_same_v<SLSB, E>())
+    if (std::is_same_v<Type, E>())
       slsbTags.set(tag, true);
   }
 
   template <typename E>
   void RemoveTag(E tag)
   {
-    if (std::is_same_v<SLSB, E>())
+    if (std::is_same_v<Type, E>())
       slsbTags.set(tag, false);
   }
 
 private:
-  REX::EnumSet<SLSB> slsbTags;
+  REX::EnumSet<Type> slsbTags;
 };
+
+class ActorTags
+{};
 }  // namespace Define

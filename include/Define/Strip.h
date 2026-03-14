@@ -7,12 +7,12 @@ class Strip
 public:
   enum class Type : uint8_t
   {
-    Default = 1 << 0,
-    All     = 1 << 1,
-    None    = 1 << 2,
-    Helmet  = 1 << 3,
-    Gloves  = 1 << 4,
-    Boots   = 1 << 5
+    None   = 0,
+    Helmet = 1 << 0,
+    Body   = 1 << 1,
+    Gloves = 1 << 2,
+    Boots  = 1 << 3,
+    All    = 1 << 4,
   };
 
   Strip(Type type) { types.set(type); }

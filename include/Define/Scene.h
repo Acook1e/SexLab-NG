@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Define/Furniture.h"
-#include "Define/Stage.h"
+#include "Define/Position.h"
+#include "Define/Tag.h"
 
 namespace Define
 {
@@ -21,7 +22,7 @@ private:
   std::string id;
   Furniture furniture;
   Type type;
-  Tags tags;
-  std::vector<Stage> stages;
+  InteractTags interactTags;
+  std::vector<Position> positions;
 };
 }  // namespace Define
