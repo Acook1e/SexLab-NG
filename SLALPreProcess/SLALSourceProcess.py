@@ -68,6 +68,7 @@ def parse_animation_file(content: str) -> dict:
     tree = ast.parse(content)
 
     config = {
+        'anim_dir': None,
         'id_prefix': None,
         'name_prefix': None,
         'pack_tags': None
@@ -79,7 +80,9 @@ def parse_animation_file(content: str) -> dict:
         if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             call = stmt.value
             func_name = convert_node(call.func)
-            if func_name == 'anim_id_prefix' and call.args:
+            if func_name == 'anim_dir' and call.args:
+                config['anim_dir'] = convert_node(call.args[0])
+            elif func_name == 'anim_id_prefix' and call.args:
                 config['id_prefix'] = convert_node(call.args[0])
             elif func_name == 'anim_name_prefix' and call.args:
                 config['name_prefix'] = convert_node(call.args[0])
@@ -194,6 +197,7 @@ def parse_animation_file(content: str) -> dict:
         animations_dict[anim_id] = anim_out
 
     result = {
+        'anim_dir': config.get('anim_dir'),
         'id_prefix': config.get('id_prefix'),
         'name_prefix': config.get('name_prefix'),
         'pack_tags': config.get('pack_tags', []),
@@ -222,6 +226,7 @@ def tags_process(raw_tags: List[str]):
 
 def prase_raw_data(raw_data):
     result = {}
+    anim_dir = raw_data.get("anim_dir", "")
     id_prefix = raw_data.get("id_prefix", "")
     name_prefix = raw_data.get("name_prefix", "")
 
@@ -229,6 +234,8 @@ def prase_raw_data(raw_data):
     pack_tags = raw_data.get("pack_tags", [])
     result["author"] = author
     result["pack_tags"] = pack_tags
+    result["anim_dir"] = anim_dir
+    result["scenes"] = dict()
     for id, anim in raw_data["animations"].items():
         name = name_prefix + anim["name"]
         id = id_prefix + id
@@ -240,7 +247,7 @@ def prase_raw_data(raw_data):
             if key in anim:
                 position = {}
                 position["gender"] = anim[key]["gender"]
-                position["race"] = anim[key]["race"]
+                position["race"] = anim[key].get("race", "Human")
                 position["be_cumed"] = anim[key].get("add_cum", "None")
                 positions.append(position)
                 total_actors += 1

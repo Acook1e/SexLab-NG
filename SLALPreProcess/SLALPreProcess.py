@@ -1,8 +1,10 @@
 import cmd
+from math import e
 
 import mobase
 import json
 import os
+from pathlib import Path
 
 from .SLALSourceProcess import preprocess_slal_source
 from .FNISBehaviorConvert import generate_behavior, process_fnis_txt
@@ -67,14 +69,9 @@ class SLALPreProcess(mobase.IPluginTool):
     def _normalize_virtual_path(path: str) -> str:
         return path.replace('\\', '/').strip('/')
 
-    def _scan_fnis_files(self):
-        root = self._normalize_virtual_path("meshes/actors")
+    def _scan_files(self, root_path: str, exclude_dirs: set[str], exclude_prefixes: set[str]) -> dict[str, str]:
+        root = self._normalize_virtual_path(root_path)
         root_lower = root.lower()
-        # 跳过 OAR 和 DAR 相关目录，因为它们不包含 SLAL 的 txt 文件
-        excluded_dir_names = {
-            "dynamicanimationreplacer", "openanimationreplacer"}
-        # 跳过 SexLab 的原版动画
-        excluded_file_prefixes = {"fnis_sexlab", "fnis_zaz_animation"}
         matched_files = {}
 
         tree = self._organizer.virtualFileTree()
@@ -84,14 +81,14 @@ class SLALPreProcess(mobase.IPluginTool):
             entry_path_lower = entry_path.lower()
 
             if entry.isDir():
-                if entry.name().lower() in excluded_dir_names:
+                if entry.name().lower() in exclude_dirs:
                     return mobase.IFileTree.SKIP
                 if root_lower.startswith(f"{entry_path_lower}/") or entry_path_lower.startswith(root_lower):
                     return mobase.IFileTree.CONTINUE
                 return mobase.IFileTree.SKIP
 
             if entry_path_lower.startswith(f"{root_lower}/") and entry_path_lower.endswith('.txt'):
-                if any(entry.name().lower().startswith(prefix) for prefix in excluded_file_prefixes):
+                if any(entry.name().lower().startswith(prefix) for prefix in exclude_prefixes):
                     return mobase.IFileTree.CONTINUE
                 real_path = self._organizer.resolvePath(entry_path)
                 if real_path:
@@ -102,15 +99,67 @@ class SLALPreProcess(mobase.IPluginTool):
 
         return matched_files
 
+    def _process_slal_source_paths(self, overwrite_path: str) -> tuple[dict[str, str], set[str]]:
+        slal_source_paths = self._scan_files("SLAnims/Source", set(), set())
+
+        # 如果 Source 下没有子目录，walk 可能漏掉根目录文件，这里补一次根目录检索
+        source_root = self._normalize_virtual_path("SLAnims/Source")
+        try:
+            direct_files = self._organizer.findFiles(source_root, "*.txt")
+        except Exception:
+            direct_files = []
+
+        for file_path in direct_files:
+            virtual_path = self._normalize_virtual_path(str(file_path))
+            if not virtual_path.lower().startswith(source_root.lower()):
+                virtual_path = self._normalize_virtual_path(
+                    f"{source_root}/{virtual_path}")
+            real_path = self._organizer.resolvePath(virtual_path)
+            if real_path:
+                slal_source_paths[virtual_path] = real_path
+
+        scenes_output_dir = os.path.join(
+            overwrite_path,
+            "SKSE",
+            "Plugins",
+            "SexLabNG",
+            "Scenes"
+        )
+        os.makedirs(scenes_output_dir, exist_ok=True)
+
+        slal_dirs: set[str] = set()
+        for _, real_path in slal_source_paths.items():
+            data = preprocess_slal_source(real_path)
+
+            name = data.get("anim_dir", "")
+            if not name:
+                continue
+            slal_dirs.add(name.lower())
+
+            output_path = os.path.join(scenes_output_dir, f"{name}.json")
+            with open(output_path, 'a+', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+
+        return slal_source_paths, slal_dirs
+
     def display(self):
-        txt_paths = self._scan_fnis_files()
         overrite_path = self._organizer.overwritePath()
 
+        slal_source_paths, slal_dirs = self._process_slal_source_paths(
+            overrite_path)
+
+        # 跳过 OAR 和 DAR 相关目录，因为它们不包含 SLAL 的 txt 文件
+        # 跳过 SexLab 的原版动画
+        fnis_txt_paths = self._scan_files(
+            "meshes/actors", {"dynamicanimationreplacer", "openanimationreplacer"}, {"fnis_sexlab", "fnis_zazanim", "fnis_babomotion"})
+
         scene_stages = {}
-        for txt_path, real_path in txt_paths.items():
+        for txt_path, real_path in fnis_txt_paths.items():
+            mod_name = Path(real_path).parent.name
+            if mod_name.lower() not in slal_dirs:
+                continue
             data = process_fnis_txt(real_path)
             cmd_lines = data["cmd_lines"]
-            mod_name = os.path.basename(txt_path).rsplit('.', 1)[0]
             output_path = os.path.join(overrite_path, txt_path)
             generate_behavior(cmd_lines, output_path, mod_name)
             scene_stages.update(data["anim_stages"])
@@ -118,5 +167,5 @@ class SLALPreProcess(mobase.IPluginTool):
         QMessageBox.information(
             self._parentWidget,
             self.displayName(),
-            f"已扫描 meshes/actors，找到 {len(txt_paths)} 个 txt 文件, 共包含 {len(scene_stages)} 个动画场景。"
+            f"Pre-processing completed! Processed {len(slal_source_paths)} SLAL source files and {len(fnis_txt_paths)} FNIS txt files."
         )
