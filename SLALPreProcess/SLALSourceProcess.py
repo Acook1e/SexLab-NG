@@ -1,12 +1,13 @@
 import ast
 import json
 import os
-from turtle import position
 from typing import Any, Dict, List
 
 # ------------------------------------------------------------
 # AST 节点转换器：将 ast 节点转为 Python 基本类型，并保留结构信息
 # ------------------------------------------------------------
+
+
 def convert_node(node: ast.AST) -> Any:
     """
     将 AST 节点转换为可 JSON 序列化的 Python 对象。
@@ -27,7 +28,8 @@ def convert_node(node: ast.AST) -> Any:
     elif isinstance(node, ast.Call):
         func_name = convert_node(node.func)
         args = [convert_node(arg) for arg in node.args]
-        keywords = {kw.arg: convert_node(kw.value) for kw in node.keywords if kw.arg}
+        keywords = {kw.arg: convert_node(kw.value)
+                    for kw in node.keywords if kw.arg}
         # 显式支持所有角色类型
         if func_name in ('Female', 'Male', 'CreatureMale', 'CreatureFemale'):
             return {'__type__': func_name, **keywords}
@@ -43,7 +45,8 @@ def convert_node(node: ast.AST) -> Any:
         elif isinstance(node.op, ast.UAdd):
             return +convert_node(node.operand)
         else:
-            print(f"Warning: Unhandled unary operator '{type(node.op).__name__}'")
+            print(
+                f"Warning: Unhandled unary operator '{type(node.op).__name__}'")
             return f"<UnaryOp {type(node.op).__name__}>"
     elif isinstance(node, ast.BinOp):
         left = convert_node(node.left)
@@ -59,6 +62,8 @@ def convert_node(node: ast.AST) -> Any:
 # ------------------------------------------------------------
 # 解析主函数
 # ------------------------------------------------------------
+
+
 def parse_animation_file(content: str) -> dict:
     tree = ast.parse(content)
 
@@ -81,10 +86,12 @@ def parse_animation_file(content: str) -> dict:
             elif func_name == 'common_tags' and call.args:
                 tags_str = convert_node(call.args[0])
                 # 分割并转为小写
-                raw_tags = [t.strip() for t in tags_str.split(',') if t.strip()]
+                raw_tags = [t.strip()
+                            for t in tags_str.split(',') if t.strip()]
                 config['pack_tags'] = [t.lower() for t in raw_tags]
             elif func_name == 'Animation':
-                anim_data = {kw.arg: convert_node(kw.value) for kw in call.keywords if kw.arg}
+                anim_data = {kw.arg: convert_node(
+                    kw.value) for kw in call.keywords if kw.arg}
                 animations.append(anim_data)
 
     animations_dict = {}
@@ -114,7 +121,8 @@ def parse_animation_file(content: str) -> dict:
                         args = stage_call.get('args', [])
                         if args:
                             stage_num = str(args[0])
-                            params = {k: v for k, v in stage_call.items() if k not in ('__type__', 'args')}
+                            params = {k: v for k, v in stage_call.items(
+                            ) if k not in ('__type__', 'args')}
                             global_stages[stage_num] = params
 
         # 处理所有 actor（actor1, actor2, ...）
@@ -164,7 +172,8 @@ def parse_animation_file(content: str) -> dict:
                             args = stage_call.get('args', [])
                             if args:
                                 stage_num = str(args[0])
-                                params = {k: v for k, v in stage_call.items() if k not in ('__type__', 'args')}
+                                params = {k: v for k, v in stage_call.items(
+                                ) if k not in ('__type__', 'args')}
                                 actor_stages[stage_num] = params
 
             # 合并全局 stage_params：对每个全局阶段号，如果 actor 已有则更新，否则创建新阶段
@@ -192,18 +201,39 @@ def parse_animation_file(content: str) -> dict:
     }
     return result
 
-def tags_process(raw_tags: List[str]) -> List[List[str]]:
-    return []
+
+def tags_process(raw_tags: List[str]):
+    PositionHelper = ["2futa", "3 girls", "cccf", "cccsf", "ccf", "ccsf", "cf", "cff", "csf", "csfsf", "f", "fcccc", "fcc", "ffffm", "fffm", "ffm", "ffmm", "fm", "fmc",
+                      "fmmm", "m", "mfc", "mff", "mmf", "mmmf", "mmmmsf", "mmmsf", "mmsf", "msf", "msfc", "sfsfc", "sfsfm", "sfsfmm", "sfsfsfm", "sfsfsfsfm", "ff", "fff", "fffc", "ffc", "ccm"]
+
+    Races = ["atronach", "bear", "boar", "cat", "chaurus", "chicken", "cow", "crab", "deer", "dog", "dragon", "dragonpriest", "draugr", "falmer", "flameatronach", "fox", "frostatronach", "gargoyle", "giant", "giantspider", "goat", "hag", "hagraven", "horse", "horker", "husky", "icewraith", "mammoth", "netch",
+             "rabbit", "reaper", "riekling", "sabrecat", "seeker", "skeever", "slaughterfish", "spider", "spriggan", "stormatronach", "troll", "unicorn", "vampire", "vampirelord", "werewolf", "wispmother", "wolf", "femwerewolf", "chaurushunter", "chaurusreapers", "largespider", "benthiclurker", "ashhopper"]
+
+    helper = []
+    race = []
+    for tag in raw_tags:
+        tag_lower = tag.lower()
+        if tag_lower in PositionHelper:
+            helper.append(tag_lower)
+        elif tag_lower in Races:
+            race.append(tag_lower)
+    return {"position_helper": helper, "race": race}
+
 
 def prase_raw_data(raw_data):
     result = {}
     id_prefix = raw_data.get("id_prefix", "")
     name_prefix = raw_data.get("name_prefix", "")
+
+    author = name_prefix.strip() if name_prefix else "Unknown"
     pack_tags = raw_data.get("pack_tags", [])
+    result["author"] = author
+    result["pack_tags"] = pack_tags
     for id, anim in raw_data["animations"].items():
         name = name_prefix + anim["name"]
         id = id_prefix + id
         total_stages = 0
+        total_actors = 0
         positions = []
         for actor_key in range(1, 10):
             key = f"actor{actor_key}"
@@ -213,13 +243,16 @@ def prase_raw_data(raw_data):
                 position["race"] = anim[key]["race"]
                 position["be_cumed"] = anim[key].get("add_cum", "None")
                 positions.append(position)
-        result[name] = {
+                total_actors += 1
+        result["scenes"][name] = {
             "event_prefix": id,
             "tags": anim["tags"],
+            "total_actors": total_actors,
             "total_stages": total_stages,
             "positions": positions
         }
     return result
+
 
 def preprocess_slal_source(file_path: str):
     with open(file_path, 'r', encoding='utf-8-sig') as f:
@@ -231,18 +264,3 @@ def preprocess_slal_source(file_path: str):
             print(f"Error parsing {file_path}: {e}")
             raise e
     return processed_data
-
-# ------------------------------------------------------------
-# 使用示例
-# ------------------------------------------------------------
-if __name__ == "__main__":
-    
-    for root, dirs, files in os.walk('./source'):
-        for filename in files:
-            if filename.endswith('.txt'):
-                filepath = os.path.join(root, filename)
-                with open(filepath, 'r', encoding='utf-8-sig') as f:
-                    result = preprocess_slal_source(filepath)
-
-                with open(os.path.join(root, filename.replace('.txt', '.json')), 'w', encoding='utf-8') as f:
-                    json.dump(result, f, indent=2, ensure_ascii=False)
