@@ -1,12 +1,5 @@
 """
 Generate FNIS behavior XML from a list file, replicating the exact structure
-of a valid FNIS output XML (e.g., FNIS_Billyy_HumanPetiteFurnitureDD_Behavior.xml).
-
-Usage:
-    python fnis_txt2xml_corrected.py input.txt output.xml
-
-Input format (lines):
-    b -md EventName AnimFileName.hkx
 """
 
 import sys
@@ -17,6 +10,7 @@ import subprocess
 from unittest import result
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
+from pathlib import Path
 
 # ===== 固定数据 ==============================================================
 FIXED_EVENTS = [
@@ -542,7 +536,9 @@ def _convert_xml_to_hkx(xml_path: str, hkx_path: str) -> None:
         errors="replace",
         check=False,
     )
-    if process.returncode != 0:
+    if process.returncode == 0:
+        os.remove(xml_path)  # 转换成功后删除临时 XML 文件
+    else:
         logs = []
         if process.stdout:
             logs.append(process.stdout.strip())
@@ -554,9 +550,17 @@ def _convert_xml_to_hkx(xml_path: str, hkx_path: str) -> None:
         )
 
 
-def generate_behavior(cmd_lines: list[str], output_file: str, mod_name: str):
+def generate_behavior(cmd_lines: list[str], output_file: Path, mod_name: str):
 
     root = generate_xml(cmd_lines, mod_name)
+
+    parts = list(output_file.parts)
+    for i in range(len(parts) - 2, -1, -1):
+        if parts[i] == "animations":
+            parts = parts[:i] + ["behaviors"] + \
+                [parts[-1].replace("List", "Behavior")]
+            break
+    output_file = Path(*parts)
 
     # 转换为漂亮的 XML 字符串
     rough_string = ET.tostring(root, encoding='unicode')
@@ -567,22 +571,22 @@ def generate_behavior(cmd_lines: list[str], output_file: str, mod_name: str):
     pretty_xml = '\n'.join([line for line in pretty_xml.split(
         '\n') if line.strip() or line.startswith('<?')])
 
-    output_no_ext, output_ext = os.path.splitext(output_file)
+    output_no_ext, output_ext = os.path.splitext(str(output_file))
     xml_cache_path = output_no_ext + ".xml"
-    hkx_output_path = output_file if output_ext.lower(
+    hkx_output_path = str(output_file) if output_ext.lower(
     ) == ".hkx" else output_no_ext + ".hkx"
 
     os.makedirs(os.path.dirname(xml_cache_path), exist_ok=True)
 
     # 输出缓存到 data 并转为 hkx
-    with open(xml_cache_path, 'w', encoding='utf-8') as f:
+    with open(xml_cache_path, 'w+', encoding='utf-8') as f:
         f.write(pretty_xml)
 
     _convert_xml_to_hkx(xml_cache_path, hkx_output_path)
     print(f"Generated behavior for '{mod_name}' -> {hkx_output_path}")
 
 
-def process_fnis_txt(file_path: str):
+def process_fnis_txt(file_path: str, output_path: Path):
     results = []
     anim_stages = {}
     file_content = read_text_with_fallback(file_path)
@@ -624,6 +628,10 @@ def process_fnis_txt(file_path: str):
             results.append(f"b -o,md {event} {anim} {' '.join(objs)}")
         else:
             results.append(f"b -md {event} {anim}")
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w+', encoding='utf-8') as f:
+        f.write('\n'.join(results))
     return {
         "cmd_lines": results,
         "anim_stages": anim_stages

@@ -1,6 +1,3 @@
-import cmd
-from math import e
-
 import mobase
 import json
 import os
@@ -137,16 +134,16 @@ class SLALPreProcess(mobase.IPluginTool):
             slal_dirs.add(name.lower())
 
             output_path = os.path.join(scenes_output_dir, f"{name}.json")
-            with open(output_path, 'a+', encoding='utf-8') as f:
+            with open(output_path, 'w+', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
 
         return slal_source_paths, slal_dirs
 
     def display(self):
-        overrite_path = self._organizer.overwritePath()
+        overwrite_path = self._organizer.overwritePath()
 
         slal_source_paths, slal_dirs = self._process_slal_source_paths(
-            overrite_path)
+            overwrite_path)
 
         # 跳过 OAR 和 DAR 相关目录，因为它们不包含 SLAL 的 txt 文件
         # 跳过 SexLab 的原版动画
@@ -158,11 +155,31 @@ class SLALPreProcess(mobase.IPluginTool):
             mod_name = Path(real_path).parent.name
             if mod_name.lower() not in slal_dirs:
                 continue
-            data = process_fnis_txt(real_path)
+            output_path = Path(os.path.join(overwrite_path, txt_path))
+            data = process_fnis_txt(real_path, output_path)
             cmd_lines = data["cmd_lines"]
-            output_path = os.path.join(overrite_path, txt_path)
             generate_behavior(cmd_lines, output_path, mod_name)
             scene_stages.update(data["anim_stages"])
+
+        # 写入total_stages
+        scenes_dir = os.path.join(
+            overwrite_path,
+            "SKSE",
+            "Plugins",
+            "SexLabNG",
+            "Scenes"
+        )
+        for root, _, files in os.walk(scenes_dir):
+            for file in files:
+                if file.endswith('.json'):
+                    scene_path = os.path.join(root, file)
+                    with open(scene_path, 'r', encoding='utf-8') as f:
+                        scene_data = json.load(f)
+                    for name, data in scene_data.get("scenes", {}).items():
+                        if data["event_prefix"] in scene_stages.keys():
+                            data["total_stages"] = scene_stages[data["event_prefix"]]
+                    with open(scene_path, 'w+', encoding='utf-8') as f:
+                        json.dump(scene_data, f, indent=2)
 
         QMessageBox.information(
             self._parentWidget,
