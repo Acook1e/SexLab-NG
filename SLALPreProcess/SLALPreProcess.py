@@ -140,6 +140,14 @@ class SLALPreProcess(mobase.IPluginTool):
         return slal_source_paths, slal_dirs
 
     def display(self):
+        is_generate = QMessageBox.question(
+            self._parentWidget,
+            self.displayName(),
+            "是否生成行为文件，耗时较久",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
+        ) == QMessageBox.StandardButton.Yes
+
         overwrite_path = self._organizer.overwritePath()
 
         slal_source_paths, slal_dirs = self._process_slal_source_paths(
@@ -158,7 +166,8 @@ class SLALPreProcess(mobase.IPluginTool):
             output_path = Path(os.path.join(overwrite_path, txt_path))
             data = process_fnis_txt(real_path, output_path)
             cmd_lines = data["cmd_lines"]
-            generate_behavior(cmd_lines, output_path, mod_name)
+            if is_generate:
+                generate_behavior(cmd_lines, output_path, mod_name)
             scene_stages.update(data["anim_stages"])
 
         # 写入total_stages

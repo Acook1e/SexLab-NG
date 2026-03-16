@@ -557,7 +557,9 @@ def generate_behavior(cmd_lines: list[str], output_file: Path, mod_name: str):
     parts = list(output_file.parts)
     for i in range(len(parts) - 2, -1, -1):
         if parts[i] == "animations":
-            parts = parts[:i] + ["behaviors"] + \
+            is_wolf = "wolf" in parts[-1].lower(
+            ) and "canine" in str(output_file).lower()
+            parts = parts[:i] + ["wolf behaviors" if is_wolf else "behaviors"] + \
                 [parts[-1].replace("List", "Behavior")]
             break
     output_file = Path(*parts)

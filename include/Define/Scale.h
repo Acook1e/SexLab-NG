@@ -9,19 +9,24 @@ public:
 
   float GetScale() const { return scale; }
 
-  static void ApplyScale(RE::Actor* actor, float scale)
-  {
-    // Placeholder for applying scale to the actor
-    // This would involve modifying the actor's properties based on the scale
-  }
-
   static float CalculateScale(RE::Actor* actor)
   {
-    // Placeholder for scale calculation logic based on position
-    return 1.0f;  // Default scale value
+    if (!actor)
+      return 1.0f;
+
+    auto node = actor->GetNodeByName(baseNode);
+    return actor->GetScale() * (node ? node->local.scale : 1.0f);
+  }
+
+  static void ApplyScale(RE::Actor* actor, float scale)
+  {
+    if (!actor)
+      return;
   }
 
 private:
+  constexpr static inline std::string_view baseNode = "NPC";
+
   float scale;
 };
 }  // namespace Define

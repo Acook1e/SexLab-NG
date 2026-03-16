@@ -2,6 +2,7 @@ import ast
 import json
 import os
 from typing import Any, Dict, List
+from enum import Flag, auto
 
 # ------------------------------------------------------------
 # AST 节点转换器：将 ast 节点转为 Python 基本类型，并保留结构信息
@@ -59,12 +60,11 @@ def convert_node(node: ast.AST) -> Any:
         print(f"Warning: Unhandled AST node type '{type(node).__name__}'")
         return f"<{type(node).__name__}>"
 
-# ------------------------------------------------------------
-# 解析主函数
-# ------------------------------------------------------------
-
 
 def parse_animation_file(content: str) -> dict:
+    '''
+    解析源数据文件，提取配置和动画信息，构建结构化的字典输出
+    '''
     tree = ast.parse(content)
 
     config = {
@@ -206,6 +206,58 @@ def parse_animation_file(content: str) -> dict:
     return result
 
 
+class RaceFlag(Flag):
+    HUMANFEMALE = auto()
+    HUMALEMALE = auto()
+    HUMANFUTA = auto()
+    ATRONACH = auto()
+    BEAR = auto()
+    BOAR = auto()
+    CAT = auto()
+    CHAURUS = auto()
+    CHICKEN = auto()
+    COW = auto()
+    CRAB = auto()
+    DEER = auto()
+    DOG = auto()
+    DRAGON = auto()
+    DRAGONPRIEST = auto()
+    DRAUGR = auto()
+    FALMER = auto()
+    FLAMEATRONACH = auto()
+    FOX = auto()
+    FROSTATRONACH = auto()
+    GARGOYLE = auto()
+    GIANT = auto()
+    GIANTSPIDER = auto()
+    GOAT = auto()
+    HAG = auto()
+    HAGRAVEN = auto()
+    HORSE = auto()
+    HORKER = auto()
+    HUSKY = auto()
+    ICEWRAITH = auto()
+    MAMMOTH = auto()
+    NETCH = auto()
+    RABBIT = auto()
+    REAPER = auto()
+    RIEKLING = auto()
+    SABRECAT = auto()
+    SEEKER = auto()
+    SKEEVER = auto()
+    SLAUGHTERFISH = auto()
+    SPIDER = auto()
+    SPRIGGAN = auto()
+    STORMATRONACH = auto()
+    TROLL = auto()
+    UNICORN = auto()
+    VAMPIRE = auto()
+    VAMPIRELORD = auto()
+    WEREWOLF = auto()
+    WISPMOTHER = auto()
+    WOLF = auto()
+
+
 def tags_process(raw_tags: List[str]):
     PositionHelper = ["2futa", "3 girls", "cccf", "cccsf", "ccf", "ccsf", "cf", "cff", "csf", "csfsf", "f", "fcccc", "fcc", "ffffm", "fffm", "ffm", "ffmm", "fm", "fmc",
                       "fmmm", "m", "mfc", "mff", "mmf", "mmmf", "mmmmsf", "mmmsf", "mmsf", "msf", "msfc", "sfsfc", "sfsfm", "sfsfmm", "sfsfsfm", "sfsfsfsfm", "ff", "fff", "fffc", "ffc", "ccm"]
@@ -225,6 +277,9 @@ def tags_process(raw_tags: List[str]):
 
 
 def prase_raw_data(raw_data):
+    '''
+    将数据格式化为SexLab NG需要的结构
+    '''
     result = {}
     anim_dir = raw_data.get("anim_dir", "")
     id_prefix = raw_data.get("id_prefix", "")
@@ -238,10 +293,10 @@ def prase_raw_data(raw_data):
     result["scenes"] = dict()
     for id, anim in raw_data["animations"].items():
         name = name_prefix + anim["name"]
-        id = id_prefix + id
+        event = id_prefix + id
         total_stages = 0
         total_actors = 0
-        positions = []
+        positions = {}
         for actor_key in range(1, 10):
             key = f"actor{actor_key}"
             if key in anim:
@@ -249,10 +304,12 @@ def prase_raw_data(raw_data):
                 position["gender"] = anim[key]["gender"]
                 position["race"] = anim[key].get("race", "Human")
                 position["be_cumed"] = anim[key].get("add_cum", "None")
-                positions.append(position)
-                total_actors += 1
+                positions[str(key)] = position
+            else:
+                total_actors = actor_key - 1
+                break
         result["scenes"][name] = {
-            "event_prefix": id,
+            "event_prefix": event,
             "tags": anim["tags"],
             "total_actors": total_actors,
             "total_stages": total_stages,
@@ -261,7 +318,35 @@ def prase_raw_data(raw_data):
     return result
 
 
+slate_tags = {}
+
+
+def preprocess_data(data: dict):
+    '''
+    对解析后的数据预处理，如标签分类、位置统计等
+    '''
+    processed = {}
+
+    return processed
+
+
 def preprocess_slal_source(file_path: str):
+    if not slate_tags:
+        slate_dir = os.path.join(
+            os.path.dirname(__file__), "slate")
+        if os.path.isdir(slate_dir):
+            for fname in os.listdir(slate_dir):
+                if fname.endswith(".json"):
+                    with open(os.path.join(slate_dir, fname), 'r', encoding='utf-8-sig') as f:
+                        data = json.load(f)
+                        for slate in data["stringList"]["slate.actionlog"]:
+                            action, target, tag = slate.split(',', 2)
+                            action = action.strip()
+                            target = target.strip()
+                            tag = tag.strip().lower()
+                            slate_tags.setdefault(action, {}).setdefault(
+                                target, []).append(tag)
+
     with open(file_path, 'r', encoding='utf-8-sig') as f:
         file_content = f.read()
         try:
