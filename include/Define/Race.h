@@ -67,6 +67,7 @@ public:
 
   Race(RE::Actor* actor) : type(GetRace(actor)) {}
   Race(Type type) : type(type) {}
+  Race(std::uint64_t mask) : type(static_cast<Type>(mask)) {}
 
   bool operator==(const Race& other) const { return type == other.type; }
   bool operator!=(const Race& other) const { return !(*this == other); }
@@ -169,6 +170,6 @@ public:
   static bool IsHuman(RE::Actor* actor) { return GetRace(actor) == Type::Human; }
 
 private:
-  Type type{Type::Unknown};
+  REX::EnumSet<Type> type;
 };
 }  // namespace Define

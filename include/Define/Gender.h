@@ -7,7 +7,7 @@ namespace Define
 class Gender
 {
 public:
-  enum class Type : uint8_t
+  enum class Type : std::uint8_t
   {
     Unknown = 0,
     Female  = 1,

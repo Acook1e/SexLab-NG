@@ -15,7 +15,9 @@ public:
     LeatIn,
   };
 
-  Scene(std::string name, std::string id, Furniture furniture) : name(std::move(name)), id(std::move(id)), furniture(std::move(furniture)) {}
+  Scene(std::string name, std::string id, Furniture furniture)
+      : name(std::move(name)), id(std::move(id)), furniture(std::move(furniture))
+  {}
 
 private:
   std::string name;
@@ -23,6 +25,7 @@ private:
   Furniture furniture;
   Type type;
   InteractTags interactTags;
+  Race races;
   std::vector<Position> positions;
 };
 }  // namespace Define

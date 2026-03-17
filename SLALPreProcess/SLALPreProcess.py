@@ -99,7 +99,6 @@ class SLALPreProcess(mobase.IPluginTool):
     def _process_slal_source_paths(self, overwrite_path: str) -> tuple[dict[str, str], set[str]]:
         slal_source_paths = self._scan_files("SLAnims/Source", set(), set())
 
-        # 如果 Source 下没有子目录，walk 可能漏掉根目录文件，这里补一次根目录检索
         source_root = self._normalize_virtual_path("SLAnims/Source")
         try:
             direct_files = self._organizer.findFiles(source_root, "*.txt")
@@ -178,6 +177,7 @@ class SLALPreProcess(mobase.IPluginTool):
             "SexLabNG",
             "Scenes"
         )
+
         for root, _, files in os.walk(scenes_dir):
             for file in files:
                 if file.endswith('.json'):

@@ -2,7 +2,10 @@ import ast
 import json
 import os
 from typing import Any, Dict, List
-from enum import Flag, auto
+from enum import Enum, Flag
+
+
+ROLE_TYPES = {'Female', 'Male', 'CreatureMale', 'CreatureFemale'}
 
 # ------------------------------------------------------------
 # AST 节点转换器：将 ast 节点转为 Python 基本类型，并保留结构信息
@@ -12,7 +15,7 @@ from enum import Flag, auto
 def convert_node(node: ast.AST) -> Any:
     """
     将 AST 节点转换为可 JSON 序列化的 Python 对象。
-    对 Female/Male/CreatureMale/CreatureFemale 和 Stage 调用返回带有 __type__ 标记的字典。
+    对角色类型调用和 Stage 调用返回带有 __type__ 标记的字典。
     """
     if isinstance(node, ast.Constant):
         return node.value
@@ -61,6 +64,12 @@ def convert_node(node: ast.AST) -> Any:
         return f"<{type(node).__name__}>"
 
 
+def normalize_actor_value(value: Any) -> Any:
+    if isinstance(value, str) and value in ROLE_TYPES:
+        return {'__type__': value}
+    return value
+
+
 def parse_animation_file(content: str) -> dict:
     '''
     解析源数据文件，提取配置和动画信息，构建结构化的字典输出
@@ -93,8 +102,14 @@ def parse_animation_file(content: str) -> dict:
                             for t in tags_str.split(',') if t.strip()]
                 config['pack_tags'] = [t.lower() for t in raw_tags]
             elif func_name == 'Animation':
-                anim_data = {kw.arg: convert_node(
-                    kw.value) for kw in call.keywords if kw.arg}
+                anim_data = {}
+                for kw in call.keywords:
+                    if not kw.arg:
+                        continue
+                    value = convert_node(kw.value)
+                    if kw.arg.startswith('actor'):
+                        value = normalize_actor_value(value)
+                    anim_data[kw.arg] = value
                 animations.append(anim_data)
 
     animations_dict = {}
@@ -156,7 +171,8 @@ def parse_animation_file(content: str) -> dict:
             # 复制角色调用的其他属性（如 strap_on, add_cum 等）
             for attr, value in actor_data.items():
                 if attr != '__type__':
-                    actor_out[attr] = value
+                    actor_out[attr] = value.lower() if isinstance(
+                        value, str) else value
 
             # 提取 actor 编号
             try:
@@ -206,56 +222,195 @@ def parse_animation_file(content: str) -> dict:
     return result
 
 
-class RaceFlag(Flag):
-    HUMANFEMALE = auto()
-    HUMALEMALE = auto()
-    HUMANFUTA = auto()
-    ATRONACH = auto()
-    BEAR = auto()
-    BOAR = auto()
-    CAT = auto()
-    CHAURUS = auto()
-    CHICKEN = auto()
-    COW = auto()
-    CRAB = auto()
-    DEER = auto()
-    DOG = auto()
-    DRAGON = auto()
-    DRAGONPRIEST = auto()
-    DRAUGR = auto()
-    FALMER = auto()
-    FLAMEATRONACH = auto()
-    FOX = auto()
-    FROSTATRONACH = auto()
-    GARGOYLE = auto()
-    GIANT = auto()
-    GIANTSPIDER = auto()
-    GOAT = auto()
-    HAG = auto()
-    HAGRAVEN = auto()
-    HORSE = auto()
-    HORKER = auto()
-    HUSKY = auto()
-    ICEWRAITH = auto()
-    MAMMOTH = auto()
-    NETCH = auto()
-    RABBIT = auto()
-    REAPER = auto()
-    RIEKLING = auto()
-    SABRECAT = auto()
-    SEEKER = auto()
-    SKEEVER = auto()
-    SLAUGHTERFISH = auto()
-    SPIDER = auto()
-    SPRIGGAN = auto()
-    STORMATRONACH = auto()
-    TROLL = auto()
-    UNICORN = auto()
-    VAMPIRE = auto()
-    VAMPIRELORD = auto()
-    WEREWOLF = auto()
-    WISPMOTHER = auto()
-    WOLF = auto()
+unknown = {}
+
+
+class Race(Flag):
+    Unknown = 0
+    Human = 1 << 0
+    AshHopper = 1 << 1
+    Bear = 1 << 2
+    Boar = 1 << 3
+    BoarMounted = 1 << 4
+    Chaurus = 1 << 5
+    ChaurusHunter = 1 << 6
+    ChaurusReaper = 1 << 7
+    Chicken = 1 << 8
+    Cow = 1 << 9
+    Deer = 1 << 10
+    Dog = 1 << 11
+    Dragon = 1 << 12
+    DragonPriest = 1 << 13
+    Draugr = 1 << 14
+    DwarvenBallista = 1 << 15
+    DwarvenCenturion = 1 << 16
+    DwarvenSphere = 1 << 17
+    DwarvenSpider = 1 << 18
+    Falmer = 1 << 19
+    FlameAtronach = 1 << 20
+    Fox = 1 << 21
+    FrostAtronach = 1 << 22
+    Gargoyle = 1 << 23
+    Giant = 1 << 24
+    GiantSpider = 1 << 25
+    Goat = 1 << 26
+    Hagraven = 1 << 27
+    Hare = 1 << 28
+    Horker = 1 << 29
+    Horse = 1 << 30
+    IceWraith = 1 << 31
+    LargeSpider = 1 << 32
+    Lurker = 1 << 33
+    Mammoth = 1 << 34
+    Mudcrab = 1 << 35
+    Netch = 1 << 36
+    Riekling = 1 << 37
+    Sabrecat = 1 << 38
+    Seeker = 1 << 39
+    Skeever = 1 << 40
+    Slaughterfish = 1 << 41
+    Spider = 1 << 42
+    Spriggan = 1 << 43
+    StormAtronach = 1 << 44
+    Troll = 1 << 45
+    VampireLord = 1 << 46
+    Werewolf = 1 << 47
+    Wisp = 1 << 48
+    Wispmother = 1 << 49
+    Wolf = 1 << 50
+
+
+def to_race(race: str) -> int:
+    res = Race.Unknown
+    match (race.lower()):
+        case "ashhoppers":
+            res = Race.AshHopper
+        case "bears":
+            res = Race.Bear
+        case "boars":
+            res = Race.Boar
+        case "boarsany":
+            res = Race.Boar | Race.BoarMounted
+        case "boarmounted":
+            res = Race.BoarMounted
+        case "canines":
+            res = Race.Dog | Race.Fox | Race.Wolf
+        case "chaurus":
+            res = Race.Chaurus
+        case "chaurushunters":
+            res = Race.ChaurusHunter
+        case "chaurusreapers":
+            res = Race.ChaurusReaper
+        case "chickens":
+            res = Race.Chicken
+        case "cows":
+            res = Race.Cow
+        case "deers":
+            res = Race.Deer
+        case "dogs":
+            res = Race.Dog
+        case "dragons":
+            res = Race.Dragon
+        case "dragonpriests":
+            res = Race.DragonPriest
+        case "draugrs":
+            res = Race.Draugr
+        case "dwarvenballistas":
+            res = Race.DwarvenBallista
+        case "dwarvencenturions":
+            res = Race.DwarvenCenturion
+        case "dwarvenspheres":
+            res = Race.DwarvenSphere
+        case "dwarvenspiders":
+            res = Race.DwarvenSpider
+        case "falmer":
+            res = Race.Falmer
+        case "flameatronach":
+            res = Race.FlameAtronach
+        case "foxes":
+            res = Race.Fox
+        case "frostatronach":
+            res = Race.FrostAtronach
+        case "gargoyles":
+            res = Race.Gargoyle
+        case "giantspiders":
+            res = Race.GiantSpider
+        case "giants":
+            res = Race.Giant
+        case "goats":
+            res = Race.Goat
+        case "hagravens":
+            res = Race.Hagraven
+        case "rabbits" | "hares":
+            res = Race.Hare
+        case "horkers":
+            res = Race.Horker
+        case "horses":
+            res = Race.Horse
+        case "human":
+            res = Race.Human
+        case "icewraiths":
+            res = Race.IceWraith
+        case "largespiders":
+            res = Race.LargeSpider
+        case "lurkers":
+            res = Race.Lurker
+        case "mammoths":
+            res = Race.Mammoth
+        case "netches":
+            res = Race.Netch
+        case "rieklings":
+            res = Race.Riekling
+        case "sabrecats":
+            res = Race.Sabrecat
+        case "seekers":
+            res = Race.Seeker
+        case "skeevers":
+            res = Race.Skeever
+        case "slaughterfishes":
+            res = Race.Slaughterfish
+        case "spiders":
+            res = Race.Spider
+        case "spriggans":
+            res = Race.Spriggan
+        case "stormatronach":
+            res = Race.StormAtronach
+        case "trolls":
+            res = Race.Troll
+        case "vampirelords":
+            res = Race.VampireLord
+        case "werewolves":
+            res = Race.Werewolf
+        case "wispmothers":
+            res = Race.Wispmother
+        case "wolves":
+            res = Race.Wolf
+        case _:
+            unknown.setdefault("race", []).append(race)
+    return res.value
+
+
+class GenderType(Enum):
+    Unknown = 0
+    Female = 1
+    Male = 2
+    Futa = 3
+    CreatureMale = 4
+    CreatureFemale = 5
+
+
+def to_gender(gender: str) -> int:
+    res = GenderType.Unknown
+    match (gender):
+        case "female":
+            res = GenderType.Female
+        case "male":
+            res = GenderType.Male
+        case "creature_male":
+            res = GenderType.CreatureMale
+        case "creature_female":
+            res = GenderType.CreatureFemale
+    return res.value
 
 
 def tags_process(raw_tags: List[str]):
@@ -276,7 +431,7 @@ def tags_process(raw_tags: List[str]):
     return {"position_helper": helper, "race": race}
 
 
-def prase_raw_data(raw_data):
+def prase_raw_data(raw_data: dict) -> dict:
     '''
     将数据格式化为SexLab NG需要的结构
     '''
@@ -297,13 +452,22 @@ def prase_raw_data(raw_data):
         total_stages = 0
         total_actors = 0
         positions = {}
+        races = 0
         for actor_key in range(1, 10):
             key = f"actor{actor_key}"
             if key in anim:
                 position = {}
-                position["gender"] = anim[key]["gender"]
-                position["race"] = anim[key].get("race", "Human")
-                position["be_cumed"] = anim[key].get("add_cum", "None")
+                position["gender"] = to_gender(anim[key]["gender"])
+                position["race"] = to_race(anim[key].get("race", "human"))
+                races |= position["race"]
+                position["be_cumed"] = anim[key].get("add_cum", "none")
+                position["stage_params"] = {}
+                for stage_num, param in anim[key].get("stage_params", {}).items():
+                    for param_name, param_value in param.items():
+                        if param_name == "animvars" or param_name == "object":
+                            continue
+                        position["stage_params"].setdefault(
+                            stage_num, {})[param_name] = param_value
                 positions[str(key)] = position
             else:
                 total_actors = actor_key - 1
@@ -313,6 +477,7 @@ def prase_raw_data(raw_data):
             "tags": anim["tags"],
             "total_actors": total_actors,
             "total_stages": total_stages,
+            "races": races,
             "positions": positions
         }
     return result
