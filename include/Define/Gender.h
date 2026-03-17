@@ -22,6 +22,22 @@ public:
 
   bool operator==(const Gender& other) const { return type == other.type; }
   bool operator!=(const Gender& other) const { return !(*this == other); }
+  [[nodiscard]] Type GetType() const { return type; }
+
+  [[nodiscard]] bool IsCompatible(const Gender& actual) const
+  {
+    if (type == Type::Unknown || actual.type == Type::Unknown)
+      return false;
+
+    if (type == actual.type)
+      return true;
+
+    // Futa can fill female or male human roles.
+    if (actual.type == Type::Futa && (type == Type::Female || type == Type::Male))
+      return true;
+
+    return false;
+  }
 
   static Type GetGender(RE::Actor* actor)
   {

@@ -1,6 +1,6 @@
-#include "Hooks.h"
+#include "Utils/Hooks.h"
 
-namespace Hook
+namespace Hooks
 {
 void MainUpdate::Update()
 {
@@ -19,4 +19,4 @@ void NPCUpdate::Update(RE::Actor* a_this, float a_delta)
   _Update(a_this, a_delta);
   // Placeholder for NPC update logic
 }
-}  // namespace Hook
+}  // namespace Hooks

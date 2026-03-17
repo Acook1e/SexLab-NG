@@ -2,8 +2,6 @@
 
 #include "API/SKEE.h"
 
-namespace Define
-{
 class Scale
 {
 public:
@@ -26,18 +24,18 @@ public:
     transformInterface =
         reinterpret_cast<SKEE::INiTransformInterface*>(msg.interfaceMap->QueryInterface("NiTransform"));
     if (!transformInterface) {
-      logger::critical("[SexLab NG] Scale : Couldn't get INiTransformInterface!");
+      logger::critical("[SexLab NG] Scale : Couldn't get NiTransformInterface!");
       return;
     }
     interfaceMap = msg.interfaceMap;
-    logger::info("[SexLab NG] Scale : Successfully obtained INiTransformInterface!");
+    logger::info("[SexLab NG] Scale : Successfully obtained NiTransformInterface!");
   }
 
   ~Scale()
   {
     if (interfaceMap && transformInterface) {
       interfaceMap->RemoveInterface("NiTransform");
-      logger::info("[SexLab NG] Scale : INiTransformInterface removed.");
+      logger::info("[SexLab NG] Scale : NiTransformInterface removed.");
     }
   }
 
@@ -96,4 +94,3 @@ private:
   SKEE::IInterfaceMap* interfaceMap               = nullptr;
   SKEE::INiTransformInterface* transformInterface = nullptr;
 };
-}  // namespace Define

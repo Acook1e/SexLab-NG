@@ -1,0 +1,42 @@
+{
+    "None": {
+        "label": "None",
+        "desc": ""
+    },
+    "Unknown": {
+        "label": "Unknown",
+        "desc": ""
+    },
+    "SexLabNG": {
+        "label": "SexLab NG",
+        "desc": ""
+    },
+    "Settings": {
+        "label": "Settings",
+        "desc": ""
+    },
+    "Debug": {
+        "label": "Debug",
+        "desc": ""
+    },
+    "CurrentTarget": {
+        "label": "Current Target: {}",
+        "desc": ""
+    },
+    "ChoosenActors:": {
+        "label": "Choosen Actors:",
+        "desc": ""
+    },
+    "AddActor": {
+        "label": "Add Actor",
+        "desc": "Add Current Target to Choosen Actors"
+    },
+    "ClearActors": {
+        "label": "Clear Actors",
+        "desc": "Clear all Choosen Actors"
+    },
+    "CreateScene": {
+        "label": "Create Scene",
+        "desc": "Create a new scene with the selected actors"
+    }
+}

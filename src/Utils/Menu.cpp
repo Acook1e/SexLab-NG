@@ -1,4 +1,6 @@
-#include "Menu.h"
+#include "Utils/Menu.h"
+
+#include "Instance/Manager.h"
 
 #include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
@@ -16,19 +18,19 @@ static std::unordered_map<std::uint32_t, std::vector<StringMap>> comboMaps;
 
 void LoadLocalization()
 {
-  constexpr std::string_view LocalizationPath = "Data/SKSE/Plugins/SexLab_Localization.json";
+  constexpr std::string_view LocalizationPath = "Data/SKSE/Plugins/SexLabNG_Localization.json";
 
   nlohmann::json j;
   try {
     std::ifstream ifs(LocalizationPath.data());
     j = nlohmann::json::parse(ifs);
   } catch (const std::exception& e) {
-    logger::error("[InflationFramework] Failed to load localization file: {}. Error: {}", LocalizationPath, e.what());
+    logger::error("[SexLab NG] Failed to load localization file: {}. Error: {}", LocalizationPath, e.what());
     return;
   }
 
   if (j.is_null() || !j.is_object()) {
-    logger::error("[InflationFramework] Localization file is not a valid JSON object.");
+    logger::error("[SexLab NG] Localization file is not a valid JSON object.");
     return;
   }
 
@@ -71,7 +73,7 @@ void SetSection(std::uint32_t hash)
   if (!map.label.empty())
     SKSEMenuFramework::SetSection(map.label.data());
   else
-    SKSEMenuFramework::SetSection(GetStringMap("UnknownValue"_h).label.data());
+    SKSEMenuFramework::SetSection(GetStringMap("Unknown"_h).label.data());
 }
 void AddSectionItem(std::uint32_t hash, SKSEMenuFramework::Model::RenderFunction func)
 {
@@ -79,7 +81,7 @@ void AddSectionItem(std::uint32_t hash, SKSEMenuFramework::Model::RenderFunction
   if (!map.label.empty())
     SKSEMenuFramework::AddSectionItem(map.label.data(), func);
   else
-    SKSEMenuFramework::AddSectionItem(GetStringMap("UnknownValue"_h).label.data(), func);
+    SKSEMenuFramework::AddSectionItem(GetStringMap("Unknown"_h).label.data(), func);
 }
 void Text(std::uint32_t hash, auto&&... args)
 {
@@ -87,7 +89,7 @@ void Text(std::uint32_t hash, auto&&... args)
   if (!map.label.empty())
     ImGuiMCP::Text(std::vformat(map.label, std::make_format_args(args...)).data());
   else
-    ImGuiMCP::Text(GetStringMap("UnknownValue"_h).label.data());
+    ImGuiMCP::Text(GetStringMap("Unknown"_h).label.data());
 }
 void Checkbox(std::uint32_t hash, bool* v, std::function<void()> onChange = nullptr)
 {
@@ -95,6 +97,15 @@ void Checkbox(std::uint32_t hash, bool* v, std::function<void()> onChange = null
   if (ImGuiMCP::Checkbox(map.label.data(), v))
     if (onChange)
       onChange();
+  if (ImGuiMCP::IsItemHovered() && !map.desc.empty())
+    ImGuiMCP::SetTooltip(map.desc.data());
+}
+void Button(std::uint32_t hash, std::function<void()> onClick = nullptr)
+{
+  const StringMap& map = GetStringMap(hash);
+  if (ImGuiMCP::Button(map.label.data()))
+    if (onClick)
+      onClick();
   if (ImGuiMCP::IsItemHovered() && !map.desc.empty())
     ImGuiMCP::SetTooltip(map.desc.data());
 }
@@ -109,8 +120,8 @@ void DragInt(std::uint32_t hash, int* v, float v_speed = 1.0f, int v_min = 0, in
   if (ImGuiMCP::IsItemHovered() && !map.desc.empty())
     ImGuiMCP::SetTooltip(map.desc.data());
 }
-void DragFloat(std::uint32_t hash, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.1f",
-               std::function<void()> onChange = nullptr)
+void DragFloat(std::uint32_t hash, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f,
+               const char* format = "%.1f", std::function<void()> onChange = nullptr)
 {
   const StringMap& map             = GetStringMap(hash);
   ImGuiMCP::ImGuiSliderFlags flags = ImGuiMCP::ImGuiSliderFlags_None;
@@ -149,9 +160,39 @@ void Menu::Debug()
 {
   auto cross        = RE::CrosshairPickData::GetSingleton();
   RE::Actor* target = nullptr;
-  target            = cross->targetActor.get().get()->As<RE::Actor>();
-  if (!target)
-    target = RE::PlayerCharacter::GetSingleton();
+  try {
+    if (auto targetActor = cross->targetActor.get(); targetActor.get())
+      target = targetActor.get()->As<RE::Actor>();
+    else
+      target = RE::PlayerCharacter::GetSingleton();
+  } catch (const std::exception& e) {
+    logger::warn("{}", e.what());
+  }
+
+  static std::vector<RE::Actor*> actors{};
+  ImGui::Text("CurrentTarget"_h, target ? target->GetDisplayFullName() : "");
+  ImGui::Text("ChoosenActors:"_h);
+  for (auto* actor : actors)
+    ImGuiMCP::Text(std::format("{}", actor->GetDisplayFullName()).data());
+
+  ImGuiMCP::Separator();
+
+  ImGui::Button("AddActor"_h, [target]() {
+    actors.push_back(target);
+  });
+  ImGui::Button("ClearActors"_h, []() {
+    actors.clear();
+  });
+  ImGui::Button("CreateScene"_h, []() {
+    // TODO
+    auto& sceneManager = Instance::SceneManager::GetSingleton();
+    auto scenes        = sceneManager.SearchScenes(actors);
+    // Handle the scenes as needed
+    logger::info("Found compact scenes: {}", scenes.size());
+    for (auto& scene : scenes) {
+      logger::info("{}", scene.get().verbose());
+    }
+  });
 }
 
 void __stdcall Menu::EventListener(SKSEMenuFramework::Model::EventType eventType)
@@ -176,7 +217,7 @@ Menu::Menu()
   if (!SKSEMenuFramework::IsInstalled())
     return;
 
-  ImGui::SetSection("InflationFramework"_h);
+  ImGui::SetSection("SexLabNG"_h);
 
   ImGui::AddSectionItem("Settings"_h, Settings);
   ImGui::AddSectionItem("Debug"_h, Debug);
@@ -184,7 +225,7 @@ Menu::Menu()
   // priority should be a individual value for each mod, here is nexus id of this mod
   event = new SKSEMenuFramework::Model::Event(EventListener, static_cast<float>(MOD));
 
-  logger::info("[InflationFramework] Menu: SKSEMenuFramework v{} loaded.", SKSEMenuFramework::GetMenuFrameworkVersion());
+  logger::info("[SexLab NG] Menu: SKSEMenuFramework v{} loaded.", SKSEMenuFramework::GetMenuFrameworkVersion());
 }
 
 Menu::~Menu()

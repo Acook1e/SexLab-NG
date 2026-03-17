@@ -1,9 +1,10 @@
 #pragma once
 
-namespace Hook
+namespace Hooks
 {
 class MainUpdate
 {
+public:
   static void Install()
   {
     auto& trampoline = SKSE::GetTrampoline();
@@ -45,4 +46,11 @@ private:
   static void Update(RE::Actor* a_this, float a_delta);
   static inline REL::Relocation<decltype(Update)> _Update;
 };
-}  // namespace Hook
+
+void inline Install()
+{
+  MainUpdate::Install();
+  PlayerUpdate::Install();
+  NPCUpdate::Install();
+}
+}  // namespace Hooks

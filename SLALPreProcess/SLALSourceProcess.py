@@ -443,7 +443,7 @@ def prase_raw_data(raw_data: dict) -> dict:
     author = name_prefix.strip() if name_prefix else "Unknown"
     pack_tags = raw_data.get("pack_tags", [])
     result["author"] = author
-    result["pack_tags"] = pack_tags
+    result["pack_tag"] = pack_tags[0] if pack_tags else ""
     result["anim_dir"] = anim_dir
     result["scenes"] = dict()
     for id, anim in raw_data["animations"].items():

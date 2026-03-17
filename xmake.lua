@@ -1,6 +1,6 @@
 set_xmakever("3.0.5")
 
-PROJECT_NAME = "SexLab"
+PROJECT_NAME = "SexLabNG"
 
 set_project(PROJECT_NAME)
 set_version("1.0.0")

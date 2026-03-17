@@ -1,5 +1,7 @@
-#include "Instance/InstanceManager.h"
-#include "menu.h"
+#include "Registry/SceneLoader.h"
+#include "Utils/Hooks.h"
+#include "Utils/Menu.h"
+#include "Utils/Scale.h"
 
 /*
 void APIMessageHandler(SKSE::MessagingInterface::Message* a_msg)
@@ -20,6 +22,7 @@ void APIMessageHandler(SKSE::MessagingInterface::Message* a_msg)
 
 inline void onPostLoad()
 {
+  Registry::SceneLoader::LoadData();
   // 注册为消息监听器, 接收其他 DLL 的 API 请求
   auto* messaging = SKSE::GetMessagingInterface();
   if (messaging) {
@@ -27,11 +30,15 @@ inline void onPostLoad()
   }
 }
 
-inline void onPostPostLoad() {}
+inline void onPostPostLoad()
+{
+  Scale::GetSingleton();
+}
 
 inline void onDataLoaded()
 {
   Menu::GetSingleton();
+  Hooks::Install();
 }
 
 inline void onEnterGame() {}

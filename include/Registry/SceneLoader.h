@@ -1,10 +1,8 @@
 #pragma once
 
-namespace Registry
+namespace Registry::SceneLoader
 {
-class SceneLoader
-{
-  void LoadSceneData();
-};
 
-}  // namespace Registry
+void LoadData();
+
+}  // namespace Registry::SceneLoader

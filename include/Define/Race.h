@@ -72,6 +72,11 @@ public:
   bool operator==(const Race& other) const { return type == other.type; }
   bool operator!=(const Race& other) const { return !(*this == other); }
 
+  bool all(const Type& mask) { return type.all(mask); }
+  bool any(const Type& mask) { return type.any(mask); }
+
+  std::uint64_t GetMask() const { return type.underlying(); }
+
   static Type GetRace(RE::Actor* actor)
   {
     static std::unordered_map<std::string, Type> raceMap = {
