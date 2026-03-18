@@ -6,11 +6,14 @@
 #include "SKSE/SKSE.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <deque>
 #include <format>
 #include <future>
+#include <map>
 #include <mutex>
 #include <ranges>
 #include <set>
@@ -19,6 +22,7 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 constexpr std::string_view PLUGIN_NAME = "SexLabUtil";

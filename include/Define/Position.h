@@ -3,7 +3,6 @@
 #include "Define/Gender.h"
 #include "Define/Race.h"
 #include "Define/Strip.h"
-#include "Utils/Scale.h"
 
 namespace Define
 {

@@ -2,6 +2,8 @@
 
 #include "API/SKEE.h"
 
+namespace Instance
+{
 class Scale
 {
 public:
@@ -94,3 +96,4 @@ private:
   SKEE::IInterfaceMap* interfaceMap               = nullptr;
   SKEE::INiTransformInterface* transformInterface = nullptr;
 };
+}  // namespace Instance

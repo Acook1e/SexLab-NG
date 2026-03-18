@@ -1,5 +1,7 @@
 #include "Instance/SceneInstance.h"
 
+#include "Instance/Collision.h"
+
 namespace Instance
 {
 SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
@@ -34,9 +36,16 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
       }
     }
   }
+
+  for (auto* actor : actors)
+    Collision::GetSingleton().AddActor(actor);
 }
 
-SceneInstance::~SceneInstance() {}
+SceneInstance::~SceneInstance()
+{
+  for (auto* actor : actors)
+    Collision::GetSingleton().RemoveActor(actor);
+}
 
 bool SceneInstance::Update()
 {
@@ -69,6 +78,7 @@ bool SceneInstance::Update()
         if (!actor || actor == central)
           continue;
         actor->SetPosition(central->GetPosition(), true);
+        actor->SetAngle(central->GetAngle());
         actor->Update3DPosition(true);
       }
     }
@@ -141,6 +151,7 @@ void SceneInstance::UnlockActors()
     }
 
     actor->AsActorState()->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+    actor->NotifyAnimationGraph("IdleStop");
     actor->SetGraphVariableBool("bHumanoidFootIKDisable", false);
   }
 }

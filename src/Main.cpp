@@ -1,7 +1,8 @@
+#include "Instance/Scale.h"
 #include "Registry/SceneLoader.h"
 #include "Utils/Hooks.h"
 #include "Utils/Menu.h"
-#include "Utils/Scale.h"
+
 
 /*
 void APIMessageHandler(SKSE::MessagingInterface::Message* a_msg)
@@ -32,7 +33,7 @@ inline void onPostLoad()
 
 inline void onPostPostLoad()
 {
-  Scale::GetSingleton();
+  Instance::Scale::GetSingleton();
 }
 
 inline void onDataLoaded()
