@@ -178,6 +178,8 @@ void Menu::Debug()
   ImGuiMCP::Separator();
 
   ImGui::Button("AddActor"_h, [target]() {
+    if (!target)
+      return;
     actors.push_back(target);
   });
   ImGui::Button("ClearActors"_h, []() {
@@ -189,9 +191,7 @@ void Menu::Debug()
     auto scenes        = sceneManager.SearchScenes(actors);
     // Handle the scenes as needed
     logger::info("Found compact scenes: {}", scenes.size());
-    for (auto& scene : scenes) {
-      logger::info("{}", scene.get().verbose());
-    }
+    Instance::SceneManager::CreateInstance(actors, scenes);
   });
 }
 

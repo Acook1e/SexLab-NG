@@ -18,6 +18,8 @@ public:
   {}
 
   void SetEvents(std::vector<std::string> a_events) { events = std::move(a_events); }
+  [[nodiscard]] const std::vector<std::string>& GetEvents() const { return events; }
+
   void SetOffsets(std::vector<Offset> a_offsets) { offsets = std::move(a_offsets); }
   void SetSchlongAngles(std::vector<std::int8_t> a_schlongAngles) { schlongAngles = std::move(a_schlongAngles); }
   void SetStrips(std::vector<Strip> a_strips) { strips = std::move(a_strips); }

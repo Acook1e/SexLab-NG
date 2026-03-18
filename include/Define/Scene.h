@@ -27,6 +27,7 @@ public:
   bool IsCompact(Race::Type mask) { return races.all(mask); }
 
   void SetPositions(std::vector<Position> a_positions) { positions = std::move(a_positions); }
+  std::vector<Position>& GetPositions() { return positions; }
 
   bool IsGenderCompact(const std::vector<Gender>& actorGenders) const
   {

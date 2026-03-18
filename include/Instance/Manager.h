@@ -8,6 +8,15 @@ namespace Instance
 class SceneManager
 {
 public:
+  enum class SceneType : std::uint8_t
+  {
+    Normal     = 0,
+    LeadIn     = 1,
+    Aggressive = 2,
+
+    Total
+  };
+
   static SceneManager& GetSingleton()
   {
     static SceneManager singleton;
@@ -16,7 +25,8 @@ public:
 
   void AddAnimPack(Define::AnimPack animPack) { animPacks.push_back(std::move(animPack)); }
 
-  std::vector<std::reference_wrapper<Define::Scene>> SearchScenes(std::vector<RE::Actor*> actors)
+  std::vector<std::reference_wrapper<Define::Scene>> SearchScenes(std::vector<RE::Actor*> actors,
+                                                                  SceneType sceneType = SceneType::Normal)
   {
     for (auto* actor : actors)
       if (!actor)
@@ -53,14 +63,15 @@ public:
     return res;
   }
 
-  static void CreateInstance() {}
+  static std::uint64_t CreateInstance(std::vector<RE::Actor*> actors,
+                                      std::vector<std::reference_wrapper<Define::Scene>> scenes);
 
-  static void DestoryInstance(std::uint64_t id) {}
+  static void DestoryInstance(std::uint64_t id);
 
-  void UpdateScenes() {}
+  void UpdateScenes();
 
 private:
   std::vector<Define::AnimPack> animPacks;
-  std::unordered_map<std::uint64_t, SceneInstance> sceneInstances;
+  std::unordered_map<std::uint64_t, SceneInstance*> sceneInstances;
 };
 }  // namespace Instance

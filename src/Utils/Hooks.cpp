@@ -1,11 +1,18 @@
 #include "Utils/Hooks.h"
 
+#include "Instance/Manager.h"
+
 namespace Hooks
 {
 void MainUpdate::Update()
 {
   _Update();
   // Placeholder for main update logic
+  try {
+    Instance::SceneManager::GetSingleton().UpdateScenes();
+  } catch (const std::exception& e) {
+    logger::error("Error in MainUpdate: {}", e.what());
+  }
 }
 
 void PlayerUpdate::Update(RE::PlayerCharacter* a_this, float a_delta)
