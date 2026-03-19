@@ -11,69 +11,46 @@ class Scene
 public:
   enum Type : std::uint8_t
   {
-    Primary,
-    LeatIn,
+    LeadIn = 0,
+    Normal,
+    Aggressive,
+    Total
   };
 
-  Scene(const std::string& name, const std::string& event_prefix, const Furniture& furniture, const Race& races)
-      : name(name), event_prefix(event_prefix), furniture(furniture), races(races)
+  Scene(const std::string& name, const std::string& event_prefix, const Furniture& furniture, const Race& races,
+        Type type, const InteractTags& interactTags, std::vector<Position> positions)
+      : name(name), furniture(furniture), races(races), type(type), interactTags(interactTags),
+        positions(std::move(positions))
   {}
 
-  Scene(std::string&& name, std::string&& event_prefix, Furniture&& furniture, Race&& races)
-      : name(std::move(name)), event_prefix(std::move(event_prefix)), furniture(std::move(furniture)),
-        races(std::move(races))
+  Scene(std::string&& name, std::string&& event_prefix, Furniture&& furniture, Race&& races, Type type,
+        InteractTags&& interactTags, std::vector<Position>&& positions)
+      : name(std::move(name)), furniture(std::move(furniture)), races(std::move(races)), type(type),
+        interactTags(std::move(interactTags)), positions(std::move(positions))
   {}
 
-  bool IsCompact(Race::Type mask) { return races.all(mask); }
+  [[nodiscard]] const std::string& GetName() const { return name; }
+  [[nodiscard]] const Furniture& GetFurniture() const { return furniture; }
+  [[nodiscard]] const Race& GetRaces() const { return races; }
+  [[nodiscard]] const Type& GetType() const { return type; }
+  [[nodiscard]] const InteractTags& GetInteractTags() const { return interactTags; }
+  [[nodiscard]] const std::vector<Position>& GetPositions() const { return positions; }
 
-  void SetPositions(std::vector<Position> a_positions) { positions = std::move(a_positions); }
-  std::vector<Position>& GetPositions() { return positions; }
-
-  bool IsGenderCompact(const std::vector<Gender>& actorGenders) const
-  {
-    if (actorGenders.size() != positions.size())
-      return false;
-
-    std::vector<bool> used(positions.size(), false);
-    return MatchGender(actorGenders, used, 0);
-  }
-
-  std::string verbose()
+  [[nodiscard]] const std::string verbose() const
   {
     std::string res;
     res += "Scene: " + name + "\n";
-    res += "Races: " + std::to_string(races.GetMask()) + "\n";
+    res += "Races: " + std::to_string(races.Get()) + "\n";
+    res += "InteractTags: " + std::to_string(interactTags.Get()) + "\n";
     res += "Positions: " + std::to_string(positions.size()) + "\n";
-    for (auto& position : positions) {
+    for (const auto& position : positions) {
       res += position.verbose();
     }
     return res;
   }
 
 private:
-  bool MatchGender(const std::vector<Gender>& actorGenders, std::vector<bool>& used, std::size_t actorIndex) const
-  {
-    if (actorIndex >= actorGenders.size())
-      return true;
-
-    for (std::size_t i = 0; i < positions.size(); ++i) {
-      if (used[i])
-        continue;
-
-      if (!positions[i].GetGender().IsCompatible(actorGenders[actorIndex]))
-        continue;
-
-      used[i] = true;
-      if (MatchGender(actorGenders, used, actorIndex + 1))
-        return true;
-      used[i] = false;
-    }
-
-    return false;
-  }
-
   std::string name;
-  std::string event_prefix;
   Furniture furniture;
   Race races;
   Type type;

@@ -2,8 +2,74 @@
 
 namespace Instance
 {
-std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors,
-                                           std::vector<std::reference_wrapper<Define::Scene>> scenes)
+std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors,
+                                                             Define::Scene::Type sceneType)
+{
+  for (auto* actor : actors)
+    if (!actor)
+      return {};
+
+  std::vector<const Define::Scene*> res;
+
+  std::unordered_map<RE::Actor*, Define::Gender> genderMap;
+  std::unordered_map<RE::Actor*, Define::Race> raceMap;
+  for (auto* actor : actors) {
+    genderMap.emplace(actor, Define::Gender::GetGender(actor));
+    raceMap.emplace(actor, Define::Race::GetRace(actor));
+  }
+
+  std::uint64_t racesMask = 0;
+  for (auto& [_, race] : raceMap)
+    racesMask |= race.Get();
+
+  for (auto& animPack : animPacks) {
+    for (const auto& scene : animPack.GetScenes()) {
+      if (scene.GetType() != sceneType)
+        continue;
+
+      if (!(scene.GetRaces() >= Define::Race(racesMask)))
+        continue;
+
+      const auto& positions = scene.GetPositions();
+      if (positions.size() != actors.size())
+        continue;
+
+      std::vector<bool> positionAssigned(positions.size(), false);
+      bool allActorsMatched = true;
+      for (auto* actor : actors) {
+        const auto& actorRace   = raceMap.at(actor);
+        const auto& actorGender = genderMap.at(actor);
+
+        bool matched = false;
+        for (std::size_t i = 0; i < positions.size(); ++i) {
+          if (positionAssigned[i])
+            continue;
+
+          const auto& position = positions[i];
+          if (position.GetRace() == actorRace && position.GetGender() == actorGender) {
+            positionAssigned[i] = true;
+            matched             = true;
+            break;
+          }
+        }
+
+        if (!matched) {
+          allActorsMatched = false;
+          break;
+        }
+      }
+
+      if (!allActorsMatched)
+        continue;
+
+      res.push_back(&scene);
+    }
+  }
+
+  return res;
+}
+
+std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::vector<const Define::Scene*> scenes)
 {
   auto* instance =
       new SceneInstance(actors.front(), std::vector<RE::Actor*>(actors.begin() + 1, actors.end()), std::move(scenes));

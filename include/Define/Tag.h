@@ -5,7 +5,7 @@ namespace Define
 class InteractTags
 {
 public:
-  enum class Type : uint64_t
+  enum class Type : std::uint64_t
   {
     SixtyNine         = 1ULL << 0,
     Anal              = 1ULL << 1,
@@ -66,31 +66,16 @@ public:
     Oviposition = 1ULL << 54,
   };
 
-  InteractTags() = default;
+  InteractTags(Type tags) : tags(static_cast<std::uint64_t>(tags)) {}
+  InteractTags(std::uint64_t tags) : tags(tags) {}
 
-  template <typename E>
-  bool HasTag(E tag) const
-  {
-    if (std::is_same_v<Type, E>())
-      return slsbTags.all(tag);
-  }
+  [[nodiscard]] const std::uint64_t Get() const { return tags.to_ullong(); }
 
-  template <typename E>
-  void AddTag(E tag)
-  {
-    if (std::is_same_v<Type, E>())
-      slsbTags.set(tag, true);
-  }
-
-  template <typename E>
-  void RemoveTag(E tag)
-  {
-    if (std::is_same_v<Type, E>())
-      slsbTags.set(tag, false);
-  }
+  [[nodiscard]] bool operator==(const InteractTags& other) const { return tags == other.tags; }
+  [[nodiscard]] bool operator!=(const InteractTags& other) const { return tags != other.tags; }
 
 private:
-  REX::EnumSet<Type> slsbTags;
+  std::bitset<sizeof(Type) * CHAR_BIT> tags;
 };
 
 class ActorTags

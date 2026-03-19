@@ -24,7 +24,6 @@ bool LoadFromJson(const std::filesystem::path& path)
   std::string name        = path.stem().string();
   std::string author      = raw.value("author", "Unknown");
   std::string animPackTag = raw["pack_tag"];
-  Define::AnimPack pack(std::move(name), std::move(author), std::move(animPackTag));
 
   std::vector<Define::Scene> scenes;
   for (const auto& [scene_name, scene_data] : raw["scenes"].items()) {
@@ -49,15 +48,14 @@ bool LoadFromJson(const std::filesystem::path& path)
         break;
       }
       const auto& actor_data = scene_data["positions"][actor_key];
-      Define::Position p(actor_data.value("race", Define::Race::Type::Unknown),
-                         actor_data.value("gender", Define::Gender::Type::Unknown), 1.0f);
       std::vector<std::string> event;
       event.reserve(total_stages);
       for (auto j = 1; j <= total_stages; ++j) {
         event.push_back(event_prefix + "_A" + std::to_string(i) + "_S" + std::to_string(j));
       }
-      p.SetEvents(std::move(event));
-      positions.push_back(std::move(p));
+      positions.push_back(Define::Position(actor_data.value("race", Define::Race::Type::Unknown),
+                                           actor_data.value("gender", Define::Gender::Type::Unknown), 1.0f,
+                                           std::move(event)));
     }
 
     if (positions.empty()) {
@@ -65,13 +63,13 @@ bool LoadFromJson(const std::filesystem::path& path)
       continue;
     }
     Define::Scene scene =
-        Define::Scene(std::move(scene_name), std::move(event_prefix), std::move(furniture), std::move(races));
-    scene.SetPositions(std::move(positions));
+        Define::Scene(std::move(scene_name), std::move(event_prefix), std::move(furniture), std::move(races),
+                      Define::Scene::Type::Normal, Define::InteractTags(0), std::move(positions));
     // logger::info("{}", scene.verbose());
     scenes.push_back(std::move(scene));
   }
   logger::info("[SexLab NG] Loaded AnimPack {} with {} scenes", path.stem().string(), scenes.size());
-  pack.SetScenes(std::move(scenes));
+  Define::AnimPack pack(std::move(name), std::move(author), std::move(animPackTag), std::move(scenes));
   Instance::SceneManager::GetSingleton().AddAnimPack(std::move(pack));
   return true;
 }

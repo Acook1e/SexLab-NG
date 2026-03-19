@@ -65,19 +65,18 @@ public:
     Wolf             = 1ULL << 50
   };
 
-  Race(RE::Actor* actor) : type(GetRace(actor)) {}
-  Race(Type type) : type(type) {}
-  Race(std::uint64_t mask) : type(static_cast<Type>(mask)) {}
+  Race(RE::Actor* actor) : type(static_cast<std::uint64_t>(GetRace(actor))) {}
+  Race(Type type) : type(static_cast<std::uint64_t>(type)) {}
+  Race(std::uint64_t mask) : type(mask) {}
 
-  bool operator==(const Race& other) const { return type == other.type; }
-  bool operator!=(const Race& other) const { return !(*this == other); }
+  [[nodiscard]] const std::uint64_t Get() const { return type.to_ullong(); }
 
-  bool all(const Type& mask) { return type.all(mask); }
-  bool any(const Type& mask) { return type.any(mask); }
+  [[nodiscard]] bool operator==(const Race& other) const { return type == other.type; }
+  [[nodiscard]] bool operator!=(const Race& other) const { return type != other.type; }
+  [[nodiscard]] bool operator>=(const Race& other) const { return (type & other.type) == other.type; }
+  [[nodiscard]] bool operator<=(const Race& other) const { return (other.type & type) == type; }
 
-  std::uint64_t GetMask() const { return type.underlying(); }
-
-  static Type GetRace(RE::Actor* actor)
+  [[nodiscard]] static Type GetRace(RE::Actor* actor)
   {
     static std::unordered_map<std::string, Type> raceMap = {
         {"0_Master.hkx", Type::Human},
@@ -172,9 +171,9 @@ public:
     return res;
   }
 
-  static bool IsHuman(RE::Actor* actor) { return GetRace(actor) == Type::Human; }
+  [[nodiscard]] static bool IsHuman(RE::Actor* actor) { return GetRace(actor) == Type::Human; }
 
 private:
-  REX::EnumSet<Type> type;
+  std::bitset<sizeof(Type) * CHAR_BIT> type;
 };
 }  // namespace Define

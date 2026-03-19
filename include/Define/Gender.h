@@ -20,26 +20,12 @@ public:
   Gender(RE::Actor* actor) : type(GetGender(actor)) {}
   Gender(Type type) : type(type) {}
 
-  bool operator==(const Gender& other) const { return type == other.type; }
-  bool operator!=(const Gender& other) const { return !(*this == other); }
-  [[nodiscard]] Type GetType() const { return type; }
+  [[nodiscard]] bool operator==(const Gender& other) const { return type == other.type; }
+  [[nodiscard]] bool operator!=(const Gender& other) const { return type != other.type; }
 
-  [[nodiscard]] bool IsCompatible(const Gender& actual) const
-  {
-    if (type == Type::Unknown || actual.type == Type::Unknown)
-      return false;
+  [[nodiscard]] const Type& Get() const { return type; }
 
-    if (type == actual.type)
-      return true;
-
-    // Futa can fill female or male human roles.
-    if (actual.type == Type::Futa && (type == Type::Female || type == Type::Male))
-      return true;
-
-    return false;
-  }
-
-  static Type GetGender(RE::Actor* actor)
+  [[nodiscard]] static Type GetGender(RE::Actor* actor)
   {
     bool isFemale = actor->GetActorBase()->IsFemale();
     if (Race::IsHuman(actor)) {
@@ -48,7 +34,7 @@ public:
       return isFemale ? Type::CreatureFemale : Type::CreatureMale;
   }
 
-  static bool IsFuta(RE::Actor* actor)
+  [[nodiscard]] static bool IsFuta(RE::Actor* actor)
   {
 
     static const auto TNGKeyword = RE::TESForm::LookupByEditorID<RE::BGSKeyword>("TNG_SkinWithPenis");

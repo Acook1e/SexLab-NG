@@ -5,7 +5,7 @@
 namespace Instance
 {
 SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
-                             std::vector<std::reference_wrapper<Define::Scene>> scenes)
+                             std::vector<const Define::Scene*> scenes)
 {
   actors.reserve(participants.size() + 1);
   actors.push_back(central);
@@ -20,10 +20,10 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
     return;
   }
 
-  currentScene = &availableScenes[rand() % availableScenes.size()].get();
+  currentScene = availableScenes[rand() % availableScenes.size()];
   currentStage = 0;
 
-  auto& positions = currentScene->GetPositions();
+  const auto& positions = currentScene->GetPositions();
   std::vector<bool> actorAssigned(actors.size(), false);
   for (auto& position : positions) {
     for (std::size_t j = 0; j < actors.size(); ++j) {
@@ -34,7 +34,7 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
       if (position.GetRace() == Define::Race::GetRace(actor) &&
           position.GetGender() == Define::Gender::GetGender(actor)) {
         actorAssigned[j] = true;
-        actorInfoMap.emplace(actor, SceneActorInfo{Define::EnjoyDegree::NoFeeling, 0.0f, position});
+        actorInfoMap.emplace(actor, SceneActorInfo(Define::EnjoyDegree::NoFeeling, 0.0f, position));
         break;
       }
     }
@@ -222,7 +222,7 @@ bool SceneInstance::NextStage()
       return false;
     }
 
-    const auto& events = info.position.GetEvents();
+    const auto& events = info.position->GetEvents();
     if (currentStage > events.size() + 1) {
       return false;
     }
@@ -244,7 +244,7 @@ bool SceneInstance::PrevStage()
       return false;
     }
 
-    const auto& events = info.position.GetEvents();
+    const auto& events = info.position->GetEvents();
     if (currentStage > events.size() + 1) {
       return false;
     }
