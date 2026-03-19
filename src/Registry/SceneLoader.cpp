@@ -23,7 +23,7 @@ bool LoadFromJson(const std::filesystem::path& path)
 
   std::string name        = path.stem().string();
   std::string author      = raw.value("author", "Unknown");
-  std::string animPackTag = raw["pack_tag"];
+  std::string animPackTag = raw.value("pack_tag", "");
 
   std::vector<Define::Scene> scenes;
   for (const auto& [scene_name, scene_data] : raw["scenes"].items()) {
@@ -74,46 +74,22 @@ bool LoadFromJson(const std::filesystem::path& path)
   return true;
 }
 
-void SaveToBinary(const Define::AnimPack& pack, const std::filesystem::path& path)
-{
-  constexpr static std::uint8_t VERSION = 1;
-}
-
-bool LoadFromBinary(const std::filesystem::path& path)
-{
-  return false;
-}
-
 void LoadData()
 {
   constexpr static std::string_view dataPath = "Data/SKSE/Plugins/SexLabNG/Scenes";
 
-  std::set<std::string> names;
   if (std::filesystem::exists(dataPath)) {
     for (const auto& entry : std::filesystem::directory_iterator(dataPath))
-      if (entry.path().extension() == ".json" || entry.path().extension() == ".slng")
-        names.insert(entry.path().stem().string());
+      if (entry.path().extension() == ".json") {
+        try {
+          LoadFromJson(entry.path());
+        } catch (const std::exception& e) {
+          logger::error("[SexLab NG] Failed to load scene from file: {}: {}", entry.path().string(), e.what());
+        }
+      }
   } else {
     logger::warn("[SexLab NG] Scene data path does not exist: {}", dataPath);
     return;
-  }
-
-  for (const auto& name : names) {
-    try {
-      auto jsonPath = std::filesystem::path(dataPath) / (name + ".json");
-      auto binPath  = std::filesystem::path(dataPath) / (name + ".slng");
-      if (std::filesystem::exists(binPath)) {
-        if (!LoadFromBinary(binPath))
-          logger::warn("[SexLab NG] Failed to load AnimPack {} from binary, fallback to json", name);
-        logger::info("[SexLab NG] Fallback loaded AnimPack {} from json {}", name,
-                     LoadFromJson(jsonPath) ? "success" : "failed");
-      } else {
-        if (!LoadFromJson(jsonPath))
-          logger::warn("[SexLab NG] Failed to load AnimPack {} from json", name);
-      }
-    } catch (const std::exception& e) {
-      logger::error("[SexLab NG] Failed to load AnimPack {} data: {}", name, e.what());
-    }
   }
 }
 

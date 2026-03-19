@@ -71,6 +71,7 @@ std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Act
 
 std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::vector<const Define::Scene*> scenes)
 {
+  std::lock_guard<std::mutex> lock(mapMutex);
   auto* instance =
       new SceneInstance(actors.front(), std::vector<RE::Actor*>(actors.begin() + 1, actors.end()), std::move(scenes));
   std::uint64_t id = reinterpret_cast<std::uint64_t>(instance);
@@ -78,8 +79,9 @@ std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::
   return id;
 }
 
-void SceneManager::DestoryInstance(std::uint64_t id)
+void SceneManager::DestroyInstance(std::uint64_t id)
 {
+  std::lock_guard<std::mutex> lock(mapMutex);
   auto& sceneInstances = GetSingleton().sceneInstances;
   auto it              = sceneInstances.find(id);
   if (it != sceneInstances.end()) {
@@ -93,14 +95,6 @@ void SceneManager::UpdateScenes()
   if (sceneInstances.empty())
     return;
 
-  constexpr static std::uint64_t UPDATE_INTERVAL = 500;  // Update every 500 ms
-  static std::uint64_t lastUpdateTime            = 0;
-  std::uint64_t currentTime = GetCurrentTime();  // Implement this function to get current time in ms
-  if (currentTime - lastUpdateTime < UPDATE_INTERVAL) {
-    return;  // Not time to update yet
-  }
-  lastUpdateTime = currentTime;
-
   std::vector<std::uint64_t> endedScenes;
 
   // Update all active scenes
@@ -111,6 +105,6 @@ void SceneManager::UpdateScenes()
   }
 
   for (auto id : endedScenes)
-    DestoryInstance(id);
+    DestroyInstance(id);
 }
 }  // namespace Instance

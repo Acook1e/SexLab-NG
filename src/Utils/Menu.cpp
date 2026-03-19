@@ -169,6 +169,7 @@ void Menu::Debug()
     logger::warn("{}", e.what());
   }
 
+  // only for runtime testing, will be removed in the future
   static std::vector<RE::Actor*> actors{};
   ImGui::Text("CurrentTarget"_h, target ? target->GetDisplayFullName() : "");
   ImGui::Text("ChoosenActors:"_h);

@@ -17,7 +17,7 @@ public:
   std::vector<const Define::Scene*> SearchScenes(std::vector<RE::Actor*> actors,
                                                  Define::Scene::Type sceneType = Define::Scene::Type::Normal);
   static std::uint64_t CreateInstance(std::vector<RE::Actor*> actors, std::vector<const Define::Scene*> scenes);
-  static void DestoryInstance(std::uint64_t id);
+  static void DestroyInstance(std::uint64_t id);
 
   void UpdateScenes();
 
@@ -25,6 +25,8 @@ public:
 
 private:
   std::vector<Define::AnimPack> animPacks;
+
+  static inline std::mutex mapMutex;
   std::unordered_map<std::uint64_t, SceneInstance*> sceneInstances;
 };
 }  // namespace Instance

@@ -20,7 +20,9 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
     return;
   }
 
-  currentScene = availableScenes[rand() % availableScenes.size()];
+  static std::mt19937 rng(std::random_device{}());
+  std::uniform_int_distribution<std::size_t> dist(0, availableScenes.size() - 1);
+  currentScene = availableScenes[dist(rng)];
   currentStage = 0;
 
   const auto& positions = currentScene->GetPositions();
@@ -64,7 +66,7 @@ bool SceneInstance::Update()
 {
   constexpr std::uint64_t STAGE_LENGTH = 30 * 1000;  // Update every 30 seconds
 
-  const auto now = static_cast<std::uint64_t>(
+  const auto GetNow = static_cast<std::uint64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
           .count());
 
@@ -74,6 +76,9 @@ bool SceneInstance::Update()
     return false;
   };
 
+  auto now = GetNow;
+  // If the scene hasn't started yet, start it
+  // Process only once
   if (!currentStage) {
     if (actorInfoMap.empty() || !currentScene)
       return false;
@@ -92,19 +97,19 @@ bool SceneInstance::Update()
     }
 
     StripActors();
+    lastUpdateTime      = now;
+    lastStageUpdateTime = lastUpdateTime;
+    if (!NextStage())
+      return cleanupAndFinish();
+  }
+
+  // Real Update start from here
+  if (now - lastStageUpdateTime > STAGE_LENGTH) {
     lastStageUpdateTime = now;
     if (!NextStage())
       return cleanupAndFinish();
   }
 
-  if (now <= lastStageUpdateTime || now - lastStageUpdateTime < STAGE_LENGTH) {
-    return true;
-  }
-
-  if (!NextStage())
-    return cleanupAndFinish();
-
-  lastStageUpdateTime = now;
   return true;
 }
 
@@ -223,7 +228,7 @@ bool SceneInstance::NextStage()
     }
 
     const auto& events = info.position->GetEvents();
-    if (currentStage > events.size() + 1) {
+    if (currentStage > events.size()) {
       return false;
     }
 
@@ -245,7 +250,7 @@ bool SceneInstance::PrevStage()
     }
 
     const auto& events = info.position->GetEvents();
-    if (currentStage > events.size() + 1) {
+    if (currentStage > events.size()) {
       return false;
     }
 

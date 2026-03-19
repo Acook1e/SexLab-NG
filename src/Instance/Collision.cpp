@@ -7,9 +7,6 @@ void Collision::AddActor(RE::Actor* actor)
   if (!actor)
     return;
 
-  std::unique_lock<std::shared_mutex> lock(mtx);
-  actors.insert(actor);
-
   auto* controller = actor->GetCharController();
   if (!controller)
     return;
@@ -53,6 +50,9 @@ void Collision::AddActor(RE::Actor* actor)
       alignedGroundRotation->vec = {0.0f, 0.0f, 0.0f, 1.0f};
     }
   }
+
+  std::unique_lock<std::shared_mutex> lock(mtx);
+  actors.insert(actor);
 }
 
 void Collision::RemoveActor(RE::Actor* actor)
@@ -62,6 +62,7 @@ void Collision::RemoveActor(RE::Actor* actor)
 
   std::unique_lock<std::shared_mutex> lock(mtx);
   actors.erase(actor);
+  lock.unlock();
 
   // Enable Foot IK
   RE::BSAnimationGraphManagerPtr graphMgr;

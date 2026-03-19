@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Define/Enjoyment.h"
 #include "Define/Scene.h"
 
@@ -37,6 +39,7 @@ private:
   std::vector<const Define::Scene*> availableScenes;
   const Define::Scene* currentScene;
   std::uint32_t currentStage;
+  std::uint64_t lastUpdateTime      = 0;
   std::uint64_t lastStageUpdateTime = 0;
 
   std::vector<RE::Actor*> actors;
