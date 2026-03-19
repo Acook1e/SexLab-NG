@@ -38,14 +38,6 @@ bool* CollisionEnable::IsCollisionEnabled(RE::hkpCollidableCollidableFilter* a_t
     return a_result;
   }
 
-  static auto GetCollisionLayer = [](const RE::hkpCollidable* collidable) -> RE::COL_LAYER {
-    if (!collidable)
-      return RE::COL_LAYER::kUnidentified;
-
-    auto info = *reinterpret_cast<const std::uint32_t*>(&collidable->broadPhaseHandle.collisionFilterInfo);
-    return static_cast<RE::COL_LAYER>(info & 0x7F);
-  };
-
   static auto IsBipedCollisionLayer = [](RE::COL_LAYER layer) -> bool {
     return layer == RE::COL_LAYER::kBiped || layer == RE::COL_LAYER::kBipedNoCC ||
            layer == RE::COL_LAYER::kCharController || layer == RE::COL_LAYER::kDeadBip;
@@ -64,8 +56,8 @@ bool* CollisionEnable::IsCollisionEnabled(RE::hkpCollidableCollidableFilter* a_t
       return nullptr;
   };
 
-  if (!IsBipedCollisionLayer(GetCollisionLayer(a_collidableA)) ||
-      !IsBipedCollisionLayer(GetCollisionLayer(a_collidableB))) {
+  if (!IsBipedCollisionLayer(a_collidableA->GetCollisionLayer()) ||
+      !IsBipedCollisionLayer(a_collidableB->GetCollisionLayer())) {
     return a_result;
   }
 
@@ -88,16 +80,12 @@ bool* CollisionEnable::IsCollisionEnabled(RE::hkpCollidableCollidableFilter* a_t
 
 void ApplyMovement::ApplyMovementDelta(RE::Actor* a_actor, float a_delta)
 {
-  _ApplyMovementDelta(a_actor, a_delta);
-
-  if (!a_actor)
-    return;
-
-  if (auto* process = a_actor->GetMiddleHighProcess(); process && process->charController) {
-    if (auto* controller = process->charController.get(); Instance::Collision::GetSingleton().HasActor(a_actor)) {
+  if (a_actor && Instance::Collision::GetSingleton().HasActor(a_actor))
+    if (auto* controller = a_actor->GetCharController(); controller) {
       Instance::Collision::ConfigureControllerForScene(controller);
       return;
     }
-  }
+
+  _ApplyMovementDelta(a_actor, a_delta);
 }
 }  // namespace Hooks

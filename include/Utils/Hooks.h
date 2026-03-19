@@ -72,7 +72,7 @@ public:
 
     // TODO: Find VR address
     REL::Relocation<uintptr_t> addr{REL::VariantID(36359, 37350, 0x0), REL::VariantOffset(0xF0, 0xFB, 0x0)};
-    _ApplyMovementDelta = addr.write_vfunc(0xB2, ApplyMovementDelta);
+    _ApplyMovementDelta = trampoline.write_call<5>(addr.address(), ApplyMovementDelta);
   }
 
 private:
@@ -80,12 +80,14 @@ private:
   static inline REL::Relocation<decltype(ApplyMovementDelta)> _ApplyMovementDelta;
 };
 
-void inline Install()
+inline void Install()
 {
   MainUpdate::Install();
   PlayerUpdate::Install();
   NPCUpdate::Install();
   CollisionEnable::Install();
+#if !defined(SKYRIMVR)
   ApplyMovement::Install();
+#endif
 }
 }  // namespace Hooks

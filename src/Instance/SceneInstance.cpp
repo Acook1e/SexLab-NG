@@ -24,27 +24,40 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
   currentStage = 0;
 
   auto& positions = currentScene->GetPositions();
-  std::vector<bool> used(positions.size(), false);
-  for (auto i = 0; i < positions.size(); ++i) {
-    for (auto j = 0; j < actors.size(); ++j) {
-      if (used[i])
+  std::vector<bool> actorAssigned(actors.size(), false);
+  for (auto& position : positions) {
+    for (std::size_t j = 0; j < actors.size(); ++j) {
+      auto* actor = actors[j];
+      if (!actor || actorAssigned[j])
         continue;
-      if (positions[i].GetRace() == Define::Race::GetRace(actors[j]) &&
-          positions[i].GetGender() == Define::Gender::GetGender(actors[j])) {
-        used[i] = true;
-        actorInfoMap.emplace(actors[j], SceneActorInfo{Define::EnjoyDegree::NoFeeling, 0.0f, positions[i]});
+
+      if (position.GetRace() == Define::Race::GetRace(actor) &&
+          position.GetGender() == Define::Gender::GetGender(actor)) {
+        actorAssigned[j] = true;
+        actorInfoMap.emplace(actor, SceneActorInfo{Define::EnjoyDegree::NoFeeling, 0.0f, position});
+        break;
       }
     }
   }
 
-  for (auto* actor : actors)
+  for (auto* actor : actors) {
+    if (!actor)
+      continue;
+    if (actorInfoMap.find(actor) == actorInfoMap.end())
+      continue;
     Collision::GetSingleton().AddActor(actor);
+  }
 }
 
 SceneInstance::~SceneInstance()
 {
-  for (auto* actor : actors)
+  for (auto* actor : actors) {
+    if (!actor)
+      continue;
+    if (actorInfoMap.find(actor) == actorInfoMap.end())
+      continue;
     Collision::GetSingleton().RemoveActor(actor);
+  }
 }
 
 bool SceneInstance::Update()
@@ -61,20 +74,15 @@ bool SceneInstance::Update()
     return false;
   };
 
-  if (!currentScene) {
-    return cleanupAndFinish();
-  }
-
   if (!currentStage) {
-    if (actorInfoMap.empty()) {
+    if (actorInfoMap.empty() || !currentScene)
       return false;
-    }
 
     LockActors();
 
     if (!actors.empty() && actors.front()) {
       auto* central = actors.front();
-      for (auto* actor : actors) {
+      for (const auto& [actor, _] : actorInfoMap) {
         if (!actor || actor == central)
           continue;
         actor->SetPosition(central->GetPosition(), true);
@@ -84,15 +92,17 @@ bool SceneInstance::Update()
     }
 
     StripActors();
+    lastStageUpdateTime = now;
+    if (!NextStage())
+      return cleanupAndFinish();
   }
 
   if (now <= lastStageUpdateTime || now - lastStageUpdateTime < STAGE_LENGTH) {
     return true;
   }
 
-  if (!NextStage()) {
+  if (!NextStage())
     return cleanupAndFinish();
-  }
 
   lastStageUpdateTime = now;
   return true;
@@ -101,14 +111,14 @@ bool SceneInstance::Update()
 void SceneInstance::LockActors()
 {
   for (auto* actor : actors) {
-    if (!actor)
-      return;
+    if (!actor || actorInfoMap.find(actor) == actorInfoMap.end())
+      continue;
 
     if (actor->IsPlayerRef()) {
       RE::PlayerCharacter::GetSingleton()->SetAIDriven(true);
-      actor->AsActorState()->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+      actor->SetLifeState(RE::ACTOR_LIFE_STATE::kAlive);
     } else {
-      actor->AsActorState()->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kRestrained;
+      actor->SetLifeState(RE::ACTOR_LIFE_STATE::kRestrained);
       actor->SetGraphVariableInt("IsNPC", 0);
     }
 
@@ -141,8 +151,8 @@ void SceneInstance::LockActors()
 void SceneInstance::UnlockActors()
 {
   for (auto* actor : actors) {
-    if (!actor)
-      return;
+    if (!actor || actorInfoMap.find(actor) == actorInfoMap.end())
+      continue;
 
     if (actor->IsPlayerRef()) {
       RE::PlayerCharacter::GetSingleton()->SetAIDriven(false);
@@ -150,7 +160,7 @@ void SceneInstance::UnlockActors()
       actor->SetGraphVariableInt("IsNPC", 1);
     }
 
-    actor->AsActorState()->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+    actor->SetLifeState(RE::ACTOR_LIFE_STATE::kAlive);
     actor->NotifyAnimationGraph("IdleStop");
     actor->SetGraphVariableBool("bHumanoidFootIKDisable", false);
   }
@@ -165,7 +175,7 @@ void SceneInstance::StripActors()
 
   for (auto* actor : actors) {
     if (!actor)
-      return;
+      continue;
 
     auto it = actorInfoMap.find(actor);
     if (it == actorInfoMap.end())
@@ -189,7 +199,7 @@ void SceneInstance::DressActors()
 
   for (auto* actor : actors) {
     if (!actor)
-      return;
+      continue;
 
     auto it = actorInfoMap.find(actor);
     if (it == actorInfoMap.end())
