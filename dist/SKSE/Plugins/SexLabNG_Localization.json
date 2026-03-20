@@ -23,6 +23,10 @@
         "label": "Current Target: {}",
         "desc": ""
     },
+    "CurrentSceneID": {
+        "label": "Current Scene ID: {}",
+        "desc": ""
+    },
     "ChoosenActors:": {
         "label": "Choosen Actors:",
         "desc": ""
@@ -38,5 +42,9 @@
     "CreateScene": {
         "label": "Create Scene",
         "desc": "Create a new scene with the selected actors"
+    },
+    "DestroyScene": {
+        "label": "Destroy Scene",
+        "desc": "Destroy the created scene"
     }
 }

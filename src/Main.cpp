@@ -2,7 +2,7 @@
 #include "Registry/SceneLoader.h"
 #include "Utils/Hooks.h"
 #include "Utils/Menu.h"
-
+#include "Utils/Serialization.h"
 
 /*
 void APIMessageHandler(SKSE::MessagingInterface::Message* a_msg)
@@ -77,6 +77,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
   if (!messaging->RegisterListener(MessageHandler)) {
     return false;
   }
+
+  // Initialize serialization system
+  Serialization::Initialize();
 
   // 注册 Papyrus Native 函数
   auto* papyrus = SKSE::GetPapyrusInterface();

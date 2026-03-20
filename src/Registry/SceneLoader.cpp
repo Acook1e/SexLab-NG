@@ -76,6 +76,8 @@ bool LoadFromJson(const std::filesystem::path& path)
 
 void LoadData()
 {
+  ScopeTimer timer("SceneLoader::LoadData");
+
   constexpr static std::string_view dataPath = "Data/SKSE/Plugins/SexLabNG/Scenes";
 
   if (std::filesystem::exists(dataPath)) {

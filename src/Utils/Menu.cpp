@@ -1,6 +1,7 @@
 #include "Utils/Menu.h"
 
 #include "Instance/Manager.h"
+#include "Utils/Serialization.h"
 
 #include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
@@ -156,6 +157,8 @@ void Combo(std::uint32_t hash, T* current_item, std::function<void()> onChange =
 
 void Menu::Settings() {}
 
+static std::vector<RE::Actor*> debugActors{};
+static std::uint64_t debugSceneId = 0;
 void Menu::Debug()
 {
   auto cross        = RE::CrosshairPickData::GetSingleton();
@@ -170,10 +173,10 @@ void Menu::Debug()
   }
 
   // only for runtime testing, will be removed in the future
-  static std::vector<RE::Actor*> actors{};
   ImGui::Text("CurrentTarget"_h, target ? target->GetDisplayFullName() : "");
+  ImGui::Text("CurrentSceneID"_h, std::format("{}", debugSceneId).data());
   ImGui::Text("ChoosenActors:"_h);
-  for (auto* actor : actors)
+  for (auto* actor : debugActors)
     ImGuiMCP::Text(std::format("{}", actor->GetDisplayFullName()).data());
 
   ImGuiMCP::Separator();
@@ -181,18 +184,25 @@ void Menu::Debug()
   ImGui::Button("AddActor"_h, [target]() {
     if (!target)
       return;
-    actors.push_back(target);
+    if (std::find(debugActors.begin(), debugActors.end(), target) == debugActors.end())
+      debugActors.push_back(target);
   });
   ImGui::Button("ClearActors"_h, []() {
-    actors.clear();
+    debugActors.clear();
   });
   ImGui::Button("CreateScene"_h, []() {
     // TODO
     auto& sceneManager = Instance::SceneManager::GetSingleton();
-    auto scenes        = sceneManager.SearchScenes(actors);
+    auto scenes        = sceneManager.SearchScenes(debugActors);
     // Handle the scenes as needed
-    logger::info("Found compact scenes: {}", scenes.size());
-    Instance::SceneManager::CreateInstance(actors, scenes);
+    logger::info("Found compatible scenes: {}", scenes.size());
+    debugSceneId = Instance::SceneManager::CreateInstance(debugActors, scenes);
+  });
+  ImGui::Button("DestroyScene"_h, []() {
+    if (debugSceneId == 0)
+      return;
+    Instance::SceneManager::DestroyInstance(debugSceneId);
+    debugSceneId = 0;
   });
 }
 
@@ -222,6 +232,13 @@ Menu::Menu()
 
   ImGui::AddSectionItem("Settings"_h, Settings);
   ImGui::AddSectionItem("Debug"_h, Debug);
+
+  constexpr std::uint32_t RevertType = 'MDBG';  // Menu Debug
+  if (!Serialization::RegisterRevertCallback(RevertType, [](SKSE::SerializationInterface* serial) {
+        debugActors.clear();
+        debugSceneId = 0;
+      }))
+    logger::error("[SexLab NG] Failed to register serialization revert callback for Menu Debug.");
 
   // priority should be a individual value for each mod, here is nexus id of this mod
   event = new SKSEMenuFramework::Model::Event(EventListener, static_cast<float>(MOD));

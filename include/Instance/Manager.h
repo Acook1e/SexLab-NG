@@ -27,6 +27,6 @@ private:
   std::vector<Define::AnimPack> animPacks;
 
   static inline std::mutex mapMutex;
-  std::unordered_map<std::uint64_t, SceneInstance*> sceneInstances;
+  static inline std::unordered_map<std::uint64_t, SceneInstance> sceneInstances;
 };
 }  // namespace Instance

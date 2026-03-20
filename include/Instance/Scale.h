@@ -29,16 +29,7 @@ public:
       logger::critical("[SexLab NG] Scale : Couldn't get NiTransformInterface!");
       return;
     }
-    interfaceMap = msg.interfaceMap;
     logger::info("[SexLab NG] Scale : Successfully obtained NiTransformInterface!");
-  }
-
-  ~Scale()
-  {
-    if (interfaceMap && transformInterface) {
-      interfaceMap->RemoveInterface("NiTransform");
-      logger::info("[SexLab NG] Scale : NiTransformInterface removed.");
-    }
   }
 
   static float CalculateScale(RE::Actor* actor)
@@ -92,8 +83,6 @@ public:
 
 private:
   constexpr static inline std::string_view baseNode = "NPC";
-
-  SKEE::IInterfaceMap* interfaceMap               = nullptr;
-  SKEE::INiTransformInterface* transformInterface = nullptr;
+  SKEE::INiTransformInterface* transformInterface   = nullptr;
 };
 }  // namespace Instance

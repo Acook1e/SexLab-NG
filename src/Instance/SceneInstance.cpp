@@ -53,6 +53,9 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
 
 SceneInstance::~SceneInstance()
 {
+  DressActors();
+  UnlockActors();
+
   for (auto* actor : actors) {
     if (!actor)
       continue;
@@ -66,17 +69,11 @@ bool SceneInstance::Update()
 {
   constexpr std::uint64_t STAGE_LENGTH = 30 * 1000;  // Update every 30 seconds
 
-  const auto GetNow = static_cast<std::uint64_t>(
+  const auto Now = static_cast<std::uint64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
           .count());
 
-  auto cleanupAndFinish = [this]() {
-    DressActors();
-    UnlockActors();
-    return false;
-  };
-
-  auto now = GetNow;
+  auto now = Now;
   // If the scene hasn't started yet, start it
   // Process only once
   if (!currentStage) {
@@ -99,15 +96,13 @@ bool SceneInstance::Update()
     StripActors();
     lastUpdateTime      = now;
     lastStageUpdateTime = lastUpdateTime;
-    if (!NextStage())
-      return cleanupAndFinish();
+    return NextStage();
   }
 
   // Real Update start from here
   if (now - lastStageUpdateTime > STAGE_LENGTH) {
     lastStageUpdateTime = now;
-    if (!NextStage())
-      return cleanupAndFinish();
+    return NextStage();
   }
 
   return true;

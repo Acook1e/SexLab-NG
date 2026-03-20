@@ -5,6 +5,8 @@ namespace Instance
 std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors,
                                                              Define::Scene::Type sceneType)
 {
+  ScopeTimer timer("SceneManager::SearchScenes");
+
   for (auto* actor : actors)
     if (!actor)
       return {};
@@ -72,39 +74,30 @@ std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Act
 std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::vector<const Define::Scene*> scenes)
 {
   std::lock_guard<std::mutex> lock(mapMutex);
-  auto* instance =
-      new SceneInstance(actors.front(), std::vector<RE::Actor*>(actors.begin() + 1, actors.end()), std::move(scenes));
-  std::uint64_t id = reinterpret_cast<std::uint64_t>(instance);
-  GetSingleton().sceneInstances.emplace(id, instance);
+  static std::mt19937_64 rng{std::random_device{}()};
+  std::uint64_t id;
+  do
+    id = rng();
+  while (id == 0 || sceneInstances.contains(id));  // 0 is reserved for invalid ID
+  sceneInstances.try_emplace(id, actors.front(), std::vector<RE::Actor*>(actors.begin() + 1, actors.end()),
+                             std::move(scenes));
   return id;
 }
 
 void SceneManager::DestroyInstance(std::uint64_t id)
 {
   std::lock_guard<std::mutex> lock(mapMutex);
-  auto& sceneInstances = GetSingleton().sceneInstances;
-  auto it              = sceneInstances.find(id);
-  if (it != sceneInstances.end()) {
-    delete it->second;
-    sceneInstances.erase(it);
-  }
+  sceneInstances.erase(id);
 }
 
 void SceneManager::UpdateScenes()
 {
-  if (sceneInstances.empty())
-    return;
-
-  std::vector<std::uint64_t> endedScenes;
-
-  // Update all active scenes
-  for (auto& [id, scene] : sceneInstances) {
-    if (!scene || !scene->Update()) {
-      endedScenes.push_back(id);
-    }
+  std::lock_guard<std::mutex> lock(mapMutex);
+  for (auto it = sceneInstances.begin(); it != sceneInstances.end();) {
+    if (!it->second.Update())
+      it = sceneInstances.erase(it);
+    else
+      ++it;
   }
-
-  for (auto id : endedScenes)
-    DestroyInstance(id);
 }
 }  // namespace Instance

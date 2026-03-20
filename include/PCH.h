@@ -46,3 +46,20 @@ constexpr std::uint32_t operator""_h(const char* str, size_t size) noexcept
 }
 
 namespace logger = SKSE::log;
+
+class ScopeTimer
+{
+public:
+  ScopeTimer(std::string_view a_name) : name(a_name), start(std::chrono::high_resolution_clock::now()) {}
+
+  ~ScopeTimer()
+  {
+    auto end      = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    logger::info("{} took {} ms", name, duration);
+  }
+
+private:
+  std::string_view name;
+  std::chrono::high_resolution_clock::time_point start;
+};
