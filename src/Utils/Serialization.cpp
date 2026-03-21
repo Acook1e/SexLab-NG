@@ -2,9 +2,9 @@
 
 namespace Serialization
 {
-std::unordered_map<std::uint32_t, Callback> saveCallbacks;
-std::unordered_map<std::uint32_t, Callback> loadCallbacks;
-std::unordered_map<std::uint32_t, Callback> revertCallbacks;
+static std::unordered_map<std::uint32_t, Callback> saveCallbacks;
+static std::unordered_map<std::uint32_t, Callback> loadCallbacks;
+static std::unordered_map<std::uint32_t, Callback> revertCallbacks;
 
 void Initialize()
 {

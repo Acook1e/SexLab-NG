@@ -11,26 +11,28 @@ class Position
 public:
   using Offset = std::array<float, 4>;
 
-  Position(const Race& race, const Gender& gender, const float& scale, const std::vector<std::string>& events)
-      : race(race), gender(gender), scale(scale), events(events)
+  Position(const Race& race, const Gender& gender, const float& scale, const std::vector<std::string>& events,
+           std::vector<Offset> offsets, std::vector<std::int8_t> schlongAngles, std::vector<StageStrip> strips)
+      : race(race), gender(gender), scale(scale), events(events), offsets(offsets), schlongAngles(schlongAngles),
+        strips(strips)
   {}
-  Position(Race&& race, Gender&& gender, float&& scale, std::vector<std::string>&& events)
-      : race(std::move(race)), gender(std::move(gender)), scale(std::move(scale)), events(std::move(events))
+  Position(Race&& race, Gender&& gender, float&& scale, std::vector<std::string>&& events,
+           std::vector<Offset>&& offsets, std::vector<std::int8_t>&& schlongAngles, std::vector<StageStrip>&& strips)
+      : race(std::move(race)), gender(std::move(gender)), scale(std::move(scale)), events(std::move(events)),
+        offsets(std::move(offsets)), schlongAngles(std::move(schlongAngles)), strips(std::move(strips))
   {}
 
   [[nodiscard]] const Race& GetRace() const { return race; }
   [[nodiscard]] const Gender& GetGender() const { return gender; }
   [[nodiscard]] const float& GetScale() const { return scale; }
   [[nodiscard]] const std::vector<std::string>& GetEvents() const { return events; }
+  [[nodiscard]] std::vector<Offset>& GetOffsets() { return offsets; }
+  [[nodiscard]] std::vector<std::int8_t>& GetSchlongAngles() { return schlongAngles; }
+  [[nodiscard]] std::vector<StageStrip>& GetStrips() { return strips; }
 
-  [[nodiscard]] const std::vector<Offset>& GetOffsets() const { return offsets; }
-  void SetOffsets(std::vector<Offset> a_offsets) { offsets = std::move(a_offsets); }
-
-  [[nodiscard]] const std::vector<std::int8_t>& GetSchlongAngles() const { return schlongAngles; }
-  void SetSchlongAngles(std::vector<std::int8_t> a_schlongAngles) { schlongAngles = std::move(a_schlongAngles); }
-
-  [[nodiscard]] const std::vector<StageStrip>& GetStrips() const { return strips; }
-  void SetStrips(std::vector<StageStrip> a_strips) { strips = std::move(a_strips); }
+  void SetOffset(Offset offset, std::size_t idx) { offsets[idx] = offset; }
+  void SetSchlongAngle(std::int8_t angle, std::size_t idx) { schlongAngles[idx] = angle; }
+  void SetStrip(StageStrip strip, std::size_t idx) { strips[idx] = strip; }
 
   [[nodiscard]] const std::string verbose() const
   {

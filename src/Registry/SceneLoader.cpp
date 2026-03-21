@@ -48,14 +48,20 @@ bool LoadFromJson(const std::filesystem::path& path)
         break;
       }
       const auto& actor_data = scene_data["positions"][actor_key];
-      std::vector<std::string> event;
-      event.reserve(total_stages);
+      std::vector<std::string> events;
+      // TODO: Load offsets, schlong angles and strips from json
+      std::vector<Define::Position::Offset> offsets(total_stages, Define::Position::Offset{0.0f, 0.0f, 0.0f, 0.0f});
+      std::vector<std::int8_t> schlongAngles(total_stages, 0);
+      std::vector<Define::StageStrip> strips(total_stages, Define::StageStrip::Type::None);
+      events.reserve(total_stages);
       for (auto j = 1; j <= total_stages; ++j) {
-        event.push_back(event_prefix + "_A" + std::to_string(i) + "_S" + std::to_string(j));
+        events.push_back(event_prefix + "_A" + std::to_string(i) + "_S" + std::to_string(j));
       }
-      positions.push_back(Define::Position(actor_data.value("race", Define::Race::Type::Unknown),
-                                           actor_data.value("gender", Define::Gender::Type::Unknown), 1.0f,
-                                           std::move(event)));
+      auto position =
+          Define::Position(actor_data.value("race", Define::Race::Type::Unknown),
+                           actor_data.value("gender", Define::Gender::Type::Unknown), 1.0f, std::move(events),
+                           std::move(offsets), std::move(schlongAngles), std::move(strips));
+      positions.push_back(std::move(position));
     }
 
     if (positions.empty()) {

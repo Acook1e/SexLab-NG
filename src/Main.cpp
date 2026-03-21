@@ -4,27 +4,8 @@
 #include "Utils/Menu.h"
 #include "Utils/Serialization.h"
 
-/*
-void APIMessageHandler(SKSE::MessagingInterface::Message* a_msg)
-{
-  if (a_msg->type == InflationFrameworkAPI::InterfaceExchangeMessage::kExchangeInterface) {
-    auto* msg = static_cast<InflationFrameworkAPI::InterfaceExchangeMessage*>(a_msg->data);
-    if (msg) {
-      msg->interfacePtr = InflationFrameworkAPI::InflationFrameworkInterfaceImpl::GetSingleton();
-      logger::info("[InflationFramework] API interface dispatched to {}", a_msg->sender ? a_msg->sender : "unknown");
-    }
-  }
-}
-*/
-
-// =========================================================================
-//  生命周期
-// =========================================================================
-
 inline void onPostLoad()
 {
-  Registry::SceneLoader::LoadData();
-  // 注册为消息监听器, 接收其他 DLL 的 API 请求
   auto* messaging = SKSE::GetMessagingInterface();
   if (messaging) {
     // messaging->RegisterListener("SexLab", APIMessageHandler);
@@ -80,6 +61,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
 
   // Initialize serialization system
   Serialization::Initialize();
+
+  // Load scene data
+  Registry::SceneLoader::LoadData();
 
   // 注册 Papyrus Native 函数
   auto* papyrus = SKSE::GetPapyrusInterface();

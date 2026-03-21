@@ -19,7 +19,7 @@ public:
   [[nodiscard]] const std::string& GetName() const { return name; }
   [[nodiscard]] const std::string& GetAuthor() const { return author; }
   [[nodiscard]] const std::string& GetAnimPackTag() const { return animPackTag; }
-  [[nodiscard]] const std::vector<Scene>& GetScenes() const { return scenes; }
+  [[nodiscard]] std::vector<Scene>& GetScenes() { return scenes; }
 
   [[nodiscard]] const std::string verbose() const
   {

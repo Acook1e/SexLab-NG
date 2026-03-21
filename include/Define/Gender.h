@@ -25,10 +25,12 @@ public:
 
   [[nodiscard]] const Type& Get() const { return type; }
 
+  [[nodiscard]] bool HasPenis() const { return type == Type::Male || type == Type::Futa || type == Type::CreatureMale; }
+
   [[nodiscard]] static Type GetGender(RE::Actor* actor)
   {
     bool isFemale = actor->GetActorBase()->IsFemale();
-    if (Race::IsHuman(actor)) {
+    if (Define::Race(actor).IsHuman()) {
       return isFemale ? (IsFuta(actor) ? Type::Futa : Type::Female) : Type::Male;
     } else
       return isFemale ? Type::CreatureFemale : Type::CreatureMale;

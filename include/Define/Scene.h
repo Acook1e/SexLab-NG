@@ -34,7 +34,7 @@ public:
   [[nodiscard]] const Race& GetRaces() const { return races; }
   [[nodiscard]] const Type& GetType() const { return type; }
   [[nodiscard]] const InteractTags& GetInteractTags() const { return interactTags; }
-  [[nodiscard]] const std::vector<Position>& GetPositions() const { return positions; }
+  [[nodiscard]] std::vector<Position>& GetPositions() { return positions; }
 
   [[nodiscard]] const std::string verbose() const
   {

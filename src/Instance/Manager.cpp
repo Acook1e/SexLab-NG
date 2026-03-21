@@ -2,8 +2,7 @@
 
 namespace Instance
 {
-std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors,
-                                                             Define::Scene::Type sceneType)
+std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors, Define::Scene::Type sceneType)
 {
   ScopeTimer timer("SceneManager::SearchScenes");
 
@@ -11,7 +10,7 @@ std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Act
     if (!actor)
       return {};
 
-  std::vector<const Define::Scene*> res;
+  std::vector<Define::Scene*> res;
 
   std::unordered_map<RE::Actor*, Define::Gender> genderMap;
   std::unordered_map<RE::Actor*, Define::Race> raceMap;
@@ -25,14 +24,14 @@ std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Act
     racesMask |= race.Get();
 
   for (auto& animPack : animPacks) {
-    for (const auto& scene : animPack.GetScenes()) {
+    for (auto& scene : animPack.GetScenes()) {
       if (scene.GetType() != sceneType)
         continue;
 
       if (!(scene.GetRaces() >= Define::Race(racesMask)))
         continue;
 
-      const auto& positions = scene.GetPositions();
+      auto& positions = scene.GetPositions();
       if (positions.size() != actors.size())
         continue;
 
@@ -71,7 +70,7 @@ std::vector<const Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Act
   return res;
 }
 
-std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::vector<const Define::Scene*> scenes)
+std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::vector<Define::Scene*> scenes)
 {
   std::lock_guard<std::mutex> lock(mapMutex);
   static std::mt19937_64 rng{std::random_device{}()};

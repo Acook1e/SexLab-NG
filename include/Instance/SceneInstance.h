@@ -12,32 +12,33 @@ public:
   {
     Define::EnjoyDegree degree;
     float enjoyment;
-    const Define::Position* position;
+    Define::Position* position;
     std::vector<RE::TESBoundObject*> strippedItems;
 
-    SceneActorInfo(Define::EnjoyDegree degree, float enjoyment, const Define::Position& position)
+    SceneActorInfo(Define::EnjoyDegree degree, float enjoyment, Define::Position& position)
         : degree(degree), enjoyment(enjoyment), position(&position)
     {}
   };
 
-  explicit SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
-                         std::vector<const Define::Scene*> scenes);
+  explicit SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants, std::vector<Define::Scene*> scenes);
   ~SceneInstance();
 
   bool Update();
 
   void LockActors();
+  void StripActors();
+  void ReadyActors();
+
+  void ResetActors();
+  void DressActors();
   void UnlockActors();
 
-  void StripActors();
-  void DressActors();
-
-  bool NextStage();
-  bool PrevStage();
+  Define::Scene* GetCurrentScene() const;
+  bool SetStage(std::uint32_t stage);
 
 private:
-  std::vector<const Define::Scene*> availableScenes;
-  const Define::Scene* currentScene;
+  std::vector<Define::Scene*> availableScenes;
+  std::size_t currentScene;
   std::uint32_t currentStage;
   std::uint64_t lastUpdateTime      = 0;
   std::uint64_t lastStageUpdateTime = 0;
