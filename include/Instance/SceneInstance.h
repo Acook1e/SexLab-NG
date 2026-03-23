@@ -10,14 +10,11 @@ class SceneInstance
 public:
   struct SceneActorInfo
   {
-    Define::EnjoyDegree degree;
-    float enjoyment;
     Define::Position* position;
-    std::vector<RE::TESBoundObject*> strippedItems;
+    Define::Enjoyment enjoy{};
+    std::vector<RE::TESBoundObject*> strippedItems{};
 
-    SceneActorInfo(Define::EnjoyDegree degree, float enjoyment, Define::Position& position)
-        : degree(degree), enjoyment(enjoyment), position(&position)
-    {}
+    SceneActorInfo(Define::Position* position) : position(position) {}
   };
 
   explicit SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants, std::vector<Define::Scene*> scenes);

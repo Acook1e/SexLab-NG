@@ -1,5 +1,6 @@
 #include "Instance/Scale.h"
 #include "Registry/SceneLoader.h"
+#include "Registry/Stat.h"
 #include "Utils/Hooks.h"
 #include "Utils/Menu.h"
 #include "Utils/Serialization.h"
@@ -15,6 +16,7 @@ inline void onPostLoad()
 inline void onPostPostLoad()
 {
   Instance::Scale::GetSingleton();
+  Registry::ActorStat::GetSingleton();
 }
 
 inline void onDataLoaded()

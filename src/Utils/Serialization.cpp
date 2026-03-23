@@ -6,10 +6,10 @@ static std::unordered_map<std::uint32_t, Callback> saveCallbacks;
 static std::unordered_map<std::uint32_t, Callback> loadCallbacks;
 static std::unordered_map<std::uint32_t, Callback> revertCallbacks;
 
+constexpr static std::uint32_t SerializationVersion = 1;
+
 void Initialize()
 {
-  constexpr static std::uint32_t SerializationVersion = 1;
-
   auto* serial = SKSE::GetSerializationInterface();
   serial->SetUniqueID(MOD);
   serial->SetSaveCallback([](SKSE::SerializationInterface* serial) {
@@ -39,6 +39,11 @@ void Initialize()
     for (const auto& [type, callback] : revertCallbacks)
       callback(serial);
   });
+}
+
+std::uint32_t GetVersion()
+{
+  return SerializationVersion;
 }
 
 bool RegisterSaveCallback(std::uint32_t type, Callback callback)

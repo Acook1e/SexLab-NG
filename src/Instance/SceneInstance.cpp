@@ -36,7 +36,7 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
       if (position.GetRace() == Define::Race::GetRace(actor) &&
           position.GetGender() == Define::Gender::GetGender(actor)) {
         actorAssigned[j] = true;
-        actorInfoMap.emplace(actor, SceneActorInfo(Define::EnjoyDegree::NoFeeling, 0.0f, position));
+        actorInfoMap.emplace(actor, SceneActorInfo(&position));
         break;
       }
     }
