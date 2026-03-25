@@ -91,6 +91,10 @@ namespace Define
     if (editorId.find("fox") != std::string::npos)
       res = Type::Fox;
     break;
+  case Type::Werewolf:
+    if (editorId.find("werebear") != std::string::npos)
+      res = Type::Werebear;
+    break;
   default:
     break;
   }

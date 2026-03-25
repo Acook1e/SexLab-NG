@@ -2,6 +2,7 @@
 
 #include "Define/Enjoyment.h"
 #include "Define/Scene.h"
+#include "Instance/Interact.h"
 
 namespace Instance
 {
@@ -13,6 +14,7 @@ public:
     Define::Position* position;
     Define::Enjoyment enjoy{};
     std::vector<RE::TESBoundObject*> strippedItems{};
+    std::unordered_map<RE::Actor*, Interact::InteractionState> interactMap{};
 
     SceneActorInfo(Define::Position* position) : position(position) {}
   };

@@ -11,6 +11,7 @@ public:
     // Chaurus, ChaurusReaper has same behavior graph
     // Dog, Fox, Wolf has same behavior graph
     // Spider, GiantSpider, LargeSpider has same behavior graph
+    // Werebear and Werewolf has same behavior graph
     Unknown          = 0ULL,
     Human            = 1ULL << 0,
     AshHopper        = 1ULL << 1,
@@ -59,10 +60,11 @@ public:
     StormAtronach    = 1ULL << 44,
     Troll            = 1ULL << 45,
     VampireLord      = 1ULL << 46,
-    Werewolf         = 1ULL << 47,
-    Wisp             = 1ULL << 48,
-    Wispmother       = 1ULL << 49,
-    Wolf             = 1ULL << 50
+    Werebear         = 1ULL << 47,
+    Werewolf         = 1ULL << 48,
+    Wisp             = 1ULL << 49,
+    Wispmother       = 1ULL << 50,
+    Wolf             = 1ULL << 51
   };
 
   Race(RE::Actor* actor) : type(static_cast<std::uint64_t>(GetRace(actor))) {}
