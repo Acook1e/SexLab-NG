@@ -17,7 +17,18 @@ public:
     SceneActorInfo(Define::Position* position) : position(position) {}
   };
 
-  explicit SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants, std::vector<Define::Scene*> scenes);
+  enum class InstanceState : std::uint8_t
+  {
+    CreateInstance = 0,
+    ActorApproach,  // Only used when enable Actor Walk to Center, otherwise will be skipped and directly set to Ready
+    SceneReady,     // Include lock strip and ready
+    LeadIn,         // Only used when enable Lead-In, otherwise will be skipped and directly set to ScenePlay
+    ScenePlay,
+    DestroyInstance
+  };
+
+  SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants, std::vector<Define::Scene*> scenes,
+                Define::Scene* leadIn = nullptr);
   ~SceneInstance();
 
   bool Update();
@@ -31,16 +42,22 @@ public:
   void UnlockActors();
 
   Define::Scene* GetCurrentScene() const;
+  Define::Scene* RandomScene();
+  void SetPositions();
   bool SetStage(std::uint32_t stage);
 
 private:
   std::vector<Define::Scene*> availableScenes;
-  std::size_t currentScene;
+  Define::Scene* currentScene;
   std::uint32_t currentStage;
+
   std::uint64_t lastUpdateTime      = 0;
   std::uint64_t lastStageUpdateTime = 0;
 
   std::vector<RE::Actor*> actors;
   std::unordered_map<RE::Actor*, SceneActorInfo> actorInfoMap;
+
+  InstanceState state;
+  RE::TESObjectREFR* furniture;
 };
 }  // namespace Instance

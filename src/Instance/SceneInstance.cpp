@@ -5,42 +5,29 @@
 namespace Instance
 {
 SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
-                             std::vector<Define::Scene*> scenes)
+                             std::vector<Define::Scene*> scenes, Define::Scene* leadIn)
+    : availableScenes(std::move(scenes))
 {
   actors.reserve(participants.size() + 1);
   actors.push_back(central);
   for (auto* participant : participants)
     actors.push_back(participant);
 
-  availableScenes = std::move(scenes);
-
   if (availableScenes.empty()) {
-    currentScene = 0;
+    currentScene = nullptr;
     currentStage = 0;
     return;
   }
 
-  static std::mt19937 rng(std::random_device{}());
-  std::uniform_int_distribution<std::size_t> dist(0, availableScenes.size() - 1);
-  currentScene = dist(rng);
+  state = InstanceState::CreateInstance;
+
+  if (leadIn)
+    currentScene = leadIn;
+  else
+    currentScene = RandomScene();
   currentStage = 0;
 
-  auto& positions = availableScenes[currentScene]->GetPositions();
-  std::vector<bool> actorAssigned(actors.size(), false);
-  for (auto& position : positions) {
-    for (std::size_t j = 0; j < actors.size(); ++j) {
-      auto* actor = actors[j];
-      if (!actor || actorAssigned[j])
-        continue;
-
-      if (position.GetRace() == Define::Race::GetRace(actor) &&
-          position.GetGender() == Define::Gender::GetGender(actor)) {
-        actorAssigned[j] = true;
-        actorInfoMap.emplace(actor, SceneActorInfo(&position));
-        break;
-      }
-    }
-  }
+  SetPositions();
 
   for (auto* actor : actors) {
     if (!actor)
@@ -78,18 +65,36 @@ bool SceneInstance::Update()
     if (actorInfoMap.empty() || !currentScene)
       return false;
 
+    state = InstanceState::SceneReady;
+
     LockActors();
     StripActors();
     ReadyActors();
 
     currentStage        = 1;
     lastStageUpdateTime = now - STAGE_LENGTH + SOS_READY;  // Schedule the first stage update
+    if (std::find(availableScenes.begin(), availableScenes.end(), currentScene) == availableScenes.end())
+      state = InstanceState::LeadIn;
+    else
+      state = InstanceState::ScenePlay;
   }
 
   // Real Update start from here
   lastUpdateTime = now;
   if (now - lastStageUpdateTime > STAGE_LENGTH) {
     lastStageUpdateTime = now;
+    if (state == InstanceState::LeadIn) {
+      if (SetStage(currentStage))
+        return currentStage++;
+      else {
+        state        = InstanceState::ScenePlay;
+        currentScene = RandomScene();
+        currentStage = 1;
+        for (auto& [actor, info] : actorInfoMap)
+          info.position = nullptr;  // Clear previous position info
+        SetPositions();
+      }
+    }
     return SetStage(currentStage) ? currentStage++ : false;
   }
 
@@ -230,7 +235,40 @@ void SceneInstance::ResetActors()
 
 Define::Scene* SceneInstance::GetCurrentScene() const
 {
-  return currentScene < availableScenes.size() ? availableScenes[currentScene] : nullptr;
+  return currentScene;
+}
+
+Define::Scene* SceneInstance::RandomScene()
+{
+  if (availableScenes.empty())
+    return nullptr;
+
+  static std::mt19937 rng(std::random_device{}());
+  std::uniform_int_distribution<std::size_t> dist(0, availableScenes.size() - 1);
+  return availableScenes.at(dist(rng));
+}
+
+void SceneInstance::SetPositions()
+{
+  auto& positions = currentScene->GetPositions();
+  std::vector<bool> actorAssigned(actors.size(), false);
+  for (auto& position : positions) {
+    for (std::size_t j = 0; j < actors.size(); ++j) {
+      auto* actor = actors[j];
+      if (!actor || actorAssigned[j])
+        continue;
+
+      if (position.GetRace() == Define::Race::GetRace(actor) &&
+          position.GetGender() == Define::Gender::GetGender(actor)) {
+        actorAssigned[j] = true;
+        if (auto it = actorInfoMap.find(actor); it != actorInfoMap.end())
+          it->second.position = &position;
+        else
+          actorInfoMap.emplace(actor, SceneActorInfo(&position));
+        break;
+      }
+    }
+  }
 }
 
 bool SceneInstance::SetStage(std::uint32_t stage)

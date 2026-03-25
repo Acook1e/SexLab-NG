@@ -2,8 +2,10 @@
 #include "Registry/SceneLoader.h"
 #include "Registry/Stat.h"
 #include "Utils/Hooks.h"
+#include "Utils/Localization.h"
 #include "Utils/Menu.h"
 #include "Utils/Serialization.h"
+#include "Utils/UI.h"
 
 inline void onPostLoad()
 {
@@ -21,6 +23,7 @@ inline void onPostPostLoad()
 
 inline void onDataLoaded()
 {
+  UI::Initialize();
   Menu::GetSingleton();
   Hooks::Install();
 }
@@ -60,6 +63,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
   if (!messaging->RegisterListener(MessageHandler)) {
     return false;
   }
+
+  // Initialize localization system
+  Localization::Initialize();
 
   // Initialize serialization system
   Serialization::Initialize();

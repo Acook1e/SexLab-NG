@@ -81,7 +81,9 @@ inline std::uint64_t ToPersistForm(RE::FormID formID)
 {
   if (formID >= 0xFF000000)
     return 0;  // Not a mod form, cannot persist
-  auto* dataHandler      = RE::TESDataHandler::GetSingleton();
+  auto* dataHandler = RE::TESDataHandler::GetSingleton();
+  if (!dataHandler)
+    return 0;
   const RE::TESFile* mod = nullptr;
   std::uint32_t rawForm  = 0;
   if (formID >= 0xFE000000) {

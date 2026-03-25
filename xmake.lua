@@ -31,7 +31,7 @@ target(PROJECT_NAME)
     add_deps("commonlibsse-ng")
     add_rules("commonlibsse-ng.plugin", {
         name = PROJECT_NAME,
-        author = "Acook1e, 墨良",
+        author = "Acook1e, moliang",
         description = "SexLab NG",
         options = {
             address_library = true,
