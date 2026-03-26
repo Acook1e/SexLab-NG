@@ -14,7 +14,6 @@ public:
     Define::Position* position;
     Define::Enjoyment enjoy{};
     std::vector<RE::TESBoundObject*> strippedItems{};
-    std::unordered_map<RE::Actor*, Interact::InteractionState> interactMap{};
 
     SceneActorInfo(Define::Position* position) : position(position) {}
   };
@@ -61,5 +60,7 @@ private:
 
   InstanceState state;
   RE::TESObjectREFR* furniture;
+
+  Interact interact;
 };
 }  // namespace Instance

@@ -13,6 +13,8 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
   for (auto* participant : participants)
     actors.push_back(participant);
 
+  interact = Interact(actors);
+
   if (availableScenes.empty()) {
     currentScene = nullptr;
     currentStage = 0;
@@ -51,14 +53,18 @@ SceneInstance::~SceneInstance()
 
 bool SceneInstance::Update()
 {
-  constexpr std::uint64_t STAGE_LENGTH = 10 * 1000;  // Update every 10 seconds
-  constexpr std::uint64_t SOS_READY    = 1000;       // 1 second to prepare for SOSBend
+  constexpr std::uint64_t UPDATE_INTERVAL = 100;        // Update every 100 milliseconds
+  constexpr std::uint64_t STAGE_LENGTH    = 10 * 1000;  // Update every 10 seconds
+  constexpr std::uint64_t SOS_READY       = 1000;       // 1 second to prepare for SOSBend
 
   const auto Now = static_cast<std::uint64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
           .count());
 
   auto now = Now;
+  if (now - lastUpdateTime < UPDATE_INTERVAL)
+    return true;
+
   // If the scene hasn't started yet, start it
   // Process only once
   if (!currentStage) {
@@ -81,6 +87,9 @@ bool SceneInstance::Update()
 
   // Real Update start from here
   lastUpdateTime = now;
+
+  interact.Update();
+
   if (now - lastStageUpdateTime > STAGE_LENGTH) {
     lastStageUpdateTime = now;
     if (state == InstanceState::LeadIn) {
@@ -178,6 +187,8 @@ void SceneInstance::StripActors()
     }
     actor->Update3DModel();
   }
+
+  interact.FlashNodeData();
 }
 
 void SceneInstance::DressActors()
@@ -197,6 +208,8 @@ void SceneInstance::DressActors()
     }
     actor->Update3DModel();
   }
+
+  interact.FlashNodeData();
 }
 
 void SceneInstance::ReadyActors()
@@ -290,6 +303,8 @@ bool SceneInstance::SetStage(std::uint32_t stage)
       actor->NotifyAnimationGraph("SOSBend" + std::to_string(angle));
     }
   }
+
+  interact.FlashNodeData();
   return true;
 }
 }  // namespace Instance

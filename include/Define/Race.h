@@ -72,6 +72,7 @@ public:
   Race(std::uint64_t mask) : type(mask) {}
 
   [[nodiscard]] const std::uint64_t Get() const { return type.to_ullong(); }
+  [[nodiscard]] Type GetType() const { return static_cast<Type>(type.to_ullong()); }
 
   [[nodiscard]] bool operator==(const Race& other) const { return type == other.type; }
   [[nodiscard]] bool operator!=(const Race& other) const { return type != other.type; }
