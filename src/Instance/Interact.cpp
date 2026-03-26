@@ -1,8 +1,7 @@
 #include "Instance/Interact.h"
 
 #include "magic_enum/magic_enum.hpp"
-
-#include <limits>
+#include "magic_enum/magic_enum_flags.hpp"
 
 namespace Instance
 {
@@ -65,7 +64,7 @@ constexpr static std::string_view ANIMOBJECTB = "ANIMOBJECTB";
 constexpr static std::string_view ANIMOBJECTR = "ANIMOBJECTR";
 constexpr static std::string_view ANIMOBJECTL = "ANIMOBJECTL";
 
-static std::unordered_map<Interact::SkeletonNode, std::string_view> skeletonNodeMap{
+static const std::unordered_map<Interact::SkeletonNode, std::string_view> skeletonNodeMap{
     {Interact::SkeletonNode::Head, HEAD},
     {Interact::SkeletonNode::HandLeft, HANDLEFT},
     {Interact::SkeletonNode::HandLeftRef, HANDLEFTREF},
@@ -112,7 +111,7 @@ struct SchlongNode
   bool isPoint = false;
 };
 
-static std::unordered_map<Define::Race::Type, SchlongNode> schlongNodes{
+static const std::unordered_map<Define::Race::Type, SchlongNode> schlongNodes{
     {Define::Race::Type::Human, {"NPC Genitals01 [Gen01]", "NPC Genitals04 [Gen04]", "NPC Genitals06 [Gen06]"}},
     {Define::Race::Type::Bear, {"BearD 5", "BearD 7", "BearD 9"}},
     {Define::Race::Type::Boar, {"BoarDick04", "BoarDick05", "BoarDick06"}},
@@ -139,7 +138,8 @@ static std::unordered_map<Define::Race::Type, SchlongNode> schlongNodes{
     {Define::Race::Type::Sabrecat, {"SCD 3", "SCD 5", "SCD 7"}},
     {Define::Race::Type::Skeever, {"SkeeverD 03", "SkeeverD 05", "SkeeverD 07"}},
     {Define::Race::Type::Spider, {"CO 5", "CO 7", "CO tip"}},
-    {Define::Race::Type::StormAtronach, {"NoExist", "Torso Rock 2", "NoExist", true}},
+    // StormAtronach: isPoint=true, only mid node exists; root/head intentionally empty
+    {Define::Race::Type::StormAtronach, {"", "Torso Rock 2", "", true}},
     {Define::Race::Type::Troll, {"TD 3", "TD 5", "TD 7"}},
     {Define::Race::Type::VampireLord, {"VLDick03", "VLDick05", "VLDick06"}},
     {Define::Race::Type::Werebear, {"WWD 5", "WWD 7", "WWD 9"}},
@@ -185,17 +185,19 @@ static const std::unordered_map<Interact::SkeletonNode, Interact::BodyPart> node
     {Interact::SkeletonNode::AnimObjL, Interact::BodyPart::HandLeft},
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 Interact::BodyPart operator|(Interact::BodyPart a, Interact::BodyPart b)
 {
   return static_cast<Interact::BodyPart>(static_cast<std::underlying_type_t<Interact::BodyPart>>(a) |
                                          static_cast<std::underlying_type_t<Interact::BodyPart>>(b));
 }
 
-static bool IsSubset(Interact::BodyPart subset, Interact::BodyPart set)
+bool operator<=(Interact::BodyPart part_a, Interact::BodyPart part_b)
 {
-  const auto subsetValue = static_cast<std::underlying_type_t<Interact::BodyPart>>(subset);
-  const auto setValue    = static_cast<std::underlying_type_t<Interact::BodyPart>>(set);
-  return (subsetValue & setValue) == subsetValue;
+  const auto a = static_cast<std::underlying_type_t<Interact::BodyPart>>(part_a);
+  const auto b = static_cast<std::underlying_type_t<Interact::BodyPart>>(part_b);
+  return (a & b) == b;
 }
 
 static Interact::BodyPart NormalizeBodyPart(Interact::BodyPart bodyPart)
@@ -253,46 +255,75 @@ static float CalcSchlongRootDistance(
   return CalcNodeDistance(schlong.isPoint ? schlong.mid : schlong.root, target, distanceCache);
 }
 
+// ─── Rules ────────────────────────────────────────────────────────────────────
+// Each rule key contains exactly 1-2 distinct BodyPart bits (Right-side parts
+// are folded to Left by NormalizeBodyPart before lookup, so only Left-side
+// keys are needed for paired parts).
+// Matching: ruleKey must be a subset of the rule key (IsSubset).
+// Disambiguation: when multiple rules match, pick the one with the most bits
+// set (most specific), using std::popcount.
+
 static const std::unordered_map<Interact::BodyPart, Interact::Rule> rules{
-    {Interact::BodyPart::Mouth | Interact::BodyPart::Mouth, {Interact::Type::Kiss, 2.0f}},
-    {Interact::BodyPart::Mouth | Interact::BodyPart::FootLeft | Interact::BodyPart::FootRight,
-     {Interact::Type::ToeSucking, 10.0f}},
-    {Interact::BodyPart::Mouth | Interact::BodyPart::Vagina, {Interact::Type::Cunnilingus, 2.0f}},
-    {Interact::BodyPart::Mouth | Interact::BodyPart::Anus, {Interact::Type::Anilingus, 2.0f}},
-    {Interact::BodyPart::Mouth | Interact::BodyPart::Penis, {Interact::Type::Fellatio, 2.0f, true, false}},
-    {Interact::BodyPart::BreastLeft | Interact::BodyPart::BreastRight | Interact::BodyPart::HandLeft |
-         Interact::BodyPart::HandRight,
-     {Interact::Type::GropeBreast, 2.0f}},
-    {Interact::BodyPart::BreastLeft | Interact::BodyPart::BreastRight | Interact::BodyPart::Penis,
-     {Interact::Type::Titfuck, 2.0f, true, false}},
-    {Interact::BodyPart::HandLeft | Interact::BodyPart::HandRight | Interact::BodyPart::Vagina,
-     {Interact::Type::FingerVagina, 2.0f}},
-    {Interact::BodyPart::HandLeft | Interact::BodyPart::HandRight | Interact::BodyPart::Anus,
-     {Interact::Type::FingerAnus, 2.0f}},
-    {Interact::BodyPart::HandLeft | Interact::BodyPart::HandRight | Interact::BodyPart::Penis,
-     {Interact::Type::Handjob, 2.0f, true, false}},
-    {Interact::BodyPart::Belly | Interact::BodyPart::Penis, {Interact::Type::Naveljob, 1.0f, true, false}},
-    {Interact::BodyPart::ThighLeft | Interact::BodyPart::ThighRight | Interact::BodyPart::Penis,
-     {Interact::Type::Thighjob, 2.0f, true, false}},
-    {Interact::BodyPart::ButtLeft | Interact::BodyPart::ButtRight | Interact::BodyPart::Penis,
-     {Interact::Type::Frottage, 2.0f, true, false}},
-    {Interact::BodyPart::FootLeft | Interact::BodyPart::FootRight | Interact::BodyPart::Penis,
-     {Interact::Type::Footjob, 2.0f, true, false}},
-    {Interact::BodyPart::Vagina | Interact::BodyPart::Vagina, {Interact::Type::Tribbing, 2.0f}},
-    {Interact::BodyPart::Vagina | Interact::BodyPart::Penis, {Interact::Type::Vaginal, 2.0f, true, false}},
-    {Interact::BodyPart::Anus | Interact::BodyPart::Penis, {Interact::Type::Anal, 2.0f, true, false}},
+    // Mouth only (Kiss: both actors contribute Mouth, OR-folded to single Mouth bit)
+    {Interact::BodyPart::Mouth, {Interact::Type::Kiss, 2.0f, false}},
+
+    // Mouth + other
+    {Interact::BodyPart::Mouth | Interact::BodyPart::FootLeft, {Interact::Type::ToeSucking, 2.0f, false}},
+    {Interact::BodyPart::Mouth | Interact::BodyPart::Vagina, {Interact::Type::Cunnilingus, 2.0f, false}},
+    {Interact::BodyPart::Mouth | Interact::BodyPart::Anus, {Interact::Type::Anilingus, 2.0f, false}},
+    {Interact::BodyPart::Mouth | Interact::BodyPart::Penis, {Interact::Type::Fellatio, 2.0f, true}},
+
+    // Breast + other (BreastRight normalized to BreastLeft)
+    {Interact::BodyPart::BreastLeft | Interact::BodyPart::HandLeft, {Interact::Type::GropeBreast, 2.0f, false}},
+    {Interact::BodyPart::BreastLeft | Interact::BodyPart::Penis, {Interact::Type::Titfuck, 2.0f, true}},
+
+    // Hand + other (HandRight normalized to HandLeft)
+    {Interact::BodyPart::HandLeft | Interact::BodyPart::Vagina, {Interact::Type::FingerVagina, 2.0f, false}},
+    {Interact::BodyPart::HandLeft | Interact::BodyPart::Anus, {Interact::Type::FingerAnus, 2.0f, false}},
+    {Interact::BodyPart::HandLeft | Interact::BodyPart::Penis, {Interact::Type::Handjob, 2.0f, true}},
+
+    // Belly + other
+    {Interact::BodyPart::Belly | Interact::BodyPart::Penis, {Interact::Type::Naveljob, 2.0f, true}},
+
+    // Thigh + other (ThighRight normalized to ThighLeft)
+    {Interact::BodyPart::ThighLeft | Interact::BodyPart::Penis, {Interact::Type::Thighjob, 2.0f, true}},
+
+    // Butt + other (ButtRight normalized to ButtLeft)
+    {Interact::BodyPart::ButtLeft | Interact::BodyPart::Penis, {Interact::Type::Frottage, 2.0f, true}},
+
+    // Foot + other (FootRight normalized to FootLeft)
+    {Interact::BodyPart::FootLeft | Interact::BodyPart::Penis, {Interact::Type::Footjob, 2.0f, true}},
+
+    // Vagina only (Tribbing: both actors contribute Vagina, OR-folded to single Vagina bit)
+    {Interact::BodyPart::Vagina, {Interact::Type::Tribbing, 2.0f, false}},
+
+    // Vagina + other
+    {Interact::BodyPart::Vagina | Interact::BodyPart::Penis, {Interact::Type::Vaginal, 2.0f, true}},
+
+    // Anus + other (Human only, enforced by HasBodyPart)
+    {Interact::BodyPart::Anus | Interact::BodyPart::Penis, {Interact::Type::Anal, 2.0f, true}},
 };
 
 static const Interact::Info kEmptyInfo{};
 static const Interact::Data kEmptyData{};
 
-bool HasBodyPart(const Interact::Data& data, Interact::BodyPart bodyPart)
+// ─── HasBodyPart ──────────────────────────────────────────────────────────────
+
+static bool HasBodyPart(const Interact::Data& data, Interact::BodyPart bodyPart)
 {
+  const bool isFemaleOrFuta =
+      data.gender.Get() == Define::Gender::Type::Female || data.gender.Get() == Define::Gender::Type::Futa;
+
   switch (bodyPart) {
+  // All creatures
   case Interact::BodyPart::Mouth:
   case Interact::BodyPart::HandLeft:
   case Interact::BodyPart::HandRight:
+  case Interact::BodyPart::FootLeft:
+  case Interact::BodyPart::FootRight:
     return true;
+
+  // Female or Futa only
   case Interact::BodyPart::BreastLeft:
   case Interact::BodyPart::BreastRight:
   case Interact::BodyPart::Belly:
@@ -300,18 +331,22 @@ bool HasBodyPart(const Interact::Data& data, Interact::BodyPart bodyPart)
   case Interact::BodyPart::ThighRight:
   case Interact::BodyPart::ButtLeft:
   case Interact::BodyPart::ButtRight:
-  case Interact::BodyPart::FootLeft:
-  case Interact::BodyPart::FootRight:
   case Interact::BodyPart::Vagina:
-    return data.gender.Get() == Define::Gender::Type::Female || data.gender.Get() == Define::Gender::Type::Futa;
+    return isFemaleOrFuta;
+
+  // Human only (NPC RT Anus2 node only exists on human skeleton)
   case Interact::BodyPart::Anus:
     return data.race.GetType() == Define::Race::Type::Human;
+
   case Interact::BodyPart::Penis:
     return data.gender.HasPenis();
+
   default:
     return false;
   }
 }
+
+// ─── Constructor ──────────────────────────────────────────────────────────────
 
 Interact::Interact(std::vector<RE::Actor*> actors)
 {
@@ -340,14 +375,18 @@ Interact::Interact(std::vector<RE::Actor*> actors)
 
     if (data.gender.HasPenis()) {
       if (auto schlongIt = schlongNodes.find(data.race.GetType()); schlongIt != schlongNodes.end()) {
-        const auto& schlongNode = schlongIt->second;
-        if (auto node = nodes->GetObjectByName(schlongNode.root); node)
-          data.schlong.root = node->AsNode();
-        if (auto node = nodes->GetObjectByName(schlongNode.mid); node)
-          data.schlong.mid = node->AsNode();
-        if (auto node = nodes->GetObjectByName(schlongNode.head); node)
-          data.schlong.head = node->AsNode();
-        data.schlong.isPoint = schlongNode.isPoint;
+        const auto& sn = schlongIt->second;
+        // Guard empty strings (e.g. StormAtronach root/head are intentionally empty)
+        if (!sn.root.empty())
+          if (auto node = nodes->GetObjectByName(sn.root); node)
+            data.schlong.root = node->AsNode();
+        if (!sn.mid.empty())
+          if (auto node = nodes->GetObjectByName(sn.mid); node)
+            data.schlong.mid = node->AsNode();
+        if (!sn.head.empty())
+          if (auto node = nodes->GetObjectByName(sn.head); node)
+            data.schlong.head = node->AsNode();
+        data.schlong.isPoint = sn.isPoint;
       }
     }
 
@@ -355,14 +394,20 @@ Interact::Interact(std::vector<RE::Actor*> actors)
   }
 }
 
+// ─── Update ───────────────────────────────────────────────────────────────────
+
 void Interact::Update()
 {
-  ScopeTimer timer("Interact::Update");
-  FlashNodeData();
+  const float nowMs = static_cast<float>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+          .count());
 
   std::unordered_map<DistanceCacheKey, float, DistanceCacheKeyHash> distanceCache{};
 
+  // Save previous frame for velocity, then clear current frame
+  std::unordered_map<RE::Actor*, std::unordered_map<BodyPart, Info>> prevBodyParts{};
   for (auto& [actor, data] : datas) {
+    prevBodyParts[actor] = data.bodyParts;
     for (auto& [bodyPart, info] : data.bodyParts)
       info = {};
   }
@@ -377,11 +422,31 @@ void Interact::Update()
       auto& sourceData  = sourceIt->second;
       auto& targetData  = targetIt->second;
 
-      float bestDistance      = (std::numeric_limits<float>::max)();
-      BodyPart bestSourcePart = BodyPart::Mouth;
-      BodyPart bestTargetPart = BodyPart::Mouth;
-      bool foundPair          = false;
+      // Per-part-pair best distance table.
+      // Key   = NormalizeBodyPart(srcPart) | NormalizeBodyPart(tgtPart)  (for rule lookup)
+      // Value = best candidate so far, storing the ORIGINAL (non-normalized) parts for correct write-back
+      struct PairBest
+      {
+        float distance      = (std::numeric_limits<float>::max)();
+        BodyPart sourcePart = BodyPart::Mouth;  // original, preserves Left/Right
+        BodyPart targetPart = BodyPart::Mouth;
+        bool fromSchlong    = false;
+      };
+      std::unordered_map<BodyPart, PairBest> bestPerPair{};
 
+      auto tryUpdate = [&](BodyPart rawSrc, BodyPart rawTgt, float dist, bool fromSchlong) {
+        // Normalize only for the lookup key so Left/Right variants share one slot
+        const BodyPart key = NormalizeBodyPart(rawSrc) | NormalizeBodyPart(rawTgt);
+        auto& best         = bestPerPair[key];
+        if (dist < best.distance) {
+          best.distance    = dist;
+          best.sourcePart  = rawSrc;
+          best.targetPart  = rawTgt;
+          best.fromSchlong = fromSchlong;
+        }
+      };
+
+      // 1. Normal skeleton node pairs (no penis nodes)
       for (const auto& [sourceNode, sourcePtr] : sourceData.skeletonNodes) {
         if (!sourcePtr)
           continue;
@@ -396,106 +461,184 @@ void Interact::Update()
           if (targetPartIt == nodeToPartMap.end() || !HasBodyPart(targetData, targetPartIt->second))
             continue;
 
-          const auto distance = CalcNodeDistance(sourcePtr, targetPtr, distanceCache);
-          if (distance < bestDistance) {
-            bestDistance   = distance;
-            bestSourcePart = NormalizeBodyPart(sourcePartIt->second);
-            bestTargetPart = NormalizeBodyPart(targetPartIt->second);
-            foundPair      = true;
-          }
-        }
-
-        if (sourceData.gender.HasPenis()) {
-          for (const auto& [targetNode, targetPtr] : targetData.skeletonNodes) {
-            if (!targetPtr)
-              continue;
-            const auto targetPartIt = nodeToPartMap.find(targetNode);
-            if (targetPartIt == nodeToPartMap.end() || !HasBodyPart(targetData, targetPartIt->second))
-              continue;
-
-            const auto distance = CalcSchlongDistance(sourceData.schlong, targetPtr, distanceCache);
-            if (distance < bestDistance) {
-              bestDistance   = distance;
-              bestSourcePart = BodyPart::Penis;
-              bestTargetPart = NormalizeBodyPart(targetPartIt->second);
-              foundPair      = true;
-            }
-          }
-        }
-
-        if (targetData.gender.HasPenis()) {
-          for (const auto& [sourceNode2, sourcePtr2] : sourceData.skeletonNodes) {
-            if (!sourcePtr2)
-              continue;
-            const auto sourcePartIt2 = nodeToPartMap.find(sourceNode2);
-            if (sourcePartIt2 == nodeToPartMap.end() || !HasBodyPart(sourceData, sourcePartIt2->second))
-              continue;
-
-            const auto distance = CalcSchlongDistance(targetData.schlong, sourcePtr2, distanceCache);
-            if (distance < bestDistance) {
-              bestDistance   = distance;
-              bestSourcePart = NormalizeBodyPart(sourcePartIt2->second);
-              bestTargetPart = BodyPart::Penis;
-              foundPair      = true;
-            }
-          }
+          const float dist = CalcNodeDistance(sourcePtr, targetPtr, distanceCache);
+          tryUpdate(sourcePartIt->second, targetPartIt->second, dist, false);
         }
       }
 
-      if (!foundPair)
-        continue;
+      // 2. Source has penis → tip distance to all target nodes
+      if (sourceData.gender.HasPenis() && (sourceData.schlong.head || sourceData.schlong.mid)) {
+        for (const auto& [targetNode, targetPtr] : targetData.skeletonNodes) {
+          if (!targetPtr)
+            continue;
+          const auto targetPartIt = nodeToPartMap.find(targetNode);
+          if (targetPartIt == nodeToPartMap.end() || !HasBodyPart(targetData, targetPartIt->second))
+            continue;
 
-      const auto ruleKey = bestSourcePart | bestTargetPart;
+          const float dist = CalcSchlongDistance(sourceData.schlong, targetPtr, distanceCache);
+          tryUpdate(BodyPart::Penis, targetPartIt->second, dist, true);
+        }
+      }
 
-      const Interact::Rule* matchedRule = nullptr;
-      for (const auto& [key, rule] : rules) {
-        if (!IsSubset(ruleKey, key))
+      // 3. Target has penis → tip distance to all source nodes
+      if (targetData.gender.HasPenis() && (targetData.schlong.head || targetData.schlong.mid)) {
+        for (const auto& [sourceNode, sourcePtr] : sourceData.skeletonNodes) {
+          if (!sourcePtr)
+            continue;
+          const auto sourcePartIt = nodeToPartMap.find(sourceNode);
+          if (sourcePartIt == nodeToPartMap.end() || !HasBodyPart(sourceData, sourcePartIt->second))
+            continue;
+
+          const float dist = CalcSchlongDistance(targetData.schlong, sourcePtr, distanceCache);
+          tryUpdate(sourcePartIt->second, BodyPart::Penis, dist, true);
+        }
+      }
+
+      // Vaginal/Anal mutual exclusion: anatomy puts Vagina and Anus close together,
+      // so when both are within radius for the same penis keep only the nearer one.
+      {
+        const BodyPart vagKey  = BodyPart::Vagina | BodyPart::Penis;
+        const BodyPart anusKey = BodyPart::Anus | BodyPart::Penis;
+        auto vagIt             = bestPerPair.find(vagKey);
+        auto anusIt            = bestPerPair.find(anusKey);
+        if (vagIt != bestPerPair.end() && anusIt != bestPerPair.end()) {
+          if (vagIt->second.distance <= anusIt->second.distance)
+            bestPerPair.erase(anusIt);
+          else
+            bestPerPair.erase(vagIt);
+        }
+      }
+
+      // Match rules for each part pair independently
+      for (const auto& [pairKey, best] : bestPerPair) {
+        // Select the most specific rule (highest popcount) whose key is a subset of pairKey,
+        // within radius, with matching schlong requirement.
+        const Rule* matchedRule = nullptr;
+        int matchedBits         = -1;
+
+        for (const auto& [key, rule] : rules) {
+          // rule key must be a subset of pairKey:
+          // every bit required by the rule must be present in pairKey
+          if (!(pairKey <= key))
+            continue;
+          if (rule.requiresSchlong != best.fromSchlong)
+            continue;
+          if (best.distance > rule.radius)
+            continue;
+
+          const int bits = std::popcount(static_cast<std::underlying_type_t<BodyPart>>(key));
+          if (bits > matchedBits) {
+            matchedBits = bits;
+            matchedRule = &rule;
+          }
+        }
+
+        if (!matchedRule)
           continue;
-        if (bestDistance > rule.radius)
-          continue;
-        if (!matchedRule || rule.radius < matchedRule->radius)
-          matchedRule = &rule;
-      }
 
-      if (!matchedRule)
-        continue;
+        auto type = matchedRule->type;
 
-      auto type = matchedRule->type;
-      if (type == Type::Fellatio) {
-        auto sourceMouthIt         = sourceData.skeletonNodes.find(SkeletonNode::Head);
-        auto targetMouthIt         = targetData.skeletonNodes.find(SkeletonNode::Head);
-        RE::NiNode* mouthNode      = nullptr;
-        const SchlongData* schlong = nullptr;
+        // DeepThroat sub-variant: upgrade Fellatio when schlong root reaches the mouth
+        if (type == Type::Fellatio) {
+          RE::NiNode* mouthNode      = nullptr;
+          const SchlongData* schlong = nullptr;
 
-        if (bestSourcePart == BodyPart::Mouth && bestTargetPart == BodyPart::Penis) {
-          mouthNode = sourceMouthIt != sourceData.skeletonNodes.end() ? sourceMouthIt->second : nullptr;
-          schlong   = &targetData.schlong;
-        } else if (bestSourcePart == BodyPart::Penis && bestTargetPart == BodyPart::Mouth) {
-          mouthNode = targetMouthIt != targetData.skeletonNodes.end() ? targetMouthIt->second : nullptr;
-          schlong   = &sourceData.schlong;
+          if (best.sourcePart == BodyPart::Mouth) {
+            if (auto it = sourceData.skeletonNodes.find(SkeletonNode::Head); it != sourceData.skeletonNodes.end())
+              mouthNode = it->second;
+            schlong = &targetData.schlong;
+          } else {
+            if (auto it = targetData.skeletonNodes.find(SkeletonNode::Head); it != targetData.skeletonNodes.end())
+              mouthNode = it->second;
+            schlong = &sourceData.schlong;
+          }
+
+          if (schlong && mouthNode && CalcSchlongRootDistance(*schlong, mouthNode, distanceCache) <= 8.0f)
+            type = Type::DeepThroat;
         }
 
-        if (schlong && mouthNode && CalcSchlongRootDistance(*schlong, mouthNode, distanceCache) <= 8.0f)
-          type = Type::DeepThroat;
-      }
+        // Write-back using ORIGINAL (non-normalized) parts as keys,
+        // preserving Left/Right distinction in bodyParts map.
+        // For penis interactions the penis side mirrors the receiver's conclusion;
+        // only update if this candidate is closer than what is already recorded.
+        if (best.fromSchlong) {
+          const bool sourcePenis   = (best.sourcePart == BodyPart::Penis);
+          auto* penisActor         = sourcePenis ? sourceActor : targetActor;
+          auto* otherActor         = sourcePenis ? targetActor : sourceActor;
+          auto& penisData          = sourcePenis ? sourceData : targetData;
+          auto& otherData          = sourcePenis ? targetData : sourceData;
+          const BodyPart otherPart = sourcePenis ? best.targetPart : best.sourcePart;
 
-      sourceData.bodyParts[bestSourcePart] = Info{targetActor, bestDistance, type};
-      targetData.bodyParts[bestTargetPart] = Info{sourceActor, bestDistance, type};
+          auto& receiverInfo = otherData.bodyParts[otherPart];
+          if (!receiverInfo.actor || best.distance < receiverInfo.distance)
+            receiverInfo = Info{penisActor, best.distance, 0.0f, type};
+
+          // Penis side mirrors receiver; keeps closest across all penis interactions
+          auto& penisInfo = penisData.bodyParts[BodyPart::Penis];
+          if (!penisInfo.actor || best.distance < penisInfo.distance)
+            penisInfo = Info{otherActor, best.distance, 0.0f, type};
+
+        } else {
+          auto& srcInfo = sourceData.bodyParts[best.sourcePart];
+          if (!srcInfo.actor || best.distance < srcInfo.distance)
+            srcInfo = Info{targetActor, best.distance, 0.0f, type};
+
+          auto& tgtInfo = targetData.bodyParts[best.targetPart];
+          if (!tgtInfo.actor || best.distance < tgtInfo.distance)
+            tgtInfo = Info{sourceActor, best.distance, 0.0f, type};
+        }
+      }
     }
   }
 
+  // Velocity: exponential smoothing of distance delta per body part
+  static constexpr float kVelocityAlpha = 0.4f;
+
+  for (auto& [actor, data] : datas) {
+    const float prevTime = data.lastUpdateMs;
+    const float deltaMs  = (prevTime > 0.0f) ? (nowMs - prevTime) : 0.0f;
+    data.lastUpdateMs    = nowMs;
+
+    if (deltaMs <= 0.0f)
+      continue;
+
+    const auto prevIt = prevBodyParts.find(actor);
+    if (prevIt == prevBodyParts.end())
+      continue;
+
+    for (auto& [bodyPart, info] : data.bodyParts) {
+      if (!info.actor)
+        continue;
+
+      const auto& prevMap   = prevIt->second;
+      const auto prevInfoIt = prevMap.find(bodyPart);
+
+      if (prevInfoIt == prevMap.end() || !prevInfoIt->second.actor) {
+        info.velocity = 0.0f;
+        continue;
+      }
+
+      const float rawVel = (info.distance - prevInfoIt->second.distance) / deltaMs;
+      info.velocity      = prevInfoIt->second.velocity + kVelocityAlpha * (rawVel - prevInfoIt->second.velocity);
+    }
+  }
+
+  // Debug output
   for (const auto& [actor, data] : datas) {
     const auto actorName = actor ? actor->GetDisplayFullName() : "null";
     for (const auto& [bodyPart, info] : data.bodyParts) {
       if (!info.actor || info.type == Type::None)
         continue;
 
-      logger::info("[Interact Debug] actor='{}' part='{}' type='{}' distance={:.3f} target='{}'", actorName,
-                   magic_enum::enum_name(bodyPart), magic_enum::enum_name(info.type), info.distance,
-                   info.actor ? info.actor->GetDisplayFullName() : "null");
+      logger::info("[Interact Debug] actor='{}' part='{}' type='{}' distance={:.3f} velocity={:.4f} target='{}'",
+                   actorName, magic_enum::enum_flags_name(bodyPart), magic_enum::enum_name(info.type), info.distance,
+                   info.velocity, info.actor->GetDisplayFullName());
     }
   }
 }
+
+// ─── FlashNodeData ────────────────────────────────────────────────────────────
+// Call manually after stage transitions or equipment changes, not every frame.
 
 void Interact::FlashNodeData()
 {
@@ -508,24 +651,32 @@ void Interact::FlashNodeData()
       continue;
 
     for (auto [skeletonNode, _] : magic_enum::enum_entries<SkeletonNode>()) {
-      auto node                        = nodes->GetObjectByName(skeletonNodeMap.at(skeletonNode));
+      auto node = nodes->GetObjectByName(skeletonNodeMap.at(skeletonNode));
+      if (!node)
+        logger::warn("[Interact] Failed to find node '{}' for actor '{}'", skeletonNodeMap.at(skeletonNode),
+                     actor->GetDisplayFullName());
       data.skeletonNodes[skeletonNode] = node ? node->AsNode() : nullptr;
     }
 
     if (data.gender.HasPenis()) {
       if (auto schlongIt = schlongNodes.find(data.race.GetType()); schlongIt != schlongNodes.end()) {
-        const auto& schlongNode = schlongIt->second;
-        if (auto node = nodes->GetObjectByName(schlongNode.root); node)
-          data.schlong.root = node->AsNode();
-        if (auto node = nodes->GetObjectByName(schlongNode.mid); node)
-          data.schlong.mid = node->AsNode();
-        if (auto node = nodes->GetObjectByName(schlongNode.head); node)
-          data.schlong.head = node->AsNode();
-        data.schlong.isPoint = schlongNode.isPoint;
+        const auto& sn = schlongIt->second;
+        if (!sn.root.empty())
+          if (auto node = nodes->GetObjectByName(sn.root); node)
+            data.schlong.root = node->AsNode();
+        if (!sn.mid.empty())
+          if (auto node = nodes->GetObjectByName(sn.mid); node)
+            data.schlong.mid = node->AsNode();
+        if (!sn.head.empty())
+          if (auto node = nodes->GetObjectByName(sn.head); node)
+            data.schlong.head = node->AsNode();
+        data.schlong.isPoint = sn.isPoint;
       }
     }
   }
 }
+
+// ─── Accessors ────────────────────────────────────────────────────────────────
 
 const Interact::Data& Interact::GetData(RE::Actor* actor) const
 {

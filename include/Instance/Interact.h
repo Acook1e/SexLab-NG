@@ -3,8 +3,6 @@
 #include "Define/Gender.h"
 #include "Define/Race.h"
 
-#include <optional>
-
 namespace Instance
 {
 class Interact
@@ -68,8 +66,8 @@ public:
     ThighRight  = 1 << 7,   // Female or Futa
     ButtLeft    = 1 << 8,   // Female or Futa
     ButtRight   = 1 << 9,   // Female or Futa
-    FootLeft    = 1 << 10,  // Female or Futa
-    FootRight   = 1 << 11,  // Female or Futa
+    FootLeft    = 1 << 10,  // All Creature
+    FootRight   = 1 << 11,  // All Creature
     Vagina      = 1 << 12,  // Female or Futa
     Anus        = 1 << 13,  // Human only
     Penis       = 1 << 14,  // Male, Futa or CreatureMale
@@ -127,6 +125,7 @@ public:
   {
     RE::Actor* actor = nullptr;
     float distance   = 0.0f;
+    float velocity   = 0.0f;  // units/ms, negative = closing, positive = separating
     Type type        = Type::None;
   };
 
@@ -137,14 +136,14 @@ public:
     SchlongData schlong{};
     Define::Race race     = Define::Race::Type::Unknown;
     Define::Gender gender = Define::Gender::Type::Unknown;
+    float lastUpdateMs    = 0.0f;
   };
 
   struct Rule
   {
-    Type type                = Type::None;
-    float radius             = 0.0f;
-    bool requiresSchlong     = false;
-    bool requiresSchlongRoot = false;
+    Type type            = Type::None;
+    float radius         = 0.0f;
+    bool requiresSchlong = false;
   };
 
   struct DistanceCacheKey

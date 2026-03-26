@@ -83,6 +83,7 @@ bool SceneInstance::Update()
       state = InstanceState::LeadIn;
     else
       state = InstanceState::ScenePlay;
+    interact.FlashNodeData();
   }
 
   // Real Update start from here
