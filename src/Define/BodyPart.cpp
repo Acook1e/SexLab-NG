@@ -19,9 +19,11 @@ static std::unordered_map<Race::Type, std::array<PointName, 2>> footLeftMap{
     {Define::Race::Type::Human, {"NPC L Foot [Lft ]", "NPC L Toe0 [LToe]"}},
 };
 static std::unordered_map<Race::Type, std::array<PointName, 2>> footRightMap{
-    {Define::Race::Type::Human, {"NPC R Foot [Rgt ]", "NPC R Toe0 [RToe]"}},
+    {Define::Race::Type::Human, {"NPC R Foot [Rft ]", "NPC R Toe0 [RToe]"}},
 };
 
+// Per-race schlong bone names: [root, mid, tip]
+// Used for Name::Penis construction
 static std::unordered_map<Race::Type, std::array<PointName, 3>> schlongMap{
     {Define::Race::Type::Human, {"NPC Genitals01 [Gen01]", "NPC Genitals04 [Gen04]", "NPC Genitals06 [Gen06]"}},
     {Define::Race::Type::Bear, {"BearD 5", "BearD 7", "BearD 9"}},
@@ -49,12 +51,7 @@ static std::unordered_map<Race::Type, std::array<PointName, 3>> schlongMap{
     {Define::Race::Type::Sabrecat, {"SCD 3", "SCD 5", "SCD 7"}},
     {Define::Race::Type::Skeever, {"SkeeverD 03", "SkeeverD 05", "SkeeverD 07"}},
     {Define::Race::Type::Spider, {"CO 5", "CO 7", "CO tip"}},
-    {Define::Race::Type::StormAtronach,
-     {
-         "",
-         "Torso Rock 2",
-         "",
-     }},
+    {Define::Race::Type::StormAtronach, {"", "Torso Rock 2", ""}},
     {Define::Race::Type::Troll, {"TD 3", "TD 5", "TD 7"}},
     {Define::Race::Type::VampireLord, {"VLDick03", "VLDick05", "VLDick06"}},
     {Define::Race::Type::Werebear, {"WWD 5", "WWD 7", "WWD 9"}},
@@ -69,15 +66,15 @@ static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
     // from root of middle finger to its tip
     {BodyPart::Name::FingerLeft, {"NPC L Finger20 [LF20]", "NPC L Finger22 [LF22]"}},
     {BodyPart::Name::FingerRight, {"NPC R Finger20 [RF20]", "NPC R Finger22 [RF22]"}},
-    // from Spine1 to Belly, almost the normal vector of belly
+    // from Spine1 to Belly — direction = body-forward normal (3D, follows actor lean)
     {BodyPart::Name::Belly, {"NPC Spine1 [Spn1]", "NPC Belly"}},
     // from mid of back thigh to mid of front thigh
     {BodyPart::Name::ThighLeft, {"NPC L RearThigh", "NPC L FrontThigh"}},
     {BodyPart::Name::ThighRight, {"NPC R RearThigh", "NPC R FrontThigh"}},
-    // the only node of butt
+    // single node for butt
     {BodyPart::Name::ButtLeft, {"NPC L Butt"}},
     {BodyPart::Name::ButtRight, {"NPC R Butt"}},
-    // from entry to deep then pevis
+    // entry midpoint -> deep -> pelvis (pelvis lies directly above deep, extends axis)
     {BodyPart::Name::Vagina, {MidNodeName{"NPC L Pussy02", "NPC R Pussy02"}, "VaginaDeep1", "NPC Pelvis [Pelv]"}},
     // from entry to deep
     {BodyPart::Name::Anus, {"NPC LT Anus2", "NPC Anus Deep2"}},
@@ -95,275 +92,441 @@ static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
     {BodyPart::Name::Penis, BodyPart::Type::FitVector},
 };
 
-// Calculate Point or Mid Point
-Point3f operator~(Point point)
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// Extract Eigen position from a Point variant.
+// MidNode → average of both nodes; Node → single node position.
+Point3f operator~(const Point& point)
 {
   if (std::holds_alternative<Node>(point)) {
-    auto node = std::get<Node>(point);
-    auto pos  = node->world.translate;
+    auto* node     = std::get<Node>(point);
+    const auto pos = node->world.translate;
     return {pos.x, pos.y, pos.z};
-  } else if (std::holds_alternative<MidNode>(point)) {
-    auto nodes  = std::get<MidNode>(point);
-    auto lhsPos = nodes[0]->world.translate;
-    auto rhsPos = nodes[1]->world.translate;
-    auto mid    = (lhsPos + rhsPos) * 0.5f;
+  } else {
+    const auto& nodes = std::get<MidNode>(point);
+    const auto lhs    = nodes[0]->world.translate;
+    const auto rhs    = nodes[1]->world.translate;
+    const auto mid    = (lhs + rhs) * 0.5f;
     return {mid.x, mid.y, mid.z};
   }
-  return {0.0f, 0.0f, 0.0f};
 }
 
-bool BodyPart::HasBodyPart(Gender gender, Race race, Name name)
+// ─── HasBodyPart ─────────────────────────────────────────────────────────────
+
+bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
 {
   const bool isFemaleOrFuta =
       gender.Get() == Define::Gender::Type::Female || gender.Get() == Define::Gender::Type::Futa;
 
-  switch (name) {
-  case BodyPart::Name::Mouth:
-  case BodyPart::Name::HandLeft:
-  case BodyPart::Name::HandRight:
-  case BodyPart::Name::FootLeft:
-  case BodyPart::Name::FootRight:
+  switch (a_name) {
+  case Name::Mouth:
+  case Name::HandLeft:
+  case Name::HandRight:
+  case Name::FootLeft:
+  case Name::FootRight:
     return true;
-  case BodyPart::Name::BreastLeft:
-  case BodyPart::Name::BreastRight:
-  case BodyPart::Name::Vagina:
+  case Name::BreastLeft:
+  case Name::BreastRight:
+  case Name::Vagina:
     return isFemaleOrFuta;
-  case BodyPart::Name::Belly:
-  case BodyPart::Name::ThighLeft:
-  case BodyPart::Name::ThighRight:
-  case BodyPart::Name::ButtLeft:
-  case BodyPart::Name::ButtRight:
-  case BodyPart::Name::Anus:
+  case Name::Belly:
+  case Name::ThighLeft:
+  case Name::ThighRight:
+  case Name::ButtLeft:
+  case Name::ButtRight:
+  case Name::Anus:
     return race.GetType() == Define::Race::Type::Human;
-  case BodyPart::Name::Penis:
+  case Name::Penis:
     return gender.HasPenis();
   default:
     return false;
   }
 }
 
-BodyPart::BodyPart(RE::Actor* actor, Race race, Name name) : name(name), type(typeMap[name])
+// ─── Constructor ─────────────────────────────────────────────────────────────
+
+BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name) : actor(a_actor), name(a_name), type(typeMap[a_name])
 {
   nodeNames.clear();
   nodes.clear();
 
-  switch (name) {
-  // All Creature
-  case BodyPart::Name::Mouth:
-    if (auto it = mouthMap.find(race.GetType()); it != mouthMap.end())
+  switch (a_name) {
+  // ── Per-race lookups ──────────────────────────────────────────────────────
+  case Name::Mouth:
+    if (auto it = mouthMap.find(a_race.GetType()); it != mouthMap.end())
       nodeNames.push_back(&it->second);
-    break;
-  case BodyPart::Name::HandLeft:
-    if (auto it = handLeftMap.find(race.GetType()); it != handLeftMap.end())
-      nodeNames.push_back(&it->second);
-    break;
-  case BodyPart::Name::HandRight:
-    if (auto it = handRightMap.find(race.GetType()); it != handRightMap.end())
-      nodeNames.push_back(&it->second);
-    break;
-  case BodyPart::Name::FootLeft:
-    if (auto it = footLeftMap.find(race.GetType()); it != footLeftMap.end())
-      for (auto& name : it->second)
-        nodeNames.push_back(&name);
-    break;
-  case BodyPart::Name::FootRight:
-    if (auto it = footRightMap.find(race.GetType()); it != footRightMap.end())
-      for (auto& name : it->second)
-        nodeNames.push_back(&name);
     break;
 
-    // Human only
-  case BodyPart::Name::BreastLeft:
-  case BodyPart::Name::BreastRight:
-  case BodyPart::Name::FingerLeft:
-  case BodyPart::Name::FingerRight:
-  case BodyPart::Name::Belly:
-  case BodyPart::Name::ThighLeft:
-  case BodyPart::Name::ThighRight:
-  case BodyPart::Name::ButtLeft:
-  case BodyPart::Name::ButtRight:
-  case BodyPart::Name::Vagina:
-  case BodyPart::Name::Anus:
-  case BodyPart::Name::Penis:
-    if (auto it = humanMap.find(name); it != humanMap.end())
-      for (auto& nodeName : it->second)
-        nodeNames.push_back(&nodeName);
+  case Name::HandLeft:
+    if (auto it = handLeftMap.find(a_race.GetType()); it != handLeftMap.end())
+      nodeNames.push_back(&it->second);
     break;
+
+  case Name::HandRight:
+    if (auto it = handRightMap.find(a_race.GetType()); it != handRightMap.end())
+      nodeNames.push_back(&it->second);
+    break;
+
+  case Name::FootLeft:
+    if (auto it = footLeftMap.find(a_race.GetType()); it != footLeftMap.end())
+      for (auto& n : it->second)
+        nodeNames.push_back(&n);
+    break;
+
+  case Name::FootRight:
+    if (auto it = footRightMap.find(a_race.GetType()); it != footRightMap.end())
+      for (auto& n : it->second)
+        nodeNames.push_back(&n);
+    break;
+
+  // ── Penis: must use schlongMap keyed by race, not humanMap ───────────────
+  case Name::Penis:
+    if (auto it = schlongMap.find(a_race.GetType()); it != schlongMap.end())
+      for (auto& n : it->second)
+        nodeNames.push_back(&n);
+    else
+      logger::warn("No schlong mapping for race: {}", magic_enum::enum_name(a_race.GetType()));
+    break;
+
+  // ── Human-only fixed lookups ─────────────────────────────────────────────
+  case Name::BreastLeft:
+  case Name::BreastRight:
+  case Name::FingerLeft:
+  case Name::FingerRight:
+  case Name::Belly:
+  case Name::ThighLeft:
+  case Name::ThighRight:
+  case Name::ButtLeft:
+  case Name::ButtRight:
+  case Name::Vagina:
+  case Name::Anus:
+    if (auto it = humanMap.find(a_name); it != humanMap.end())
+      for (auto& n : it->second)
+        nodeNames.push_back(&n);
+    break;
+
   default:
     break;
   }
 
   if (nodeNames.empty())
-    logger::warn("BodyPart not found for race: {} and name: {}", magic_enum::enum_name(race.GetType()),
-                 magic_enum::enum_name(name));
+    logger::warn("BodyPart not found for race: {} and name: {}", magic_enum::enum_name(a_race.GetType()),
+                 magic_enum::enum_name(a_name));
+
   UpdateNodes();
 
   if (nodes.empty() || nodeNames.size() != nodes.size())
-    logger::warn("No valid nodes found for BodyPart with name: {}", magic_enum::enum_name(name));
+    logger::warn("No valid nodes found for BodyPart with name: {}", magic_enum::enum_name(a_name));
+
   UpdatePosition();
 }
 
+// ─── UpdateNodes ─────────────────────────────────────────────────────────────
+// Resolves each PointName to a live NiNode* (or MidNode pair).
+// On failure the node is pushed as nullptr so indices stay aligned with nodeNames.
+// Subsequent UpdatePosition() checks validity before dereferencing.
+
 void BodyPart::UpdateNodes()
 {
-  for (auto& variant : nodeNames) {
+  nodes.clear();
+  for (auto* variant : nodeNames) {
     if (std::holds_alternative<NodeName>(*variant)) {
-      if (auto node = actor->GetNodeByName(std::get<NodeName>(*variant)); node)
-        nodes.push_back(node->AsNode());
-      else {
-        logger::warn("Node not found for name: {}", std::get<NodeName>(*variant));
-        return;
+      const auto& boneName = std::get<NodeName>(*variant);
+      // Empty bone name is a deliberate placeholder (e.g. StormAtronach schlong root/tip)
+      if (boneName.empty()) {
+        nodes.push_back(static_cast<RE::NiNode*>(nullptr));
+        continue;
       }
-    } else if (std::holds_alternative<MidNodeName>(*variant)) {
-      const auto& midNodeName = std::get<MidNodeName>(*variant);
+      auto* obj = actor->GetNodeByName(boneName);
+      if (!obj)
+        logger::warn("Node not found: {}", boneName);
+      nodes.push_back(obj ? obj->AsNode() : nullptr);
+
+    } else {
+      const auto& midName = std::get<MidNodeName>(*variant);
       std::array<RE::NiNode*, 2> midNodes{};
+      bool ok = true;
       for (std::size_t i = 0; i < 2; ++i) {
-        if (auto node = actor->GetNodeByName(midNodeName[i]); node)
-          midNodes[i] = node->AsNode();
-        else {
-          logger::warn("Node not found for name: {}", midNodeName[i]);
-          return;
+        auto* obj = actor->GetNodeByName(midName[i]);
+        if (!obj) {
+          logger::warn("Mid-node not found: {}", midName[i]);
+          ok = false;
         }
+        midNodes[i] = obj ? obj->AsNode() : nullptr;
       }
+      // Push even on partial failure; IsValid() will catch nullptr members
       nodes.push_back(midNodes);
     }
   }
 }
 
+// ─── IsValid ─────────────────────────────────────────────────────────────────
+
+bool BodyPart::IsValid() const
+{
+  if (nodes.empty())
+    return false;
+  for (const auto& p : nodes) {
+    if (std::holds_alternative<Node>(p)) {
+      if (!std::get<Node>(p))
+        return false;
+    } else {
+      const auto& m = std::get<MidNode>(p);
+      if (!m[0] || !m[1])
+        return false;
+    }
+  }
+  return true;
+}
+
+// ─── UpdatePosition ──────────────────────────────────────────────────────────
+
 void BodyPart::UpdatePosition()
 {
+  start     = Point3f::Zero();
+  end       = Point3f::Zero();
+  direction = Vector3f::Zero();
+  length    = 0.f;
+
+  if (!IsValid())
+    return;
+
   switch (type) {
-  case BodyPart::Type::Point:
+
+  // Point: only start matters; no direction
+  case Type::Point:
     start = ~nodes[0];
+    end   = start;
     break;
-  case BodyPart::Type::Vector:
-  case BodyPart::Type::NormalVectorStart:
-  case BodyPart::Type::NormalVectorEnd:
+
+  // Vector / NormalVectorStart / NormalVectorEnd:
+  //   direction = end - start (3-D, not projected; IsInFront semantics follow body lean)
+  //   NormalVectorEnd (Belly): start = Spine1, end = Belly surface
+  //   => direction points toward body surface / front of actor
+  case Type::Vector:
+  case Type::NormalVectorStart:
+  case Type::NormalVectorEnd:
     start     = ~nodes[0];
     end       = ~nodes[1];
     direction = end - start;
     length    = direction.norm();
+    if (length > 1e-6f)
+      direction /= length;  // store unit direction separately from length
     break;
-  case BodyPart::Type::FitVector:
-    start     = ~nodes[0];
-    end       = ~nodes[2];
-    direction = FitVector();
-    length    = direction.norm();
+
+  // FitVector: SVD principal axis through all valid points
+  //   start = first node position, end = last node position (before fitting)
+  //   direction = fitted unit axis (root-to-tip orientation)
+  //   length = (end - start).norm()  — actual geometric span, not axis vector norm
+  case Type::FitVector: {
+    start = ~nodes[0];
+    end   = ~nodes[nodes.size() - 1];
+
+    direction = FitVector();  // returns unit vector
+
+    // Real length is the distance between the first and last anchor points,
+    // NOT direction.norm() (which would always be ~1 after normalization)
+    length = (end - start).norm();
     break;
+  }
+
   default:
     break;
   }
 }
 
+// ─── FitVector ───────────────────────────────────────────────────────────────
+// Returns a UNIT vector along the principal axis of all valid node positions.
+// Direction is guaranteed to agree with (last - first) orientation.
+
 Vector3f BodyPart::FitVector()
 {
-  if (nodes.size() < 3) {
-    logger::warn("FitVector requires at least 3 nodes, but got {}", nodes.size());
-    return Vector3f::Zero();
+  // Collect valid points (skip nullptr entries from StormAtronach-style gaps)
+  std::vector<Vector3f> pts;
+  pts.reserve(nodes.size());
+  for (const auto& p : nodes) {
+    if (std::holds_alternative<Node>(p) && std::get<Node>(p))
+      pts.push_back(~const_cast<Point&>(p));
+    else if (std::holds_alternative<MidNode>(p)) {
+      const auto& m = std::get<MidNode>(p);
+      if (m[0] && m[1])
+        pts.push_back(~const_cast<Point&>(p));
+    }
   }
 
-  Vector3f p0 = ~nodes[0];
-  Vector3f p1 = ~nodes[1];
-  Vector3f p2 = ~nodes[2];
+  if (pts.size() < 2) {
+    logger::warn("FitVector: fewer than 2 valid nodes");
+    return Vector3f::Zero();
+  }
+  if (pts.size() == 2) {
+    Vector3f d    = pts[1] - pts[0];
+    const float l = d.norm();
+    if (l < 1e-6f)
+      return Vector3f::Zero();
+    return d / l;
+  }
 
-  Vector3f centroid = (p0 + p1 + p2) / 3.0f;
+  // Centroid
+  Vector3f centroid = Vector3f::Zero();
+  for (const auto& p : pts)
+    centroid += p;
+  centroid /= static_cast<float>(pts.size());
 
-  Eigen::Matrix3f cov            = Eigen::Matrix3f::Zero();
-  std::array<Vector3f, 3> points = {p0, p1, p2};
-  for (const auto& p : points) {
+  // Covariance matrix
+  Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
+  for (const auto& p : pts) {
     Vector3f diff = p - centroid;
     cov += diff * diff.transpose();
   }
 
+  // Largest eigenvector = principal axis
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(cov);
-  Vector3f direction = solver.eigenvectors().col(2);  // Eigenvector with the largest eigenvalue
+  Vector3f axis = solver.eigenvectors().col(2);
 
-  if ((p2 - p0).dot(direction) < 0)
-    direction = -direction;
+  // Orient from first valid point toward last valid point
+  if ((pts.back() - pts.front()).dot(axis) < 0.f)
+    axis = -axis;
 
-  return direction;
+  return axis.normalized();
 }
 
-float BodyPart::Angle(const BodyPart& other)
+// ─── Angle ───────────────────────────────────────────────────────────────────
+// Returns the signed angle (degrees) from this direction to other's direction,
+// in the range (-180, 180].
+// Sign convention: positive = counter-clockwise when viewed from above
+// (world-up = +Z), consistent with right-hand rule about Z axis.
+// Returns 0 if either part is Point type or has zero-length direction.
+
+float BodyPart::Angle(const BodyPart& other) const
 {
   if (type == Type::Point || other.type == Type::Point)
-    return 0.0f;
-
+    return 0.f;
   if (length < 1e-6f || other.length < 1e-6f)
-    return 0.0f;
+    return 0.f;
 
-  float cosTheta = direction.normalized().dot(other.direction.normalized());
-  return std::acos(std::clamp(cosTheta, -1.0f, 1.0f));
+  // direction is already unit after UpdatePosition
+  const Vector3f& a = direction;
+  const Vector3f& b = other.direction;
+
+  const float dot     = std::clamp(a.dot(b), -1.f, 1.f);
+  const float cross_z = a.x() * b.y() - a.y() * b.x();  // Z component of a × b
+
+  // atan2 gives signed angle in (-π, π]; convert to degrees
+  return std::atan2(cross_z, dot) * (180.f / std::numbers::pi_v<float>);
 }
 
-float BodyPart::Distance(const BodyPart& other)
+// ─── Distance ────────────────────────────────────────────────────────────────
+// Minimum distance between the two body parts (segment-to-segment, or
+// point-to-segment, or point-to-point depending on types).
+//
+// Uses normalized directions internally so that s ∈ [0, lenA] and t ∈ [0, lenB],
+// avoiding the clamp-to-1.0 bug that arose when direction was not unit-length.
+
+float BodyPart::Distance(const BodyPart& other) const
 {
+  // ── Point-to-point ────────────────────────────────────────────────────────
   if (type == Type::Point && other.type == Type::Point)
     return (start - other.start).norm();
 
-  auto PointToVector = [](const Point3f& point, const Vector3f vector, const Point3f& vecStart,
-                          const Point3f& vecEnd) -> float {
-    float t = (point - vecStart).dot(vector);
-    if (t <= 0.0f)
-      return (point - vecStart).norm();
-    auto len = vector.squaredNorm();
+  // ── Helper: distance from a point to a parametric segment [s0, s0 + dN*len]
+  //   dN must be a unit vector, len is the segment length.
+  auto pointToSeg = [](const Point3f& p, const Point3f& s0, const Vector3f& dN, float len) -> float {
     if (len < 1e-6f)
-      return (point - vecStart).norm();
-    else if (t >= len)
-      return (point - vecEnd).norm();
-    return (point - (vecStart + (t / len) * vector)).norm();
+      return (p - s0).norm();
+    const float t = std::clamp((p - s0).dot(dN), 0.f, len);
+    return (p - (s0 + dN * t)).norm();
   };
 
-  if (type == Type::Point)
-    return PointToVector(start, other.direction, other.start, other.end);
+  // Determine unit directions and lengths for each part
+  // Point types have zero length; treat them as degenerate segments.
+  const bool aIsVec = (type != Type::Point && length > 1e-6f);
+  const bool bIsVec = (other.type != Type::Point && other.length > 1e-6f);
 
-  if (other.type == Type::Point)
-    return PointToVector(other.start, direction, start, end);
+  const Vector3f dA = aIsVec ? direction : Vector3f::Zero();  // already unit
+  const Vector3f dB = bIsVec ? other.direction : Vector3f::Zero();
+  const float lA    = aIsVec ? length : 0.f;
+  const float lB    = bIsVec ? other.length : 0.f;
 
-  // For two vectors, we can calculate the distance between them as the distance between their closest points
+  // ── Point-to-segment ─────────────────────────────────────────────────────
+  if (!aIsVec)
+    return pointToSeg(start, other.start, dB, lB);
+  if (!bIsVec)
+    return pointToSeg(other.start, start, dA, lA);
 
-  auto w = other.start - start;
-
-  auto a = direction.dot(direction);  // always >= 0
-  auto b = direction.dot(other.direction);
-  auto c = other.direction.dot(other.direction);  // always >= 0
-  auto d = direction.dot(w);
-  auto e = other.direction.dot(w);
-
-  auto denom = a * c - b * b;  // always >= 0
+  // ── Segment-to-segment ───────────────────────────────────────────────────
+  // Parametrize: P(s) = start + dA*s,  s ∈ [0, lA]
+  //              Q(t) = other.start + dB*t,  t ∈ [0, lB]
+  const Vector3f w  = other.start - start;
+  const float b     = dA.dot(dB);
+  const float d     = dA.dot(w);
+  const float e     = dB.dot(w);
+  const float denom = 1.f - b * b;  // = 1 - cos²θ = sin²θ, always ∈ [0,1]
 
   float s, t;
-  if (denom < 1e-6f) {  // Lines are almost parallel
-    s          = 0.0f;
-    t          = std::clamp(e / c, 0.0f, 1.0f);
-    float dist = PointToVector(start, other.direction, other.start, other.end);
-    dist       = min(dist, PointToVector(other.start, direction, start, end));
-    dist       = min(dist, PointToVector(end, other.direction, other.start, other.end));
-    dist       = min(dist, PointToVector(other.end, direction, start, end));
+
+  if (denom < 1e-6f) {
+    // Lines nearly parallel: fix s=0, project
+    s = 0.f;
+    t = std::clamp(e / lB, 0.f, 1.f) * lB;  // t ∈ [0, lB]
+    // Take minimum over all four endpoint combinations for robustness
+    float dist = pointToSeg(start, other.start, dB, lB);
+    dist       = min(dist, pointToSeg(other.start, start, dA, lA));
+    dist       = min(dist, pointToSeg(start + dA * lA, other.start, dB, lB));
+    dist       = min(dist, pointToSeg(other.start + dB * lB, start, dA, lA));
     return dist;
   }
 
-  s = (b * e - c * d) / denom;
-  t = (a * e - b * d) / denom;
+  // Unconstrained closest approach
+  s = (b * e - d) / denom;
+  t = (e - b * d) / denom;
 
-  if (s < 0.0f) {
-    s = 0.0f;
-    t = std::clamp(e / c, 0.0f, 1.0f);
-  } else if (s > 1.0f) {
-    s = 1.0f;
-    t = std::clamp((b + e) / c, 0.0f, 1.0f);
+  // Clamp s to [0, lA], then re-derive t; clamp t to [0, lB], then re-derive s
+  if (s < 0.f) {
+    s = 0.f;
+    t = std::clamp(e, 0.f, lB);
+  } else if (s > lA) {
+    s = lA;
+    t = std::clamp(e + b * lA, 0.f, lB);
   }
 
-  if (t < 0.0f) {
-    t = 0.0f;
-    s = std::clamp(-d / a, 0.0f, 1.0f);
-  } else if (t > 1.0f) {
-    t = 1.0f;
-    s = std::clamp((b - d) / a, 0.0f, 1.0f);
+  if (t < 0.f) {
+    t = 0.f;
+    s = std::clamp(-d, 0.f, lA);
+  } else if (t > lB) {
+    t = lB;
+    s = std::clamp(b * lB - d, 0.f, lA);
   }
 
-  auto p = start + s * direction;
-  auto q = other.start + t * other.direction;
+  const Point3f p = start + dA * s;
+  const Point3f q = other.start + dB * t;
   return (p - q).norm();
+}
+
+// ─── IsInFront ───────────────────────────────────────────────────────────────
+// Returns true if the point lies on the side that direction points toward.
+// For Belly (NormalVectorEnd): start=Spine1, end=Belly surface,
+//   direction = Spine1→Belly = body-forward; IsInFront(p) means p is in front of the actor.
+// For any Vector part the semantics follow the part's own axis direction.
+// Point-type parts always return false (no directional axis).
+
+bool BodyPart::IsInFront(const Point3f& p) const
+{
+  if (type == Type::Point || length < 1e-6f)
+    return false;
+  // Positive signed projection along direction from start
+  return (p - start).dot(direction) > 0.f;
+}
+
+// ─── IsHorizontal ────────────────────────────────────────────────────────────
+// Returns true if the direction vector is within toleranceDeg of the XY plane.
+// Useful for Naveljob (penis must be roughly horizontal, not pointing down into vagina).
+
+bool BodyPart::IsHorizontal(float toleranceDeg) const
+{
+  if (type == Type::Point || length < 1e-6f)
+    return false;
+  const float sinTol = std::sin(toleranceDeg * std::numbers::pi_v<float> / 180.f);
+  return std::abs(direction.z()) <= sinTol;
 }
 
 }  // namespace Define

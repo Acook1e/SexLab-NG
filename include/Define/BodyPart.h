@@ -46,39 +46,56 @@ public:
 
   enum class Type : std::uint8_t
   {
-    Point,
-    Vector,             // Vector based on 2 points
-    FitVector,          // Vector fitted based on 3 points
-    NormalVectorStart,  // Start Point on the Plane
-    NormalVectorEnd,    // End Point on the Plane
+    Point,              // Single node; no direction
+    Vector,             // start -> end, direction = unit(end - start)
+    FitVector,          // SVD principal axis through 2-3 nodes
+    NormalVectorStart,  // Vector where start is the surface point
+    NormalVectorEnd,    // Vector where end is the surface point (e.g. Belly: Spine1->Belly)
   };
 
   BodyPart() = default;
   BodyPart(RE::Actor* actor, Race race, Name name);
 
-  Name GetName() const { return name; }
+  [[nodiscard]] Name GetName() const noexcept { return name; }
+  [[nodiscard]] Type GetType() const noexcept { return type; }
+  [[nodiscard]] bool IsValid() const;
 
-  const Point3f& GetStart() const { return start; }
-  const Point3f& GetEnd() const { return end; }
-  const Vector3f& GetDirection() const { return direction; }
-  float GetLength() const { return length; }
+  [[nodiscard]] const Point3f& GetStart() const noexcept { return start; }
+  [[nodiscard]] const Point3f& GetEnd() const noexcept { return end; }
+  [[nodiscard]] const Vector3f& GetDirection() const noexcept { return direction; }
+  [[nodiscard]] float GetLength() const noexcept { return length; }
 
   void UpdateNodes();
   void UpdatePosition();
-  Vector3f FitVector();
 
-  float Angle(const BodyPart& other);
-  float Distance(const BodyPart& other);
+  // Returns the signed angle (degrees, -180..180] from this direction to other's,
+  // positive = CCW when viewed from +Z (world up).
+  // Returns 0 if either part is Point type.
+  [[nodiscard]] float Angle(const BodyPart& other) const;
+
+  // Minimum distance between the two body parts (point/segment as appropriate).
+  [[nodiscard]] float Distance(const BodyPart& other) const;
+
+  // True if point p lies on the side that direction points toward (signed projection > 0).
+  // For Belly this means "in front of the actor". Always false for Point types.
+  [[nodiscard]] bool IsInFront(const Point3f& p) const;
+
+  // True if direction is within toleranceDeg of horizontal (|dir.z| <= sin(tol)).
+  // Useful for Naveljob guard (penis must not point downward into vagina area).
+  [[nodiscard]] bool IsHorizontal(float toleranceDeg = 20.f) const;
 
 private:
+  Vector3f FitVector();
+
   std::vector<PointName*> nodeNames{};
   std::vector<Point> nodes{};
   Point3f start{};
   Point3f end{};
-  Vector3f direction{};
-  float length     = 0.0f;
+  Vector3f direction{};  // unit vector after UpdatePosition
+  float length     = 0.f;
   RE::Actor* actor = nullptr;
-  Name name;
-  Type type;
+  Name name        = Name::Mouth;
+  Type type        = Type::Point;
 };
+
 }  // namespace Define

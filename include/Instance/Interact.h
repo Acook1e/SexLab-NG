@@ -6,85 +6,87 @@
 
 namespace Instance
 {
+
 class Interact
 {
 public:
+  // ── 交互类型 ─────────────────────────────────────────────────────────────
   enum class Type : std::uint8_t
   {
     None = 0,
-    // For Mouth
-    Kiss,          // Mouth and Mouth
-    ToeSucking,    // Mouth and Foot
-    Cunnilingus,   // Mouth and Vagina
-    Anilingus,     // Mouth and Anus
-    Fellatio,      // Mouth and Penis
-    DeepThroat,    // Mouth and Penis, deeper than Fellatio
-    MouthAnimObj,  // Mouth and AnimObject
-
-    // For Breast
-    GropeBreast,  // Breast and Hand
-    Titfuck,      // Breast and Penis
-
-    // For Hand
-    FingerVagina,  // Hand and Vagina
-    FingerAnus,    // Hand and Anus
-    Handjob,       // Hand and Penis
-
-    // For Belly
-    Naveljob,  // Belly and Penis
-
-    // For Thigh
-    Thighjob,  // Thigh and Penis
-
-    // For Butt
-    Frottage,  // Butt and Penis
-
-    // For foot
-    Footjob,  // Foot and Penis
-
-    // For Vagina
-    Tribbing,  // Vagina and Vagina
-    Vaginal,   // Vagina and Penis
-
-    // For Anus
-    Anal,  //  Anus and Penis
-
-    // For Penis
-    PenisAnimObj,  // Penis and AnimObject
+    // Mouth
+    Kiss,         // Mouth  <-> Mouth
+    ToeSucking,   // Mouth  ->  Foot
+    Cunnilingus,  // Mouth  ->  Vagina
+    Anilingus,    // Mouth  ->  Anus
+    Fellatio,     // Mouth  <-  Penis
+    DeepThroat,   // Mouth  <-  Penis  (deeper)
+    MouthAnimObj,
+    // Breast
+    GropeBreast,  // Breast <-> Hand
+    Titfuck,      // Breast <-> Penis
+    // Hand / Finger
+    FingerVagina,  // Finger ->  Vagina
+    FingerAnus,    // Finger ->  Anus
+    Handjob,       // Hand   ->  Penis
+    // Belly
+    Naveljob,  // Belly  <-  Penis
+    // Thigh
+    Thighjob,  // Thigh  <-  Penis
+    // Butt
+    Frottage,  // Butt   <-  Penis
+    // Foot
+    Footjob,  // Foot   <-  Penis
+    // Vagina
+    Tribbing,  // Vagina <-> Vagina
+    Vaginal,   // Vagina <-  Penis
+    // Anus
+    Anal,  // Anus   <-  Penis
+    // Penis
+    PenisAnimObj,
 
     Total
   };
 
+  // ── 每个部位的当前交互结果（外部只读）────────────────────────────────────
   struct Info
   {
-    Define::BodyPart part{};
+    RE::Actor* actor = nullptr;  // 与之交互的 actor（nullptr = 无交互）
+    float distance   = 0.f;      // 交互距离
+    float velocity   = 0.f;      // 靠近速度（units/ms，负=靠近）
+    Type type        = Type::None;
+    // 上一帧镜像，用于滞后判断
     RE::Actor* prevActor = nullptr;
-    RE::Actor* actor     = nullptr;
-    float prevDistance   = 0.0f;
-    float distance       = 0.0f;
+    float prevDistance   = 0.f;
     Type prevType        = Type::None;
-    Type type            = Type::None;
-    float velocity       = 0.0f;
   };
 
-  struct Data
+  struct ActorData
   {
-    std::unordered_map<Define::BodyPart::Name, Info> bodyParts{};
+    // 每个该 actor 拥有的 BodyPart 实例（按 Name 索引）
+    std::unordered_map<Define::BodyPart::Name, Define::BodyPart> parts{};
+    // 每个 BodyPart 当前帧的交互结果
+    std::unordered_map<Define::BodyPart::Name, Interact::Info> infos{};
     Define::Race race     = Define::Race::Type::Unknown;
     Define::Gender gender = Define::Gender::Type::Unknown;
-    float lastUpdateMs    = 0.0f;
+    float lastUpdateMs    = 0.f;
   };
 
+  // ── 生命周期 ─────────────────────────────────────────────────────────────
   Interact() = default;
-  Interact(std::vector<RE::Actor*> actors) {}
+  explicit Interact(std::vector<RE::Actor*> actors);
 
-  void Update() {}
-  void FlashNodeData() {}
+  // 节点指针刷新（骨骼树重建后调用，如换装）
+  void FlashNodeData();
 
-  [[nodiscard]] const Data& GetData(RE::Actor* actor) const;
-  [[nodiscard]] const Info& GetInfo(RE::Actor* actor, Define::BodyPart::Name bodyPart) const;
+  // 每帧位置更新 + 交互计算
+  void Update();
+
+  // ── 查询 ────────────────────────────────────────────────────────────────
+  [[nodiscard]] const Info& GetInfo(RE::Actor* actor, Define::BodyPart::Name part) const;
 
 private:
-  std::unordered_map<RE::Actor*, Data> datas{};
+  std::unordered_map<RE::Actor*, ActorData> datas{};
 };
+
 }  // namespace Instance
