@@ -1,15 +1,9 @@
 #include "Define/BodyPart.h"
 
+#include "magic_enum/magic_enum.hpp"
+
 namespace Define
 {
-
-using NodeName    = std::string_view;
-using MidNodeName = std::array<std::string_view, 2>;
-
-using PointName     = std::variant<NodeName, MidNodeName>;
-using VectorName    = std::array<PointName, 2>;  // include normal vector
-using FitVectorName = std::array<PointName, 3>;  // include normal vector
-
 static std::unordered_map<Race::Type, PointName> mouthMap{
     {Define::Race::Type::Human, "NPC Head [Head]"},
 };
@@ -21,14 +15,14 @@ static std::unordered_map<Race::Type, PointName> handRightMap{
     {Define::Race::Type::Human, "WEAPON"},
 };
 
-static std::unordered_map<Race::Type, VectorName> footLeftMap{
+static std::unordered_map<Race::Type, std::array<PointName, 2>> footLeftMap{
     {Define::Race::Type::Human, {"NPC L Foot [Lft ]", "NPC L Toe0 [LToe]"}},
 };
-static std::unordered_map<Race::Type, VectorName> footRightMap{
+static std::unordered_map<Race::Type, std::array<PointName, 2>> footRightMap{
     {Define::Race::Type::Human, {"NPC R Foot [Rgt ]", "NPC R Toe0 [RToe]"}},
 };
 
-static std::unordered_map<Race::Type, FitVectorName> schlongMap{
+static std::unordered_map<Race::Type, std::array<PointName, 3>> schlongMap{
     {Define::Race::Type::Human, {"NPC Genitals01 [Gen01]", "NPC Genitals04 [Gen04]", "NPC Genitals06 [Gen06]"}},
     {Define::Race::Type::Bear, {"BearD 5", "BearD 7", "BearD 9"}},
     {Define::Race::Type::Boar, {"BoarDick04", "BoarDick05", "BoarDick06"}},
@@ -68,26 +62,25 @@ static std::unordered_map<Race::Type, FitVectorName> schlongMap{
     {Define::Race::Type::Wolf, {"CDPenis 3", "CDPenis 5", "CDPenis 7"}},
 };
 
-static std::unordered_map<BodyPart::Name, std::variant<PointName, VectorName, FitVectorName>> humanMap{
+static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
     // from base breast to nipple
-    {BodyPart::Name::BreastLeft, VectorName{"L Breast02", "L Breast03"}},
-    {BodyPart::Name::BreastRight, VectorName{"R Breast02", "R Breast03"}},
+    {BodyPart::Name::BreastLeft, {"L Breast02", "L Breast03"}},
+    {BodyPart::Name::BreastRight, {"R Breast02", "R Breast03"}},
     // from root of middle finger to its tip
-    {BodyPart::Name::FingerLeft, VectorName{"NPC L Finger20 [LF20]", "NPC L Finger22 [LF22]"}},
-    {BodyPart::Name::FingerRight, VectorName{"NPC R Finger20 [RF20]", "NPC R Finger22 [RF22]"}},
+    {BodyPart::Name::FingerLeft, {"NPC L Finger20 [LF20]", "NPC L Finger22 [LF22]"}},
+    {BodyPart::Name::FingerRight, {"NPC R Finger20 [RF20]", "NPC R Finger22 [RF22]"}},
     // from Spine1 to Belly, almost the normal vector of belly
-    {BodyPart::Name::Belly, VectorName{"NPC Spine1 [Spn1]", "NPC Belly"}},
+    {BodyPart::Name::Belly, {"NPC Spine1 [Spn1]", "NPC Belly"}},
     // from mid of back thigh to mid of front thigh
-    {BodyPart::Name::ThighLeft, VectorName{"NPC L RearThigh", "NPC L FrontThigh"}},
-    {BodyPart::Name::ThighRight, VectorName{"NPC R RearThigh", "NPC R FrontThigh"}},
+    {BodyPart::Name::ThighLeft, {"NPC L RearThigh", "NPC L FrontThigh"}},
+    {BodyPart::Name::ThighRight, {"NPC R RearThigh", "NPC R FrontThigh"}},
     // the only node of butt
-    {BodyPart::Name::ButtLeft, PointName{"NPC L Butt"}},
-    {BodyPart::Name::ButtRight, PointName{"NPC R Butt"}},
+    {BodyPart::Name::ButtLeft, {"NPC L Butt"}},
+    {BodyPart::Name::ButtRight, {"NPC R Butt"}},
     // from entry to deep then pevis
-    {BodyPart::Name::Vagina,
-     FitVectorName{MidNodeName{"NPC L Pussy02", "NPC R Pussy02"}, "VaginaDeep1", "NPC Pelvis [Pelv]"}},
+    {BodyPart::Name::Vagina, {MidNodeName{"NPC L Pussy02", "NPC R Pussy02"}, "VaginaDeep1", "NPC Pelvis [Pelv]"}},
     // from entry to deep
-    {BodyPart::Name::Anus, VectorName{"NPC LT Anus2", "NPC Anus Deep2"}},
+    {BodyPart::Name::Anus, {"NPC LT Anus2", "NPC Anus Deep2"}},
 };
 
 static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
@@ -102,23 +95,22 @@ static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
     {BodyPart::Name::Penis, BodyPart::Type::FitVector},
 };
 
-/*
-// Calculate Mid Point
-Point3f operator!(std::array<RE::NiNode*, 2> nodes)
+// Calculate Point or Mid Point
+Point3f operator~(Point point)
 {
+  if (std::holds_alternative<Node>(point)) {
+    auto node = std::get<Node>(point);
+    auto pos  = node->world.translate;
+    return {pos.x, pos.y, pos.z};
+  } else if (std::holds_alternative<MidNode>(point)) {
+    auto nodes  = std::get<MidNode>(point);
     auto lhsPos = nodes[0]->world.translate;
     auto rhsPos = nodes[1]->world.translate;
     auto mid    = (lhsPos + rhsPos) * 0.5f;
     return {mid.x, mid.y, mid.z};
+  }
+  return {0.0f, 0.0f, 0.0f};
 }
-
-// Calculate Point
-Point3f operator!(RE::NiNode node)
-{
-    auto pos = node.world.translate;
-    return {pos.x, pos.y, pos.z};
-}
-*/
 
 bool BodyPart::HasBodyPart(Gender gender, Race race, Name name)
 {
@@ -148,6 +140,230 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name name)
   default:
     return false;
   }
+}
+
+BodyPart::BodyPart(RE::Actor* actor, Race race, Name name) : name(name), type(typeMap[name])
+{
+  nodeNames.clear();
+  nodes.clear();
+
+  switch (name) {
+  // All Creature
+  case BodyPart::Name::Mouth:
+    if (auto it = mouthMap.find(race.GetType()); it != mouthMap.end())
+      nodeNames.push_back(&it->second);
+    break;
+  case BodyPart::Name::HandLeft:
+    if (auto it = handLeftMap.find(race.GetType()); it != handLeftMap.end())
+      nodeNames.push_back(&it->second);
+    break;
+  case BodyPart::Name::HandRight:
+    if (auto it = handRightMap.find(race.GetType()); it != handRightMap.end())
+      nodeNames.push_back(&it->second);
+    break;
+  case BodyPart::Name::FootLeft:
+    if (auto it = footLeftMap.find(race.GetType()); it != footLeftMap.end())
+      for (auto& name : it->second)
+        nodeNames.push_back(&name);
+    break;
+  case BodyPart::Name::FootRight:
+    if (auto it = footRightMap.find(race.GetType()); it != footRightMap.end())
+      for (auto& name : it->second)
+        nodeNames.push_back(&name);
+    break;
+
+    // Human only
+  case BodyPart::Name::BreastLeft:
+  case BodyPart::Name::BreastRight:
+  case BodyPart::Name::FingerLeft:
+  case BodyPart::Name::FingerRight:
+  case BodyPart::Name::Belly:
+  case BodyPart::Name::ThighLeft:
+  case BodyPart::Name::ThighRight:
+  case BodyPart::Name::ButtLeft:
+  case BodyPart::Name::ButtRight:
+  case BodyPart::Name::Vagina:
+  case BodyPart::Name::Anus:
+  case BodyPart::Name::Penis:
+    if (auto it = humanMap.find(name); it != humanMap.end())
+      for (auto& nodeName : it->second)
+        nodeNames.push_back(&nodeName);
+    break;
+  default:
+    break;
+  }
+
+  if (nodeNames.empty())
+    logger::warn("BodyPart not found for race: {} and name: {}", magic_enum::enum_name(race.GetType()),
+                 magic_enum::enum_name(name));
+  UpdateNodes();
+
+  if (nodes.empty() || nodeNames.size() != nodes.size())
+    logger::warn("No valid nodes found for BodyPart with name: {}", magic_enum::enum_name(name));
+  UpdatePosition();
+}
+
+void BodyPart::UpdateNodes()
+{
+  for (auto& variant : nodeNames) {
+    if (std::holds_alternative<NodeName>(*variant)) {
+      if (auto node = actor->GetNodeByName(std::get<NodeName>(*variant)); node)
+        nodes.push_back(node->AsNode());
+      else {
+        logger::warn("Node not found for name: {}", std::get<NodeName>(*variant));
+        return;
+      }
+    } else if (std::holds_alternative<MidNodeName>(*variant)) {
+      const auto& midNodeName = std::get<MidNodeName>(*variant);
+      std::array<RE::NiNode*, 2> midNodes{};
+      for (std::size_t i = 0; i < 2; ++i) {
+        if (auto node = actor->GetNodeByName(midNodeName[i]); node)
+          midNodes[i] = node->AsNode();
+        else {
+          logger::warn("Node not found for name: {}", midNodeName[i]);
+          return;
+        }
+      }
+      nodes.push_back(midNodes);
+    }
+  }
+}
+
+void BodyPart::UpdatePosition()
+{
+  switch (type) {
+  case BodyPart::Type::Point:
+    start = ~nodes[0];
+    break;
+  case BodyPart::Type::Vector:
+  case BodyPart::Type::NormalVectorStart:
+  case BodyPart::Type::NormalVectorEnd:
+    start     = ~nodes[0];
+    end       = ~nodes[1];
+    direction = end - start;
+    length    = direction.norm();
+    break;
+  case BodyPart::Type::FitVector:
+    start     = ~nodes[0];
+    end       = ~nodes[2];
+    direction = FitVector();
+    length    = direction.norm();
+    break;
+  default:
+    break;
+  }
+}
+
+Vector3f BodyPart::FitVector()
+{
+  if (nodes.size() < 3) {
+    logger::warn("FitVector requires at least 3 nodes, but got {}", nodes.size());
+    return Vector3f::Zero();
+  }
+
+  Vector3f p0 = ~nodes[0];
+  Vector3f p1 = ~nodes[1];
+  Vector3f p2 = ~nodes[2];
+
+  Vector3f centroid = (p0 + p1 + p2) / 3.0f;
+
+  Eigen::Matrix3f cov            = Eigen::Matrix3f::Zero();
+  std::array<Vector3f, 3> points = {p0, p1, p2};
+  for (const auto& p : points) {
+    Vector3f diff = p - centroid;
+    cov += diff * diff.transpose();
+  }
+
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(cov);
+  Vector3f direction = solver.eigenvectors().col(2);  // Eigenvector with the largest eigenvalue
+
+  if ((p2 - p0).dot(direction) < 0)
+    direction = -direction;
+
+  return direction;
+}
+
+float BodyPart::Angle(const BodyPart& other)
+{
+  if (type == Type::Point || other.type == Type::Point)
+    return 0.0f;
+
+  if (length < 1e-6f || other.length < 1e-6f)
+    return 0.0f;
+
+  float cosTheta = direction.normalized().dot(other.direction.normalized());
+  return std::acos(std::clamp(cosTheta, -1.0f, 1.0f));
+}
+
+float BodyPart::Distance(const BodyPart& other)
+{
+  if (type == Type::Point && other.type == Type::Point)
+    return (start - other.start).norm();
+
+  auto PointToVector = [](const Point3f& point, const Vector3f vector, const Point3f& vecStart,
+                          const Point3f& vecEnd) -> float {
+    float t = (point - vecStart).dot(vector);
+    if (t <= 0.0f)
+      return (point - vecStart).norm();
+    auto len = vector.squaredNorm();
+    if (len < 1e-6f)
+      return (point - vecStart).norm();
+    else if (t >= len)
+      return (point - vecEnd).norm();
+    return (point - (vecStart + (t / len) * vector)).norm();
+  };
+
+  if (type == Type::Point)
+    return PointToVector(start, other.direction, other.start, other.end);
+
+  if (other.type == Type::Point)
+    return PointToVector(other.start, direction, start, end);
+
+  // For two vectors, we can calculate the distance between them as the distance between their closest points
+
+  auto w = other.start - start;
+
+  auto a = direction.dot(direction);  // always >= 0
+  auto b = direction.dot(other.direction);
+  auto c = other.direction.dot(other.direction);  // always >= 0
+  auto d = direction.dot(w);
+  auto e = other.direction.dot(w);
+
+  auto denom = a * c - b * b;  // always >= 0
+
+  float s, t;
+  if (denom < 1e-6f) {  // Lines are almost parallel
+    s          = 0.0f;
+    t          = std::clamp(e / c, 0.0f, 1.0f);
+    float dist = PointToVector(start, other.direction, other.start, other.end);
+    dist       = min(dist, PointToVector(other.start, direction, start, end));
+    dist       = min(dist, PointToVector(end, other.direction, other.start, other.end));
+    dist       = min(dist, PointToVector(other.end, direction, start, end));
+    return dist;
+  }
+
+  s = (b * e - c * d) / denom;
+  t = (a * e - b * d) / denom;
+
+  if (s < 0.0f) {
+    s = 0.0f;
+    t = std::clamp(e / c, 0.0f, 1.0f);
+  } else if (s > 1.0f) {
+    s = 1.0f;
+    t = std::clamp((b + e) / c, 0.0f, 1.0f);
+  }
+
+  if (t < 0.0f) {
+    t = 0.0f;
+    s = std::clamp(-d / a, 0.0f, 1.0f);
+  } else if (t > 1.0f) {
+    t = 1.0f;
+    s = std::clamp((b - d) / a, 0.0f, 1.0f);
+  }
+
+  auto p = start + s * direction;
+  auto q = other.start + t * other.direction;
+  return (p - q).norm();
 }
 
 }  // namespace Define

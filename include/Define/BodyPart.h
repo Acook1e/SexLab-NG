@@ -10,6 +10,14 @@ namespace Define
 using Point3f  = Eigen::Vector3f;
 using Vector3f = Eigen::Vector3f;
 
+using NodeName    = std::string_view;
+using MidNodeName = std::array<std::string_view, 2>;
+using PointName   = std::variant<NodeName, MidNodeName>;
+
+using Node    = RE::NiNode*;
+using MidNode = std::array<RE::NiNode*, 2>;
+using Point   = std::variant<Node, MidNode>;
+
 class BodyPart
 {
 public:
@@ -46,17 +54,30 @@ public:
   };
 
   BodyPart() = default;
-  BodyPart(Race race, Name name, Type type);
+  BodyPart(RE::Actor* actor, Race race, Name name);
+
+  Name GetName() const { return name; }
+
+  const Point3f& GetStart() const { return start; }
+  const Point3f& GetEnd() const { return end; }
+  const Vector3f& GetDirection() const { return direction; }
+  float GetLength() const { return length; }
 
   void UpdateNodes();
   void UpdatePosition();
+  Vector3f FitVector();
+
+  float Angle(const BodyPart& other);
+  float Distance(const BodyPart& other);
 
 private:
-  std::vector<std::variant<RE::NiNode*, std::array<RE::NiNode*, 2>>> nodes;
-  Point3f start;
-  Point3f end;
-  Vector3f direction;
-  float squaredLength;
+  std::vector<PointName*> nodeNames{};
+  std::vector<Point> nodes{};
+  Point3f start{};
+  Point3f end{};
+  Vector3f direction{};
+  float length     = 0.0f;
+  RE::Actor* actor = nullptr;
   Name name;
   Type type;
 };
