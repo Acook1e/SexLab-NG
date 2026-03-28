@@ -58,6 +58,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
   SKSE::Init(skse, true);
 
   logger::info("Runtime version: {}", skse->RuntimeVersion());
+  RUNTIME = skse->RuntimeVersion();
 
   auto* messaging = SKSE::GetMessagingInterface();
   if (!messaging->RegisterListener(MessageHandler)) {

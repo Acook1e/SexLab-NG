@@ -1,6 +1,7 @@
 #include "Instance/SceneInstance.h"
 
 #include "Instance/Collision.h"
+#include "Instance/Scale.h"
 
 namespace Instance
 {
@@ -28,6 +29,8 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
   else
     currentScene = RandomScene();
   currentStage = 0;
+
+  logger::info("[SexLab NG] Current scene: '{}'", currentScene ? currentScene->GetName() : "null");
 
   SetPositions();
 
@@ -218,9 +221,12 @@ void SceneInstance::ReadyActors()
   if (!actors.empty() && actors.front()) {
     auto* central = actors.front();
     for (const auto& [actor, info] : actorInfoMap) {
-      if (!actor || actor == central)
+      if (!actor)
         continue;
+      Scale::GetSingleton().ApplyScale(actor, info.position->GetScale());
 
+      if (actor == central)
+        continue;
       actor->SetPosition(central->GetPosition(), true);
       actor->SetAngle(central->GetAngle());
       actor->Update3DPosition(true);
@@ -235,6 +241,7 @@ void SceneInstance::ResetActors()
   for (const auto& [actor, info] : actorInfoMap) {
     if (!actor)
       continue;
+    Scale::GetSingleton().RemoveScale(actor);
     actor->NotifyAnimationGraph("AnimObjectUnequip");
     // Reset human
     actor->NotifyAnimationGraph("IdleForceDefaultState");
@@ -300,7 +307,7 @@ bool SceneInstance::SetStage(std::uint32_t stage)
 
     if (info.position->GetGender().HasPenis()) {
       // For SOS or TNG, value from -9 to 9
-      std::int8_t angle = info.position->GetSchlongAngles()[stage - 1] + (stage % 2 ? stage : -stage);
+      std::int8_t angle = info.position->GetSchlongAngles()[stage - 1];
       actor->NotifyAnimationGraph("SOSBend" + std::to_string(angle));
     }
   }

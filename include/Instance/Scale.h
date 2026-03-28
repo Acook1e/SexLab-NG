@@ -15,6 +15,11 @@ public:
 
   Scale()
   {
+    if (RUNTIME != SKSE::RUNTIME_SSE_1_6_1170 && RUNTIME != SKSE::RUNTIME_1_6_1179) {
+      logger::critical("[SexLab NG] Scale : Unsupported runtime version: {}", RUNTIME);
+      return;
+    }
+
     SKEE::InterfaceExchangeMessage msg;
     const auto* const intfc{SKSE::GetMessagingInterface()};
     intfc->Dispatch(SKEE::InterfaceExchangeMessage::kExchangeInterface, &msg, sizeof(SKEE::InterfaceExchangeMessage*),
@@ -38,6 +43,8 @@ public:
       return 1.0f;
 
     auto node = actor->GetNodeByName(baseNode);
+    logger::info("[SexLab NG] Scale : Base scale for actor '{}' is {:.3f})", actor->GetDisplayFullName(),
+                 actor->GetScale() * (node ? node->local.scale : 1.0f));
     return actor->GetScale() * (node ? node->local.scale : 1.0f);
   }
 
@@ -60,6 +67,11 @@ public:
       basescale = CalculateScale(actor);
     }
 
+    if (std::abs(basescale - scale) < 0.03f)
+      return;  // No significant change, skip to avoid unnecessary updates
+
+    logger::info("[SexLab NG] Scale : Applying scale {:.3f} to actor '{}'", scale, actor->GetDisplayFullName());
+
     // calculate multiplicative scale factor and apply
     float k = scale / basescale;
 
@@ -74,6 +86,8 @@ public:
 
     if (!actor)
       return;
+
+    logger::info("[SexLab NG] Scale : Removing scale from actor '{}'", actor->GetDisplayFullName());
 
     auto isFemale = actor->GetActorBase()->IsFemale();
     if (transformInterface->RemoveNodeTransformScale(actor, false, isFemale, baseNode.data(), "SexLabNG")) {

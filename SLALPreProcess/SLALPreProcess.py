@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 
+
+from .logger import Logger
 from .SLALSourceProcess import preprocess_slal_source
 from .FNISBehaviorConvert import generate_behavior, process_fnis_txt
 

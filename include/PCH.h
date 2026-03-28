@@ -31,6 +31,8 @@
 constexpr inline std::string_view PLUGIN_NAME = "SexLabNG";
 constexpr inline std::uint32_t MOD            = 'SLNG';
 
+inline REL::Version RUNTIME = SKSE::RUNTIME_SSE_1_6_1170;
+
 constexpr inline std::uint32_t hash(const char* data, size_t const size) noexcept
 {
   uint32_t hash = MOD;

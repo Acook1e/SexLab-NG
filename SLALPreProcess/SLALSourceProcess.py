@@ -4,6 +4,8 @@ import os
 from typing import Any, Dict, List
 from enum import Enum, Flag
 
+from .logger import Logger
+logger = Logger()
 
 ROLE_TYPES = {'Female', 'Male', 'CreatureMale', 'CreatureFemale'}
 
@@ -274,10 +276,11 @@ class Race(Flag):
     StormAtronach = 1 << 44
     Troll = 1 << 45
     VampireLord = 1 << 46
-    Werewolf = 1 << 47
-    Wisp = 1 << 48
-    Wispmother = 1 << 49
-    Wolf = 1 << 50
+    Werebear = 1 << 47
+    Werewolf = 1 << 48
+    Wisp = 1 << 49
+    Wispmother = 1 << 50
+    Wolf = 1 << 51
 
 
 def to_race(race: str) -> int:
@@ -379,6 +382,8 @@ def to_race(race: str) -> int:
             res = Race.Troll
         case "vampirelords":
             res = Race.VampireLord
+        case "werebears":
+            res = Race.Werebear
         case "werewolves":
             res = Race.Werewolf
         case "wispmothers":
@@ -413,24 +418,6 @@ def to_gender(gender: str) -> int:
     return res.value
 
 
-def tags_process(raw_tags: List[str]):
-    PositionHelper = ["2futa", "3 girls", "cccf", "cccsf", "ccf", "ccsf", "cf", "cff", "csf", "csfsf", "f", "fcccc", "fcc", "ffffm", "fffm", "ffm", "ffmm", "fm", "fmc",
-                      "fmmm", "m", "mfc", "mff", "mmf", "mmmf", "mmmmsf", "mmmsf", "mmsf", "msf", "msfc", "sfsfc", "sfsfm", "sfsfmm", "sfsfsfm", "sfsfsfsfm", "ff", "fff", "fffc", "ffc", "ccm"]
-
-    Races = ["atronach", "bear", "boar", "cat", "chaurus", "chicken", "cow", "crab", "deer", "dog", "dragon", "dragonpriest", "draugr", "falmer", "flameatronach", "fox", "frostatronach", "gargoyle", "giant", "giantspider", "goat", "hag", "hagraven", "horse", "horker", "husky", "icewraith", "mammoth", "netch",
-             "rabbit", "reaper", "riekling", "sabrecat", "seeker", "skeever", "slaughterfish", "spider", "spriggan", "stormatronach", "troll", "unicorn", "vampire", "vampirelord", "werewolf", "wispmother", "wolf", "femwerewolf", "chaurushunter", "chaurusreapers", "largespider", "benthiclurker", "ashhopper"]
-
-    helper = []
-    race = []
-    for tag in raw_tags:
-        tag_lower = tag.lower()
-        if tag_lower in PositionHelper:
-            helper.append(tag_lower)
-        elif tag_lower in Races:
-            race.append(tag_lower)
-    return {"position_helper": helper, "race": race}
-
-
 def prase_raw_data(raw_data: dict) -> dict:
     '''
     将数据格式化为SexLab NG需要的结构
@@ -461,6 +448,7 @@ def prase_raw_data(raw_data: dict) -> dict:
                 position["race"] = to_race(anim[key].get("race", "human"))
                 races |= position["race"]
                 position["be_cumed"] = anim[key].get("add_cum", "none")
+                position["scale"] = 1.0
                 position["stage_params"] = {}
                 for stage_num, param in anim[key].get("stage_params", {}).items():
                     for param_name, param_value in param.items():
@@ -472,6 +460,7 @@ def prase_raw_data(raw_data: dict) -> dict:
             else:
                 total_actors = actor_key - 1
                 break
+
         result["scenes"][name] = {
             "event_prefix": event,
             "tags": anim["tags"],
@@ -486,13 +475,76 @@ def prase_raw_data(raw_data: dict) -> dict:
 slate_tags = {}
 
 
+def tags_process(raw_tags: List[str]):
+    Position = ["2futa", "3 girls", "cccf", "cccsf", "ccf", "ccsf", "cf", "cff", "csf", "csfsf", "f", "fcccc", "fcc", "ffffm", "fffm", "ffm", "ffmm", "fm", "fmc",
+                "fmmm", "m", "mfc", "mff", "mmf", "mmmf", "mmmmsf", "mmmsf", "mmsf", "msf", "msfc", "sfsfc", "sfsfm", "sfsfmm", "sfsfsfm", "sfsfsfsfm", "ff", "fff", "fffc", "ffc", "ccm", "mf", "ff"]
+
+    Races = ["atronach", "bear", "boar", "cat", "chaurus", "chicken", "cow", "crab", "deer", "dog", "dragon", "dragonpriest", "draugr", "falmer", "flameatronach", "fox", "frostatronach", "gargoyle", "giant", "giantspider", "goat", "hag", "hagraven", "horse", "horker", "husky", "icewraith", "lurker", "mammoth", "netch",
+             "rabbit", "reaper", "riekling", "sabrecat", "seeker", "skeever", "slaughterfish", "spider", "spriggan", "stormatronach", "troll", "unicorn", "vampire", "vampirelord", "werewolf", "wispmother", "wolf", "femwerewolf", "chaurushunter", "chaurusreapers", "largespider", "benthiclurker", "ashhopper", "futa", "male", "female"]
+
+    SceneType = ["aggressive", "rape", "leadin", "aggressivedefault"]
+
+    Scale = ["petite", "bigguy", "loli", "shota"]
+
+    Skip = ["test", "leito"]
+
+    position = []
+    race = []
+    scene = []
+    scale = []
+    unknown = []
+    for tag in raw_tags:
+        tag_lower = tag.lower()
+        if tag_lower in Position:
+            position.append(tag_lower)
+        elif tag_lower in Races:
+            race.append(tag_lower)
+        elif tag_lower in SceneType:
+            scene.append(tag_lower)
+        elif tag_lower in Scale:
+            scale.append(tag_lower)
+        elif tag_lower in Skip:
+            continue
+        else:
+            unknown.append(tag_lower)
+    if unknown:
+        logger.warn(f"Unknown tag: {', '.join(unknown)}")
+    return {"position": position, "race": race, "scene": scene, "scale": scale}
+
+
 def preprocess_data(data: dict):
     '''
     对解析后的数据预处理，如标签分类、位置统计等
     '''
-    processed = {}
-
-    return processed
+    for scene_name, scene_data in data["scenes"].items():
+        tags = scene_data.get("tags", [])
+        tag_info = tags_process(tags)
+        if tag_info["scale"]:
+            if tag_info["position"]:
+                position_tag = tag_info["position"][0]
+                loli_count = position_tag.count("sf")
+                shota_count = position_tag.count("sm")
+                scene_female = 0
+                scene_male = 0
+                for actor_key, actor_data in scene_data["positions"].items():
+                    if actor_data["gender"] == 1:
+                        scene_female += 1
+                    elif actor_data["gender"] == 2:
+                        scene_male += 1
+                if loli_count == scene_female:
+                    logger.info(f"Scene '{scene_name}' scaled as petite")
+                    for actor_key, actor_data in scene_data["positions"].items():
+                        if actor_data["gender"] == 1:
+                            actor_data["scale"] = 0.8
+                elif shota_count == scene_male:
+                    logger.info(f"Scene '{scene_name}' scaled as petite")
+                    for actor_key, actor_data in scene_data["positions"].items():
+                        if actor_data["gender"] == 2:
+                            actor_data["scale"] = 0.8
+                else:
+                    logger.warn(
+                        f"Scene '{scene_name}' has scale tag but position tag does not match, skipping scale")
+    return data
 
 
 def preprocess_slal_source(file_path: str):
@@ -517,7 +569,9 @@ def preprocess_slal_source(file_path: str):
         try:
             parsed_data = parse_animation_file(file_content)
             processed_data = prase_raw_data(parsed_data)
+            processed_data = preprocess_data(processed_data)
         except Exception as e:
             print(f"Error parsing {file_path}: {e}")
             raise e
+
     return processed_data
