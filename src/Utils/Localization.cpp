@@ -15,7 +15,8 @@ void Initialize()
     std::ifstream ifs(LocalizationPath.data());
     j = nlohmann::json::parse(ifs);
   } catch (const std::exception& e) {
-    logger::error("[SexLab NG] Failed to load localization file: {}. Error: {}", LocalizationPath, e.what());
+    logger::error("[SexLab NG] Failed to load localization file: {}. Error: {}", LocalizationPath,
+                  e.what());
     return;
   }
 

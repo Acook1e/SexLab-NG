@@ -17,14 +17,15 @@ public:
     Total
   };
 
-  Scene(const std::string& name, const std::string& event_prefix, const Furniture& furniture, const Race& races,
-        Type type, const InteractTags& interactTags, std::vector<Position> positions)
+  Scene(const std::string& name, const std::string& event_prefix, const Furniture& furniture,
+        const Race& races, Type type, const InteractTags& interactTags,
+        std::vector<Position> positions)
       : name(name), furniture(furniture), races(races), type(type), interactTags(interactTags),
         positions(std::move(positions))
   {}
 
-  Scene(std::string&& name, std::string&& event_prefix, Furniture&& furniture, Race&& races, Type type,
-        InteractTags&& interactTags, std::vector<Position>&& positions)
+  Scene(std::string&& name, std::string&& event_prefix, Furniture&& furniture, Race&& races,
+        Type type, InteractTags&& interactTags, std::vector<Position>&& positions)
       : name(std::move(name)), furniture(std::move(furniture)), races(std::move(races)), type(type),
         interactTags(std::move(interactTags)), positions(std::move(positions))
   {}

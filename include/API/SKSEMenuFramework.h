@@ -75,7 +75,8 @@ namespace Model
   using UnregisterHudElementFuction      = void (*)(uint64_t id);
   using IsAnyBlockingWindowOpenedFuction = bool (*)();
   using SetWindowsPauseGameFuction       = void (*)(bool pause);
-  using LoadTextureFuction               = ImGuiMCP::ImTextureID (*)(const char* texturePath, ImGuiMCP::ImVec2* size);
+  using LoadTextureFuction               = ImGuiMCP::ImTextureID (*)(const char* texturePath,
+                                                                     ImGuiMCP::ImVec2* size);
   using DisposeTextureFuction            = void (*)(const char* texturePath);
   using GetMenuFrameworkVersionFunction  = float (*)();
 
@@ -152,7 +153,8 @@ inline void AddSectionItem(std::string menu, Model::RenderFunction rendererFunct
   }
 }
 
-inline Model::WindowInterface* AddWindow(Model::RenderFunction rendererFunction, bool doesWindowPauseGame = true)
+inline Model::WindowInterface* AddWindow(Model::RenderFunction rendererFunction,
+                                         bool doesWindowPauseGame = true)
 {
   static auto func = Model::Internal::GetFunction<Model::AddWindowFunction>("AddWindow");
   if (func) {
@@ -185,7 +187,8 @@ inline float GetMenuFrameworkVersion()
     return 0.0;
   }
 
-  static auto func = Model::Internal::GetFunction<Model::GetMenuFrameworkVersionFunction>("GetMenuFrameworkVersion");
+  static auto func = Model::Internal::GetFunction<Model::GetMenuFrameworkVersionFunction>(
+      "GetMenuFrameworkVersion");
 
   if (func) {
     return func();
@@ -196,7 +199,8 @@ inline float GetMenuFrameworkVersion()
 
 inline bool IsAnyBlockingWindowOpened()
 {
-  static auto func = Model::Internal::GetFunction<Model::IsAnyBlockingWindowOpenedFuction>("IsAnyBlockingWindowOpened");
+  static auto func = Model::Internal::GetFunction<Model::IsAnyBlockingWindowOpenedFuction>(
+      "IsAnyBlockingWindowOpened");
   if (func) {
     return func();
   }
@@ -230,28 +234,36 @@ namespace FontAwesome
 {
 inline void PushSolid()
 {
-  static auto func = SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>("PushSolid");
+  static auto func =
+      SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>(
+          "PushSolid");
   if (func) {
     return func();
   }
 }
 inline void PushRegular()
 {
-  static auto func = SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>("PushRegular");
+  static auto func =
+      SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>(
+          "PushRegular");
   if (func) {
     return func();
   }
 }
 inline void PushBrands()
 {
-  static auto func = SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>("PushBrands");
+  static auto func =
+      SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>(
+          "PushBrands");
   if (func) {
     return func();
   }
 }
 inline void Pop()
 {
-  static auto func = SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>("Pop");
+  static auto func =
+      SKSEMenuFramework::Model::Internal::GetFunction<SKSEMenuFramework::Model::ActionFunction>(
+          "Pop");
   if (func) {
     return func();
   }
@@ -283,9 +295,9 @@ namespace ImGuiMCP
 #define IM_COL32_A_MASK 0xFF000000
 #endif
 #endif
-#define IM_COL32(R, G, B, A)                                                                                                                         \
-  (((ImGuiMCP::ImU32)(A) << IM_COL32_A_SHIFT) | ((ImGuiMCP::ImU32)(B) << IM_COL32_B_SHIFT) | ((ImGuiMCP::ImU32)(G) << IM_COL32_G_SHIFT) |            \
-   ((ImGuiMCP::ImU32)(R) << IM_COL32_R_SHIFT))
+#define IM_COL32(R, G, B, A)                                                                       \
+  (((ImGuiMCP::ImU32)(A) << IM_COL32_A_SHIFT) | ((ImGuiMCP::ImU32)(B) << IM_COL32_B_SHIFT) |       \
+   ((ImGuiMCP::ImU32)(G) << IM_COL32_G_SHIFT) | ((ImGuiMCP::ImU32)(R) << IM_COL32_R_SHIFT))
 #define IM_COL32_WHITE IM_COL32(255, 255, 255, 255)  // Opaque white = 0xFFFFFFFF
 #define IM_COL32_BLACK IM_COL32(0, 0, 0, 255)        // Opaque black
 #define IM_COL32_BLACK_TRANS IM_COL32(0, 0, 0, 0)    // Transparent black = 0x00000000
@@ -486,10 +498,11 @@ typedef enum
   ImGuiWindowFlags_NoNavFocus                = 1 << 17,
   ImGuiWindowFlags_UnsavedDocument           = 1 << 18,
   ImGuiWindowFlags_NoDocking                 = 1 << 19,
-  ImGuiWindowFlags_NoNav                     = ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
-  ImGuiWindowFlags_NoDecoration =
-      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse,
-  ImGuiWindowFlags_NoInputs     = ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
+  ImGuiWindowFlags_NoNav        = ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
+  ImGuiWindowFlags_NoDecoration = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                                  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse,
+  ImGuiWindowFlags_NoInputs =
+      ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
   ImGuiWindowFlags_NavFlattened = 1 << 23,
   ImGuiWindowFlags_ChildWindow  = 1 << 24,
   ImGuiWindowFlags_Tooltip      = 1 << 25,
@@ -556,7 +569,9 @@ typedef enum
   ImGuiTreeNodeFlags_SpanTextWidth        = 1 << 13,
   ImGuiTreeNodeFlags_SpanAllColumns       = 1 << 14,
   ImGuiTreeNodeFlags_NavLeftJumpsBackHere = 1 << 15,
-  ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog,
+  ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed |
+                                            ImGuiTreeNodeFlags_NoTreePushOnOpen |
+                                            ImGuiTreeNodeFlags_NoAutoOpenOnLog,
 } ImGuiTreeNodeFlags_;
 typedef enum
 {
@@ -571,7 +586,7 @@ typedef enum
   ImGuiPopupFlags_NoOpenOverItems         = 1 << 8,
   ImGuiPopupFlags_AnyPopupId              = 1 << 10,
   ImGuiPopupFlags_AnyPopupLevel           = 1 << 11,
-  ImGuiPopupFlags_AnyPopup                = ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel,
+  ImGuiPopupFlags_AnyPopup = ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel,
 } ImGuiPopupFlags_;
 typedef enum
 {
@@ -593,8 +608,8 @@ typedef enum
   ImGuiComboFlags_NoArrowButton   = 1 << 5,
   ImGuiComboFlags_NoPreview       = 1 << 6,
   ImGuiComboFlags_WidthFitPreview = 1 << 7,
-  ImGuiComboFlags_HeightMask_ =
-      ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest,
+  ImGuiComboFlags_HeightMask_     = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular |
+                                    ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest,
 } ImGuiComboFlags_;
 typedef enum
 {
@@ -607,8 +622,9 @@ typedef enum
   ImGuiTabBarFlags_NoTooltip                    = 1 << 5,
   ImGuiTabBarFlags_FittingPolicyResizeDown      = 1 << 6,
   ImGuiTabBarFlags_FittingPolicyScroll          = 1 << 7,
-  ImGuiTabBarFlags_FittingPolicyMask_           = ImGuiTabBarFlags_FittingPolicyResizeDown | ImGuiTabBarFlags_FittingPolicyScroll,
-  ImGuiTabBarFlags_FittingPolicyDefault_        = ImGuiTabBarFlags_FittingPolicyResizeDown,
+  ImGuiTabBarFlags_FittingPolicyMask_ =
+      ImGuiTabBarFlags_FittingPolicyResizeDown | ImGuiTabBarFlags_FittingPolicyScroll,
+  ImGuiTabBarFlags_FittingPolicyDefault_ = ImGuiTabBarFlags_FittingPolicyResizeDown,
 } ImGuiTabBarFlags_;
 typedef enum
 {
@@ -625,13 +641,14 @@ typedef enum
 } ImGuiTabItemFlags_;
 typedef enum
 {
-  ImGuiFocusedFlags_None                = 0,
-  ImGuiFocusedFlags_ChildWindows        = 1 << 0,
-  ImGuiFocusedFlags_RootWindow          = 1 << 1,
-  ImGuiFocusedFlags_AnyWindow           = 1 << 2,
-  ImGuiFocusedFlags_NoPopupHierarchy    = 1 << 3,
-  ImGuiFocusedFlags_DockHierarchy       = 1 << 4,
-  ImGuiFocusedFlags_RootAndChildWindows = ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows,
+  ImGuiFocusedFlags_None             = 0,
+  ImGuiFocusedFlags_ChildWindows     = 1 << 0,
+  ImGuiFocusedFlags_RootWindow       = 1 << 1,
+  ImGuiFocusedFlags_AnyWindow        = 1 << 2,
+  ImGuiFocusedFlags_NoPopupHierarchy = 1 << 3,
+  ImGuiFocusedFlags_DockHierarchy    = 1 << 4,
+  ImGuiFocusedFlags_RootAndChildWindows =
+      ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows,
 } ImGuiFocusedFlags_;
 typedef enum
 {
@@ -647,16 +664,19 @@ typedef enum
   ImGuiHoveredFlags_AllowWhenOverlappedByWindow  = 1 << 9,
   ImGuiHoveredFlags_AllowWhenDisabled            = 1 << 10,
   ImGuiHoveredFlags_NoNavOverride                = 1 << 11,
-  ImGuiHoveredFlags_AllowWhenOverlapped          = ImGuiHoveredFlags_AllowWhenOverlappedByItem | ImGuiHoveredFlags_AllowWhenOverlappedByWindow,
-  ImGuiHoveredFlags_RectOnly =
-      ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped,
-  ImGuiHoveredFlags_RootAndChildWindows = ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows,
-  ImGuiHoveredFlags_ForTooltip          = 1 << 12,
-  ImGuiHoveredFlags_Stationary          = 1 << 13,
-  ImGuiHoveredFlags_DelayNone           = 1 << 14,
-  ImGuiHoveredFlags_DelayShort          = 1 << 15,
-  ImGuiHoveredFlags_DelayNormal         = 1 << 16,
-  ImGuiHoveredFlags_NoSharedDelay       = 1 << 17,
+  ImGuiHoveredFlags_AllowWhenOverlapped =
+      ImGuiHoveredFlags_AllowWhenOverlappedByItem | ImGuiHoveredFlags_AllowWhenOverlappedByWindow,
+  ImGuiHoveredFlags_RectOnly = ImGuiHoveredFlags_AllowWhenBlockedByPopup |
+                               ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
+                               ImGuiHoveredFlags_AllowWhenOverlapped,
+  ImGuiHoveredFlags_RootAndChildWindows =
+      ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows,
+  ImGuiHoveredFlags_ForTooltip    = 1 << 12,
+  ImGuiHoveredFlags_Stationary    = 1 << 13,
+  ImGuiHoveredFlags_DelayNone     = 1 << 14,
+  ImGuiHoveredFlags_DelayShort    = 1 << 15,
+  ImGuiHoveredFlags_DelayNormal   = 1 << 16,
+  ImGuiHoveredFlags_NoSharedDelay = 1 << 17,
 } ImGuiHoveredFlags_;
 typedef enum
 {
@@ -681,7 +701,8 @@ typedef enum
   ImGuiDragDropFlags_AcceptBeforeDelivery     = 1 << 10,
   ImGuiDragDropFlags_AcceptNoDrawDefaultRect  = 1 << 11,
   ImGuiDragDropFlags_AcceptNoPreviewTooltip   = 1 << 12,
-  ImGuiDragDropFlags_AcceptPeekOnly           = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect,
+  ImGuiDragDropFlags_AcceptPeekOnly =
+      ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect,
 } ImGuiDragDropFlags_;
 typedef enum
 {
@@ -1025,7 +1046,9 @@ typedef enum
   ImGuiButtonFlags_MouseButtonLeft   = 1 << 0,
   ImGuiButtonFlags_MouseButtonRight  = 1 << 1,
   ImGuiButtonFlags_MouseButtonMiddle = 1 << 2,
-  ImGuiButtonFlags_MouseButtonMask_  = ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle,
+  ImGuiButtonFlags_MouseButtonMask_  = ImGuiButtonFlags_MouseButtonLeft |
+                                       ImGuiButtonFlags_MouseButtonRight |
+                                       ImGuiButtonFlags_MouseButtonMiddle,
 } ImGuiButtonFlags_;
 typedef enum
 {
@@ -1053,12 +1076,16 @@ typedef enum
   ImGuiColorEditFlags_PickerHueWheel   = 1 << 26,
   ImGuiColorEditFlags_InputRGB         = 1 << 27,
   ImGuiColorEditFlags_InputHSV         = 1 << 28,
-  ImGuiColorEditFlags_DefaultOptions_ =
-      ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_PickerHueBar,
-  ImGuiColorEditFlags_DisplayMask_  = ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_DisplayHSV | ImGuiColorEditFlags_DisplayHex,
-  ImGuiColorEditFlags_DataTypeMask_ = ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_Float,
-  ImGuiColorEditFlags_PickerMask_   = ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_PickerHueBar,
-  ImGuiColorEditFlags_InputMask_    = ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_InputHSV,
+  ImGuiColorEditFlags_DefaultOptions_ = ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_DisplayRGB |
+                                        ImGuiColorEditFlags_InputRGB |
+                                        ImGuiColorEditFlags_PickerHueBar,
+  ImGuiColorEditFlags_DisplayMask_    = ImGuiColorEditFlags_DisplayRGB |
+                                        ImGuiColorEditFlags_DisplayHSV |
+                                        ImGuiColorEditFlags_DisplayHex,
+  ImGuiColorEditFlags_DataTypeMask_   = ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_Float,
+  ImGuiColorEditFlags_PickerMask_ =
+      ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_PickerHueBar,
+  ImGuiColorEditFlags_InputMask_ = ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_InputHSV,
 } ImGuiColorEditFlags_;
 typedef enum
 {
@@ -1107,24 +1134,24 @@ typedef enum
 } ImGuiCond_;
 typedef enum
 {
-  ImGuiTableFlags_None                       = 0,
-  ImGuiTableFlags_Resizable                  = 1 << 0,
-  ImGuiTableFlags_Reorderable                = 1 << 1,
-  ImGuiTableFlags_Hideable                   = 1 << 2,
-  ImGuiTableFlags_Sortable                   = 1 << 3,
-  ImGuiTableFlags_NoSavedSettings            = 1 << 4,
-  ImGuiTableFlags_ContextMenuInBody          = 1 << 5,
-  ImGuiTableFlags_RowBg                      = 1 << 6,
-  ImGuiTableFlags_BordersInnerH              = 1 << 7,
-  ImGuiTableFlags_BordersOuterH              = 1 << 8,
-  ImGuiTableFlags_BordersInnerV              = 1 << 9,
-  ImGuiTableFlags_BordersOuterV              = 1 << 10,
-  ImGuiTableFlags_BordersH                   = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_BordersOuterH,
-  ImGuiTableFlags_BordersV                   = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersOuterV,
-  ImGuiTableFlags_BordersInner               = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH,
-  ImGuiTableFlags_BordersOuter               = ImGuiTableFlags_BordersOuterV | ImGuiTableFlags_BordersOuterH,
-  ImGuiTableFlags_Borders                    = ImGuiTableFlags_BordersInner | ImGuiTableFlags_BordersOuter,
-  ImGuiTableFlags_NoBordersInBody            = 1 << 11,
+  ImGuiTableFlags_None              = 0,
+  ImGuiTableFlags_Resizable         = 1 << 0,
+  ImGuiTableFlags_Reorderable       = 1 << 1,
+  ImGuiTableFlags_Hideable          = 1 << 2,
+  ImGuiTableFlags_Sortable          = 1 << 3,
+  ImGuiTableFlags_NoSavedSettings   = 1 << 4,
+  ImGuiTableFlags_ContextMenuInBody = 1 << 5,
+  ImGuiTableFlags_RowBg             = 1 << 6,
+  ImGuiTableFlags_BordersInnerH     = 1 << 7,
+  ImGuiTableFlags_BordersOuterH     = 1 << 8,
+  ImGuiTableFlags_BordersInnerV     = 1 << 9,
+  ImGuiTableFlags_BordersOuterV     = 1 << 10,
+  ImGuiTableFlags_BordersH          = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_BordersOuterH,
+  ImGuiTableFlags_BordersV          = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersOuterV,
+  ImGuiTableFlags_BordersInner      = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH,
+  ImGuiTableFlags_BordersOuter      = ImGuiTableFlags_BordersOuterV | ImGuiTableFlags_BordersOuterH,
+  ImGuiTableFlags_Borders           = ImGuiTableFlags_BordersInner | ImGuiTableFlags_BordersOuter,
+  ImGuiTableFlags_NoBordersInBody   = 1 << 11,
   ImGuiTableFlags_NoBordersInBodyUntilResize = 1 << 12,
   ImGuiTableFlags_SizingFixedFit             = 1 << 13,
   ImGuiTableFlags_SizingFixedSame            = 2 << 13,
@@ -1143,8 +1170,9 @@ typedef enum
   ImGuiTableFlags_SortMulti                  = 1 << 26,
   ImGuiTableFlags_SortTristate               = 1 << 27,
   ImGuiTableFlags_HighlightHoveredColumn     = 1 << 28,
-  ImGuiTableFlags_SizingMask_ =
-      ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_SizingFixedSame | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_SizingStretchSame,
+  ImGuiTableFlags_SizingMask_ = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_SizingFixedSame |
+                                ImGuiTableFlags_SizingStretchProp |
+                                ImGuiTableFlags_SizingStretchSame,
 } ImGuiTableFlags_;
 typedef enum
 {
@@ -1172,10 +1200,13 @@ typedef enum
   ImGuiTableColumnFlags_IsVisible            = 1 << 25,
   ImGuiTableColumnFlags_IsSorted             = 1 << 26,
   ImGuiTableColumnFlags_IsHovered            = 1 << 27,
-  ImGuiTableColumnFlags_WidthMask_           = ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed,
-  ImGuiTableColumnFlags_IndentMask_          = ImGuiTableColumnFlags_IndentEnable | ImGuiTableColumnFlags_IndentDisable,
+  ImGuiTableColumnFlags_WidthMask_ =
+      ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed,
+  ImGuiTableColumnFlags_IndentMask_ =
+      ImGuiTableColumnFlags_IndentEnable | ImGuiTableColumnFlags_IndentDisable,
   ImGuiTableColumnFlags_StatusMask_ =
-      ImGuiTableColumnFlags_IsEnabled | ImGuiTableColumnFlags_IsVisible | ImGuiTableColumnFlags_IsSorted | ImGuiTableColumnFlags_IsHovered,
+      ImGuiTableColumnFlags_IsEnabled | ImGuiTableColumnFlags_IsVisible |
+      ImGuiTableColumnFlags_IsSorted | ImGuiTableColumnFlags_IsHovered,
   ImGuiTableColumnFlags_NoDirectResize_ = 1 << 30,
 } ImGuiTableColumnFlags_;
 typedef enum
@@ -1453,13 +1484,15 @@ private:
   static inline Data* Create(const char* default_filter)
   {
     using func_t = Data* (*)(const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_ImGuiTextFilter"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_ImGuiTextFilter"));
     return func(default_filter);
   }
   inline void Destroy()
   {
     using func_t = void (*)(Data*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_destroy"));
     return func(data);
   }
 
@@ -1475,7 +1508,8 @@ public:
   inline bool PassFilter(const char* text, const char* text_end = NULL)
   {
     using func_t = bool (*)(Data*, const char*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_PassFilter"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_PassFilter"));
     return func(data, text, text_end);
   }
   inline void Build()
@@ -1493,7 +1527,8 @@ public:
   inline bool IsActive()
   {
     using func_t = bool (*)(Data*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_IsActive"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextFilter_IsActive"));
     return func(data);
   }
 };
@@ -1613,12 +1648,16 @@ typedef enum
   ImDrawFlags_RoundCornersBottomLeft  = 1 << 6,
   ImDrawFlags_RoundCornersBottomRight = 1 << 7,
   ImDrawFlags_RoundCornersNone        = 1 << 8,
-  ImDrawFlags_RoundCornersTop         = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight,
-  ImDrawFlags_RoundCornersBottom      = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight,
-  ImDrawFlags_RoundCornersLeft        = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersTopLeft,
-  ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundCornersBottomRight | ImDrawFlags_RoundCornersTopRight,
-  ImDrawFlags_RoundCornersAll =
-      ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight,
+  ImDrawFlags_RoundCornersTop = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight,
+  ImDrawFlags_RoundCornersBottom =
+      ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight,
+  ImDrawFlags_RoundCornersLeft =
+      ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersTopLeft,
+  ImDrawFlags_RoundCornersRight =
+      ImDrawFlags_RoundCornersBottomRight | ImDrawFlags_RoundCornersTopRight,
+  ImDrawFlags_RoundCornersAll = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight |
+                                ImDrawFlags_RoundCornersBottomLeft |
+                                ImDrawFlags_RoundCornersBottomRight,
   ImDrawFlags_RoundCornersDefault_ = ImDrawFlags_RoundCornersAll,
   ImDrawFlags_RoundCornersMask_    = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone,
 } ImDrawFlags_;
@@ -1908,7 +1947,8 @@ struct ImGuiPlatformIO
   void (*Platform_SwapBuffers)(ImGuiViewport* vp, void* render_arg);
   float (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);
   void (*Platform_OnChangedViewport)(ImGuiViewport* vp);
-  int (*Platform_CreateVkSurface)(ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface);
+  int (*Platform_CreateVkSurface)(ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators,
+                                  ImU64* out_vk_surface);
   void (*Renderer_CreateWindow)(ImGuiViewport* vp);
   void (*Renderer_DestroyWindow)(ImGuiViewport* vp);
   void (*Renderer_SetWindowSize)(ImGuiViewport* vp, ImVec2 size);
@@ -2147,16 +2187,18 @@ typedef enum
 } ImGuiItemStatusFlags_;
 typedef enum
 {
-  ImGuiHoveredFlags_DelayMask_ =
-      ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_NoSharedDelay,
-  ImGuiHoveredFlags_AllowedMaskForIsWindowHovered = ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_AnyWindow |
-                                                    ImGuiHoveredFlags_NoPopupHierarchy | ImGuiHoveredFlags_DockHierarchy |
-                                                    ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
-                                                    ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_Stationary,
-  ImGuiHoveredFlags_AllowedMaskForIsItemHovered   = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
-                                                    ImGuiHoveredFlags_AllowWhenOverlapped | ImGuiHoveredFlags_AllowWhenDisabled |
-                                                    ImGuiHoveredFlags_NoNavOverride | ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_Stationary |
-                                                    ImGuiHoveredFlags_DelayMask_,
+  ImGuiHoveredFlags_DelayMask_ = ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_DelayShort |
+                                 ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_NoSharedDelay,
+  ImGuiHoveredFlags_AllowedMaskForIsWindowHovered =
+      ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_AnyWindow |
+      ImGuiHoveredFlags_NoPopupHierarchy | ImGuiHoveredFlags_DockHierarchy |
+      ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
+      ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_Stationary,
+  ImGuiHoveredFlags_AllowedMaskForIsItemHovered =
+      ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
+      ImGuiHoveredFlags_AllowWhenOverlapped | ImGuiHoveredFlags_AllowWhenDisabled |
+      ImGuiHoveredFlags_NoNavOverride | ImGuiHoveredFlags_ForTooltip |
+      ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayMask_,
 } ImGuiHoveredFlagsPrivate_;
 typedef enum
 {
@@ -2184,10 +2226,11 @@ typedef enum
   ImGuiButtonFlags_NoHoveredOnFocus              = 1 << 19,
   ImGuiButtonFlags_NoSetKeyOwner                 = 1 << 20,
   ImGuiButtonFlags_NoTestKeyOwner                = 1 << 21,
-  ImGuiButtonFlags_PressedOnMask_                = ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnClickRelease |
-                                                   ImGuiButtonFlags_PressedOnClickReleaseAnywhere | ImGuiButtonFlags_PressedOnRelease |
-                                                   ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold,
-  ImGuiButtonFlags_PressedOnDefault_             = ImGuiButtonFlags_PressedOnClickRelease,
+  ImGuiButtonFlags_PressedOnMask_ =
+      ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnClickRelease |
+      ImGuiButtonFlags_PressedOnClickReleaseAnywhere | ImGuiButtonFlags_PressedOnRelease |
+      ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold,
+  ImGuiButtonFlags_PressedOnDefault_ = ImGuiButtonFlags_PressedOnClickRelease,
 } ImGuiButtonFlagsPrivate_;
 typedef enum
 {
@@ -2607,23 +2650,33 @@ typedef enum
   ImGuiInputFlags_LockUntilRelease                 = 1 << 21,
   ImGuiInputFlags_CondHovered                      = 1 << 22,
   ImGuiInputFlags_CondActive                       = 1 << 23,
-  ImGuiInputFlags_CondDefault_                     = ImGuiInputFlags_CondHovered | ImGuiInputFlags_CondActive,
-  ImGuiInputFlags_RepeatRateMask_  = ImGuiInputFlags_RepeatRateDefault | ImGuiInputFlags_RepeatRateNavMove | ImGuiInputFlags_RepeatRateNavTweak,
-  ImGuiInputFlags_RepeatUntilMask_ = ImGuiInputFlags_RepeatUntilRelease | ImGuiInputFlags_RepeatUntilKeyModsChange |
-                                     ImGuiInputFlags_RepeatUntilKeyModsChangeFromNone | ImGuiInputFlags_RepeatUntilOtherKeyPress,
-  ImGuiInputFlags_RepeatMask_      = ImGuiInputFlags_Repeat | ImGuiInputFlags_RepeatRateMask_ | ImGuiInputFlags_RepeatUntilMask_,
-  ImGuiInputFlags_CondMask_        = ImGuiInputFlags_CondHovered | ImGuiInputFlags_CondActive,
-  ImGuiInputFlags_RouteTypeMask_ =
-      ImGuiInputFlags_RouteActive | ImGuiInputFlags_RouteFocused | ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteAlways,
+  ImGuiInputFlags_CondDefault_    = ImGuiInputFlags_CondHovered | ImGuiInputFlags_CondActive,
+  ImGuiInputFlags_RepeatRateMask_ = ImGuiInputFlags_RepeatRateDefault |
+                                    ImGuiInputFlags_RepeatRateNavMove |
+                                    ImGuiInputFlags_RepeatRateNavTweak,
+  ImGuiInputFlags_RepeatUntilMask_ =
+      ImGuiInputFlags_RepeatUntilRelease | ImGuiInputFlags_RepeatUntilKeyModsChange |
+      ImGuiInputFlags_RepeatUntilKeyModsChangeFromNone | ImGuiInputFlags_RepeatUntilOtherKeyPress,
+  ImGuiInputFlags_RepeatMask_ =
+      ImGuiInputFlags_Repeat | ImGuiInputFlags_RepeatRateMask_ | ImGuiInputFlags_RepeatUntilMask_,
+  ImGuiInputFlags_CondMask_      = ImGuiInputFlags_CondHovered | ImGuiInputFlags_CondActive,
+  ImGuiInputFlags_RouteTypeMask_ = ImGuiInputFlags_RouteActive | ImGuiInputFlags_RouteFocused |
+                                   ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteAlways,
   ImGuiInputFlags_RouteOptionsMask_ =
-      ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive | ImGuiInputFlags_RouteUnlessBgFocused | ImGuiInputFlags_RouteFromRootWindow,
+      ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive |
+      ImGuiInputFlags_RouteUnlessBgFocused | ImGuiInputFlags_RouteFromRootWindow,
   ImGuiInputFlags_SupportedByIsKeyPressed   = ImGuiInputFlags_RepeatMask_,
   ImGuiInputFlags_SupportedByIsMouseClicked = ImGuiInputFlags_Repeat,
-  ImGuiInputFlags_SupportedByShortcut       = ImGuiInputFlags_RepeatMask_ | ImGuiInputFlags_RouteTypeMask_ | ImGuiInputFlags_RouteOptionsMask_,
+  ImGuiInputFlags_SupportedByShortcut       = ImGuiInputFlags_RepeatMask_ |
+                                              ImGuiInputFlags_RouteTypeMask_ |
+                                              ImGuiInputFlags_RouteOptionsMask_,
   ImGuiInputFlags_SupportedBySetNextItemShortcut =
-      ImGuiInputFlags_RepeatMask_ | ImGuiInputFlags_RouteTypeMask_ | ImGuiInputFlags_RouteOptionsMask_ | ImGuiInputFlags_Tooltip,
-  ImGuiInputFlags_SupportedBySetKeyOwner     = ImGuiInputFlags_LockThisFrame | ImGuiInputFlags_LockUntilRelease,
-  ImGuiInputFlags_SupportedBySetItemKeyOwner = ImGuiInputFlags_SupportedBySetKeyOwner | ImGuiInputFlags_CondMask_,
+      ImGuiInputFlags_RepeatMask_ | ImGuiInputFlags_RouteTypeMask_ |
+      ImGuiInputFlags_RouteOptionsMask_ | ImGuiInputFlags_Tooltip,
+  ImGuiInputFlags_SupportedBySetKeyOwner =
+      ImGuiInputFlags_LockThisFrame | ImGuiInputFlags_LockUntilRelease,
+  ImGuiInputFlags_SupportedBySetItemKeyOwner =
+      ImGuiInputFlags_SupportedBySetKeyOwner | ImGuiInputFlags_CondMask_,
 } ImGuiInputFlagsPrivate_;
 typedef struct ImGuiListClipperRange ImGuiListClipperRange;
 struct ImGuiListClipperRange
@@ -2669,8 +2722,10 @@ typedef enum
   ImGuiScrollFlags_AlwaysCenterX      = 1 << 4,
   ImGuiScrollFlags_AlwaysCenterY      = 1 << 5,
   ImGuiScrollFlags_NoScrollParent     = 1 << 6,
-  ImGuiScrollFlags_MaskX_             = ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleCenterX | ImGuiScrollFlags_AlwaysCenterX,
-  ImGuiScrollFlags_MaskY_             = ImGuiScrollFlags_KeepVisibleEdgeY | ImGuiScrollFlags_KeepVisibleCenterY | ImGuiScrollFlags_AlwaysCenterY,
+  ImGuiScrollFlags_MaskX_ = ImGuiScrollFlags_KeepVisibleEdgeX |
+                            ImGuiScrollFlags_KeepVisibleCenterX | ImGuiScrollFlags_AlwaysCenterX,
+  ImGuiScrollFlags_MaskY_ = ImGuiScrollFlags_KeepVisibleEdgeY |
+                            ImGuiScrollFlags_KeepVisibleCenterY | ImGuiScrollFlags_AlwaysCenterY,
 } ImGuiScrollFlags_;
 typedef enum
 {
@@ -2686,7 +2741,8 @@ typedef enum
   ImGuiNavMoveFlags_LoopY               = 1 << 1,
   ImGuiNavMoveFlags_WrapX               = 1 << 2,
   ImGuiNavMoveFlags_WrapY               = 1 << 3,
-  ImGuiNavMoveFlags_WrapMask_           = ImGuiNavMoveFlags_LoopX | ImGuiNavMoveFlags_LoopY | ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_WrapY,
+  ImGuiNavMoveFlags_WrapMask_           = ImGuiNavMoveFlags_LoopX | ImGuiNavMoveFlags_LoopY |
+                                          ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_WrapY,
   ImGuiNavMoveFlags_AllowCurrentNavId   = 1 << 4,
   ImGuiNavMoveFlags_AlsoScoreVisibleSet = 1 << 5,
   ImGuiNavMoveFlags_ScrollToEdgeY       = 1 << 6,
@@ -2804,16 +2860,23 @@ typedef enum
   ImGuiDockNodeFlags_NoDockingOverMe           = 1 << 20,
   ImGuiDockNodeFlags_NoDockingOverOther        = 1 << 21,
   ImGuiDockNodeFlags_NoDockingOverEmpty        = 1 << 22,
-  ImGuiDockNodeFlags_NoDocking = ImGuiDockNodeFlags_NoDockingOverMe | ImGuiDockNodeFlags_NoDockingOverOther | ImGuiDockNodeFlags_NoDockingOverEmpty |
-                                 ImGuiDockNodeFlags_NoDockingSplit | ImGuiDockNodeFlags_NoDockingSplitOther,
+  ImGuiDockNodeFlags_NoDocking =
+      ImGuiDockNodeFlags_NoDockingOverMe | ImGuiDockNodeFlags_NoDockingOverOther |
+      ImGuiDockNodeFlags_NoDockingOverEmpty | ImGuiDockNodeFlags_NoDockingSplit |
+      ImGuiDockNodeFlags_NoDockingSplitOther,
   ImGuiDockNodeFlags_SharedFlagsInheritMask_ = ~0,
-  ImGuiDockNodeFlags_NoResizeFlagsMask_      = ImGuiDockNodeFlags_NoResize | ImGuiDockNodeFlags_NoResizeX | ImGuiDockNodeFlags_NoResizeY,
+  ImGuiDockNodeFlags_NoResizeFlagsMask_ =
+      ImGuiDockNodeFlags_NoResize | ImGuiDockNodeFlags_NoResizeX | ImGuiDockNodeFlags_NoResizeY,
   ImGuiDockNodeFlags_LocalFlagsTransferMask_ =
-      ImGuiDockNodeFlags_NoDockingSplit | ImGuiDockNodeFlags_NoResizeFlagsMask_ | ImGuiDockNodeFlags_AutoHideTabBar | ImGuiDockNodeFlags_CentralNode |
-      ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton,
-  ImGuiDockNodeFlags_SavedFlagsMask_ = ImGuiDockNodeFlags_NoResizeFlagsMask_ | ImGuiDockNodeFlags_DockSpace | ImGuiDockNodeFlags_CentralNode |
-                                       ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton |
-                                       ImGuiDockNodeFlags_NoCloseButton,
+      ImGuiDockNodeFlags_NoDockingSplit | ImGuiDockNodeFlags_NoResizeFlagsMask_ |
+      ImGuiDockNodeFlags_AutoHideTabBar | ImGuiDockNodeFlags_CentralNode |
+      ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar |
+      ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton,
+  ImGuiDockNodeFlags_SavedFlagsMask_ =
+      ImGuiDockNodeFlags_NoResizeFlagsMask_ | ImGuiDockNodeFlags_DockSpace |
+      ImGuiDockNodeFlags_CentralNode | ImGuiDockNodeFlags_NoTabBar |
+      ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton |
+      ImGuiDockNodeFlags_NoCloseButton,
 } ImGuiDockNodeFlagsPrivate_;
 typedef enum
 {
@@ -2963,7 +3026,8 @@ struct ImGuiSettingsHandler
   void (*ClearAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);
   void (*ReadInitFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);
   void* (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);
-  void (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line);
+  void (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry,
+                     const char* line);
   void (*ApplyAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);
   void (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);
   void* UserData;
@@ -2990,21 +3054,23 @@ struct ImGuiLocEntry
 };
 typedef enum
 {
-  ImGuiDebugLogFlags_None               = 0,
-  ImGuiDebugLogFlags_EventActiveId      = 1 << 0,
-  ImGuiDebugLogFlags_EventFocus         = 1 << 1,
-  ImGuiDebugLogFlags_EventPopup         = 1 << 2,
-  ImGuiDebugLogFlags_EventNav           = 1 << 3,
-  ImGuiDebugLogFlags_EventClipper       = 1 << 4,
-  ImGuiDebugLogFlags_EventSelection     = 1 << 5,
-  ImGuiDebugLogFlags_EventIO            = 1 << 6,
-  ImGuiDebugLogFlags_EventInputRouting  = 1 << 7,
-  ImGuiDebugLogFlags_EventDocking       = 1 << 8,
-  ImGuiDebugLogFlags_EventViewport      = 1 << 9,
-  ImGuiDebugLogFlags_EventMask_         = ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup |
-                                          ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection |
-                                          ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventInputRouting | ImGuiDebugLogFlags_EventDocking |
-                                          ImGuiDebugLogFlags_EventViewport,
+  ImGuiDebugLogFlags_None              = 0,
+  ImGuiDebugLogFlags_EventActiveId     = 1 << 0,
+  ImGuiDebugLogFlags_EventFocus        = 1 << 1,
+  ImGuiDebugLogFlags_EventPopup        = 1 << 2,
+  ImGuiDebugLogFlags_EventNav          = 1 << 3,
+  ImGuiDebugLogFlags_EventClipper      = 1 << 4,
+  ImGuiDebugLogFlags_EventSelection    = 1 << 5,
+  ImGuiDebugLogFlags_EventIO           = 1 << 6,
+  ImGuiDebugLogFlags_EventInputRouting = 1 << 7,
+  ImGuiDebugLogFlags_EventDocking      = 1 << 8,
+  ImGuiDebugLogFlags_EventViewport     = 1 << 9,
+  ImGuiDebugLogFlags_EventMask_ =
+      ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus |
+      ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav |
+      ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection |
+      ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventInputRouting |
+      ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
   ImGuiDebugLogFlags_OutputToTTY        = 1 << 20,
   ImGuiDebugLogFlags_OutputToTestEngine = 1 << 21,
 } ImGuiDebugLogFlags_;
@@ -4245,13 +4311,15 @@ inline void End()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igEnd"));
   return func();
 }
-inline bool BeginChild(const char* str_id, const ImVec2 size = ImVec2(0, 0), ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0)
+inline bool BeginChild(const char* str_id, const ImVec2 size = ImVec2(0, 0),
+                       ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0)
 {
   using func_t = bool (*)(const char*, const ImVec2, ImGuiChildFlags, ImGuiWindowFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginChild_Str"));
   return func(str_id, size, child_flags, window_flags);
 }
-inline bool BeginChild(ImGuiID id, const ImVec2 size = ImVec2(0, 0), ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0)
+inline bool BeginChild(ImGuiID id, const ImVec2 size = ImVec2(0, 0),
+                       ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0)
 {
   using func_t = bool (*)(ImGuiID, const ImVec2, ImGuiChildFlags, ImGuiWindowFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginChild_ID"));
@@ -4345,23 +4413,26 @@ inline void SetNextWindowSize(const ImVec2 size, ImGuiCond cond = 0)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowSize"));
   return func(size, cond);
 }
-inline void SetNextWindowSizeConstraints(const ImVec2 size_min, const ImVec2 size_max, ImGuiSizeCallback custom_callback = NULL,
-                                         void* custom_callback_data = NULL)
+inline void SetNextWindowSizeConstraints(const ImVec2 size_min, const ImVec2 size_max,
+                                         ImGuiSizeCallback custom_callback = NULL,
+                                         void* custom_callback_data        = NULL)
 {
   using func_t = void (*)(const ImVec2, const ImVec2, ImGuiSizeCallback, void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowSizeConstraints"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowSizeConstraints"));
   return func(size_min, size_max, custom_callback, custom_callback_data);
 }
 inline void SetNextWindowContentSize(const ImVec2 size)
 {
   using func_t = void (*)(const ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowContentSize"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowContentSize"));
   return func(size);
 }
 inline void SetNextWindowCollapsed(bool collapsed, ImGuiCond cond = 0)
 {
   using func_t = void (*)(bool, ImGuiCond);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowCollapsed"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowCollapsed"));
   return func(collapsed, cond);
 }
 inline void SetNextWindowFocus()
@@ -4403,7 +4474,8 @@ inline void SetWindowSize(const ImVec2 size, ImGuiCond cond = 0)
 inline void SetWindowCollapsed(bool collapsed, ImGuiCond cond = 0)
 {
   using func_t = void (*)(bool, ImGuiCond);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowCollapsed_Bool"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowCollapsed_Bool"));
   return func(collapsed, cond);
 }
 inline void SetWindowFocus()
@@ -4433,7 +4505,7 @@ inline void SetWindowSize(const char* name, const ImVec2 size, ImGuiCond cond = 
 inline void SetWindowCollapsed(const char* name, bool collapsed, ImGuiCond cond = 0)
 {
   using func_t = void (*)(const char*, bool, ImGuiCond);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowCollapsed_Str"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowCollapsed_Str"));
   return func(name, collapsed, cond);
 }
 inline void SetWindowFocus(const char* name)
@@ -4457,7 +4529,8 @@ inline void GetContentRegionMax(ImVec2* pOut)
 inline ImVec2 GetWindowContentRegionMin()
 {
   using func_t = void (*)(ImVec2*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowContentRegionMin"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowContentRegionMin"));
   ImVec2 pOut;
   func(&pOut);
   return pOut;
@@ -4465,7 +4538,8 @@ inline ImVec2 GetWindowContentRegionMin()
 inline ImVec2 GetWindowContentRegionMax()
 {
   using func_t = void (*)(ImVec2*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowContentRegionMax"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowContentRegionMax"));
   ImVec2 pOut;
   func(&pOut);
   return pOut;
@@ -4521,13 +4595,15 @@ inline void SetScrollHereY(float center_y_ratio = 0.5f)
 inline void SetScrollFromPosX(float local_x, float center_x_ratio = 0.5f)
 {
   using func_t = void (*)(float, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosX_Float"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosX_Float"));
   return func(local_x, center_x_ratio);
 }
 inline void SetScrollFromPosY(float local_y, float center_y_ratio = 0.5f)
 {
   using func_t = void (*)(float, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosY_Float"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosY_Float"));
   return func(local_y, center_y_ratio);
 }
 inline void PushFont(ImFont* font)
@@ -4653,7 +4729,7 @@ inline float GetFontSize()
 inline void GetFontTexUvWhitePixel(ImVec2* pOut)
 {
   using func_t = void (*)(ImVec2*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetFontTexUvWhitePixel"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetFontTexUvWhitePixel"));
   return func(pOut);
 }
 inline ImU32 GetColorU32(ImGuiCol idx, float alpha_mul = 1.0f)
@@ -4791,7 +4867,8 @@ inline void EndGroup()
 inline void AlignTextToFramePadding()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igAlignTextToFramePadding"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igAlignTextToFramePadding"));
   return func();
 }
 inline float GetTextLineHeight()
@@ -4803,7 +4880,8 @@ inline float GetTextLineHeight()
 inline float GetTextLineHeightWithSpacing()
 {
   using func_t = float (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTextLineHeightWithSpacing"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTextLineHeightWithSpacing"));
   return func();
 }
 inline float GetFrameHeight()
@@ -4815,7 +4893,8 @@ inline float GetFrameHeight()
 inline float GetFrameHeightWithSpacing()
 {
   using func_t = float (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetFrameHeightWithSpacing"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetFrameHeightWithSpacing"));
   return func();
 }
 inline void PushID(const char* str_id)
@@ -5034,17 +5113,23 @@ inline void Bullet()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBullet"));
   return func();
 }
-inline void Image(ImTextureID user_texture_id, const ImVec2 image_size, const ImVec2 uv0 = ImVec2(0, 0), const ImVec2 uv1 = ImVec2(1, 1),
-                  const ImVec4 tint_col = ImVec4(1, 1, 1, 1), const ImVec4 border_col = ImVec4(0, 0, 0, 0))
+inline void Image(ImTextureID user_texture_id, const ImVec2 image_size,
+                  const ImVec2 uv0 = ImVec2(0, 0), const ImVec2 uv1 = ImVec2(1, 1),
+                  const ImVec4 tint_col   = ImVec4(1, 1, 1, 1),
+                  const ImVec4 border_col = ImVec4(0, 0, 0, 0))
 {
-  using func_t = void (*)(ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec4, const ImVec4);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImage"));
+  using func_t =
+      void (*)(ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec4, const ImVec4);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImage"));
   return func(user_texture_id, image_size, uv0, uv1, tint_col, border_col);
 }
-inline bool ImageButton(const char* str_id, ImTextureID user_texture_id, const ImVec2 image_size, const ImVec2 uv0 = ImVec2(0, 0),
-                        const ImVec2 uv1 = ImVec2(1, 1), const ImVec4 bg_col = ImVec4(0, 0, 0, 0), const ImVec4 tint_col = ImVec4(1, 1, 1, 1))
+inline bool ImageButton(const char* str_id, ImTextureID user_texture_id, const ImVec2 image_size,
+                        const ImVec2 uv0 = ImVec2(0, 0), const ImVec2 uv1 = ImVec2(1, 1),
+                        const ImVec4 bg_col   = ImVec4(0, 0, 0, 0),
+                        const ImVec4 tint_col = ImVec4(1, 1, 1, 1))
 {
-  using func_t = bool (*)(const char*, ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec4, const ImVec4);
+  using func_t = bool (*)(const char*, ImTextureID, const ImVec2, const ImVec2, const ImVec2,
+                          const ImVec4, const ImVec4);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImageButton"));
   return func(str_id, user_texture_id, image_size, uv0, uv1, bg_col, tint_col);
 }
@@ -5060,245 +5145,289 @@ inline void EndCombo()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igEndCombo"));
   return func();
 }
-inline bool Combo(const char* label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items = -1)
+inline bool Combo(const char* label, int* current_item, const char* const items[], int items_count,
+                  int popup_max_height_in_items = -1)
 {
   using func_t = bool (*)(const char*, int*, const char* const[], int, int);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCombo_Str_arr"));
   return func(label, current_item, items, items_count, popup_max_height_in_items);
 }
-inline bool Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items = -1)
+inline bool Combo(const char* label, int* current_item, const char* items_separated_by_zeros,
+                  int popup_max_height_in_items = -1)
 {
   using func_t = bool (*)(const char*, int*, const char*, int);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCombo_Str"));
   return func(label, current_item, items_separated_by_zeros, popup_max_height_in_items);
 }
-inline bool Combo(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count,
+inline bool Combo(const char* label, int* current_item,
+                  const char* (*getter)(void* user_data, int idx), void* user_data, int items_count,
                   int popup_max_height_in_items = -1)
 {
   using func_t = bool (*)(const char*, int*, const char* (*)(void*, int), void*, int, int);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCombo_FnStrPtr"));
   return func(label, current_item, getter, user_data, items_count, popup_max_height_in_items);
 }
-inline bool DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f",
-                      ImGuiSliderFlags flags = 0)
+inline bool DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f,
+                      float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float*, float, float, float, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloat"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragFloat2(const char* label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f",
-                       ImGuiSliderFlags flags = 0)
+inline bool DragFloat2(const char* label, float v[2], float v_speed = 1.0f, float v_min = 0.0f,
+                       float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, float[2], float, float, float, const char*, ImGuiSliderFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloat2"));
+  using func_t =
+      bool (*)(const char*, float[2], float, float, float, const char*, ImGuiSliderFlags);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloat2"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f",
-                       ImGuiSliderFlags flags = 0)
+inline bool DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f,
+                       float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, float[3], float, float, float, const char*, ImGuiSliderFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloat3"));
+  using func_t =
+      bool (*)(const char*, float[3], float, float, float, const char*, ImGuiSliderFlags);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloat3"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f",
-                       ImGuiSliderFlags flags = 0)
+inline bool DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f,
+                       float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, float[4], float, float, float, const char*, ImGuiSliderFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloat4"));
+  using func_t =
+      bool (*)(const char*, float[4], float, float, float, const char*, ImGuiSliderFlags);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloat4"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f,
-                            float v_max = 0.0f, const char* format = "%.3f", const char* format_max = NULL, ImGuiSliderFlags flags = 0)
+inline bool DragFloatRange2(const char* label, float* v_current_min, float* v_current_max,
+                            float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f,
+                            const char* format = "%.3f", const char* format_max = NULL,
+                            ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, float*, float*, float, float, float, const char*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(const char*, float*, float*, float, float, float, const char*,
+                          const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragFloatRange2"));
-  return func(label, v_current_min, v_current_max, v_speed, v_min, v_max, format, format_max, flags);
+  return func(label, v_current_min, v_current_max, v_speed, v_min, v_max, format, format_max,
+              flags);
 }
-inline bool DragInt(const char* label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d",
-                    ImGuiSliderFlags flags = 0)
+inline bool DragInt(const char* label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0,
+                    const char* format = "%d", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int*, float, int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragInt"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragInt2(const char* label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d",
-                     ImGuiSliderFlags flags = 0)
+inline bool DragInt2(const char* label, int v[2], float v_speed = 1.0f, int v_min = 0,
+                     int v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int[2], float, int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragInt2"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragInt3(const char* label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d",
-                     ImGuiSliderFlags flags = 0)
+inline bool DragInt3(const char* label, int v[3], float v_speed = 1.0f, int v_min = 0,
+                     int v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int[3], float, int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragInt3"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragInt4(const char* label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d",
-                     ImGuiSliderFlags flags = 0)
+inline bool DragInt4(const char* label, int v[4], float v_speed = 1.0f, int v_min = 0,
+                     int v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int[4], float, int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragInt4"));
   return func(label, v, v_speed, v_min, v_max, format, flags);
 }
-inline bool DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0,
-                          const char* format = "%d", const char* format_max = NULL, ImGuiSliderFlags flags = 0)
+inline bool DragIntRange2(const char* label, int* v_current_min, int* v_current_max,
+                          float v_speed = 1.0f, int v_min = 0, int v_max = 0,
+                          const char* format = "%d", const char* format_max = NULL,
+                          ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, int*, int*, float, int, int, const char*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(const char*, int*, int*, float, int, int, const char*, const char*,
+                          ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragIntRange2"));
-  return func(label, v_current_min, v_current_max, v_speed, v_min, v_max, format, format_max, flags);
+  return func(label, v_current_min, v_current_max, v_speed, v_min, v_max, format, format_max,
+              flags);
 }
-inline bool DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed = 1.0f, const void* p_min = NULL,
-                       const void* p_max = NULL, const char* format = NULL, ImGuiSliderFlags flags = 0)
+inline bool DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
+                       float v_speed = 1.0f, const void* p_min = NULL, const void* p_max = NULL,
+                       const char* format = NULL, ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, ImGuiDataType, void*, float, const void*, const void*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(const char*, ImGuiDataType, void*, float, const void*, const void*,
+                          const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragScalar"));
   return func(label, data_type, p_data, v_speed, p_min, p_max, format, flags);
 }
-inline bool DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max,
-                        const char* format, ImGuiSliderFlags flags = 1.0f)
+inline bool DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components,
+                        float v_speed, const void* p_min, const void* p_max, const char* format,
+                        ImGuiSliderFlags flags = 1.0f)
 {
-  using func_t = bool (*)(const char*, ImGuiDataType, void*, int, float, const void*, const void*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(const char*, ImGuiDataType, void*, int, float, const void*, const void*,
+                          const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragScalarN"));
   return func(label, data_type, p_data, components, v_speed, p_min, p_max, format, flags);
 }
-inline bool SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+inline bool SliderFloat(const char* label, float* v, float v_min, float v_max,
+                        const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float*, float, float, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderFloat"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+inline bool SliderFloat2(const char* label, float v[2], float v_min, float v_max,
+                         const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float[2], float, float, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderFloat2"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+inline bool SliderFloat3(const char* label, float v[3], float v_min, float v_max,
+                         const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float[3], float, float, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderFloat3"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+inline bool SliderFloat4(const char* label, float v[4], float v_min, float v_max,
+                         const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float[4], float, float, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderFloat4"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f,
-                        const char* format = "%.0f deg", ImGuiSliderFlags flags = 0)
+inline bool SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f,
+                        float v_degrees_max = +360.0f, const char* format = "%.0f deg",
+                        ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float*, float, float, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderAngle"));
   return func(label, v_rad, v_degrees_min, v_degrees_max, format, flags);
 }
-inline bool SliderInt(const char* label, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+inline bool SliderInt(const char* label, int* v, int v_min, int v_max, const char* format = "%d",
+                      ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int*, int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderInt"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+inline bool SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format = "%d",
+                       ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int[2], int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderInt2"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+inline bool SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format = "%d",
+                       ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int[3], int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderInt3"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+inline bool SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format = "%d",
+                       ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int[4], int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderInt4"));
   return func(label, v, v_min, v_max, format, flags);
 }
-inline bool SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format,
+inline bool SliderScalar(const char* label, ImGuiDataType data_type, void* p_data,
+                         const void* p_min, const void* p_max, const char* format,
                          ImGuiSliderFlags flags = 1.0f)
 {
-  using func_t = bool (*)(const char*, ImGuiDataType, void*, const void*, const void*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(const char*, ImGuiDataType, void*, const void*, const void*, const char*,
+                          ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderScalar"));
   return func(label, data_type, p_data, p_min, p_max, format, flags);
 }
-inline bool SliderScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max,
-                          const char* format, ImGuiSliderFlags flags = 1.0f)
+inline bool SliderScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components,
+                          const void* p_min, const void* p_max, const char* format,
+                          ImGuiSliderFlags flags = 1.0f)
 {
-  using func_t = bool (*)(const char*, ImGuiDataType, void*, int, const void*, const void*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(const char*, ImGuiDataType, void*, int, const void*, const void*,
+                          const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderScalarN"));
   return func(label, data_type, p_data, components, p_min, p_max, format, flags);
 }
-inline bool VSliderFloat(const char* label, const ImVec2 size, float* v, float v_min, float v_max, const char* format = "%.3f",
-                         ImGuiSliderFlags flags = 0)
+inline bool VSliderFloat(const char* label, const ImVec2 size, float* v, float v_min, float v_max,
+                         const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, const ImVec2, float*, float, float, const char*, ImGuiSliderFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igVSliderFloat"));
+  using func_t =
+      bool (*)(const char*, const ImVec2, float*, float, float, const char*, ImGuiSliderFlags);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igVSliderFloat"));
   return func(label, size, v, v_min, v_max, format, flags);
 }
-inline bool VSliderInt(const char* label, const ImVec2 size, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+inline bool VSliderInt(const char* label, const ImVec2 size, int* v, int v_min, int v_max,
+                       const char* format = "%d", ImGuiSliderFlags flags = 0)
 {
   using func_t = bool (*)(const char*, const ImVec2, int*, int, int, const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igVSliderInt"));
   return func(label, size, v, v_min, v_max, format, flags);
 }
-inline bool VSliderScalar(const char* label, const ImVec2 size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max,
+inline bool VSliderScalar(const char* label, const ImVec2 size, ImGuiDataType data_type,
+                          void* p_data, const void* p_min, const void* p_max,
                           const char* format = NULL, ImGuiSliderFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, const ImVec2, ImGuiDataType, void*, const void*, const void*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(const char*, const ImVec2, ImGuiDataType, void*, const void*, const void*,
+                          const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igVSliderScalar"));
   return func(label, size, data_type, p_data, p_min, p_max, format, flags);
 }
-inline bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL,
-                      void* user_data = NULL)
+inline bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0,
+                      ImGuiInputTextCallback callback = NULL, void* user_data = NULL)
 {
-  using func_t = bool (*)(const char*, char*, size_t, ImGuiInputTextFlags, ImGuiInputTextCallback, void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputText"));
+  using func_t =
+      bool (*)(const char*, char*, size_t, ImGuiInputTextFlags, ImGuiInputTextCallback, void*);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputText"));
   return func(label, buf, buf_size, flags, callback, user_data);
 }
-inline bool InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2 size, ImGuiInputTextFlags flags,
-                               ImGuiInputTextCallback callback, void* user_data)
+inline bool InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2 size,
+                               ImGuiInputTextFlags flags, ImGuiInputTextCallback callback,
+                               void* user_data)
 {
-  using func_t = bool (*)(const char*, char*, size_t, const ImVec2, ImGuiInputTextFlags, ImGuiInputTextCallback, void*);
+  using func_t = bool (*)(const char*, char*, size_t, const ImVec2, ImGuiInputTextFlags,
+                          ImGuiInputTextCallback, void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputTextMultiline"));
   return func(label, buf, buf_size, size, flags, callback, user_data);
 }
-inline bool InputTextWithHint(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0,
-                              ImGuiInputTextCallback callback = NULL, void* user_data = NULL)
+inline bool InputTextWithHint(const char* label, const char* hint, char* buf, size_t buf_size,
+                              ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL,
+                              void* user_data = NULL)
 {
-  using func_t = bool (*)(const char*, const char*, char*, size_t, ImGuiInputTextFlags, ImGuiInputTextCallback, void*);
+  using func_t = bool (*)(const char*, const char*, char*, size_t, ImGuiInputTextFlags,
+                          ImGuiInputTextCallback, void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputTextWithHint"));
   return func(label, hint, buf, buf_size, flags, callback, user_data);
 }
-inline bool InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, const char* format = "%.3f",
-                       ImGuiInputTextFlags flags = 0)
+inline bool InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f,
+                       const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float*, float, float, const char*, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputFloat"));
   return func(label, v, step, step_fast, format, flags);
 }
-inline bool InputFloat2(const char* label, float v[2], const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
+inline bool InputFloat2(const char* label, float v[2], const char* format = "%.3f",
+                        ImGuiInputTextFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float[2], const char*, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputFloat2"));
   return func(label, v, format, flags);
 }
-inline bool InputFloat3(const char* label, float v[3], const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
+inline bool InputFloat3(const char* label, float v[3], const char* format = "%.3f",
+                        ImGuiInputTextFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float[3], const char*, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputFloat3"));
   return func(label, v, format, flags);
 }
-inline bool InputFloat4(const char* label, float v[4], const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
+inline bool InputFloat4(const char* label, float v[4], const char* format = "%.3f",
+                        ImGuiInputTextFlags flags = 0)
 {
   using func_t = bool (*)(const char*, float[4], const char*, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputFloat4"));
   return func(label, v, format, flags);
 }
-inline bool InputInt(const char* label, int* v, int step = 1, int step_fast = 100, ImGuiInputTextFlags flags = 0)
+inline bool InputInt(const char* label, int* v, int step = 1, int step_fast = 100,
+                     ImGuiInputTextFlags flags = 0)
 {
   using func_t = bool (*)(const char*, int*, int, int, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputInt"));
@@ -5322,24 +5451,28 @@ inline bool InputInt4(const char* label, int v[4], ImGuiInputTextFlags flags = 0
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputInt4"));
   return func(label, v, flags);
 }
-inline bool InputDouble(const char* label, double* v, double step = 0.0, double step_fast = 0.0, const char* format = "%.6f",
-                        ImGuiInputTextFlags flags = 0)
+inline bool InputDouble(const char* label, double* v, double step = 0.0, double step_fast = 0.0,
+                        const char* format = "%.6f", ImGuiInputTextFlags flags = 0)
 {
   using func_t = bool (*)(const char*, double*, double, double, const char*, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputDouble"));
   return func(label, v, step, step_fast, format, flags);
 }
-inline bool InputScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_step = NULL, const void* p_step_fast = NULL,
+inline bool InputScalar(const char* label, ImGuiDataType data_type, void* p_data,
+                        const void* p_step = NULL, const void* p_step_fast = NULL,
                         const char* format = NULL, ImGuiInputTextFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, ImGuiDataType, void*, const void*, const void*, const char*, ImGuiInputTextFlags);
+  using func_t = bool (*)(const char*, ImGuiDataType, void*, const void*, const void*, const char*,
+                          ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputScalar"));
   return func(label, data_type, p_data, p_step, p_step_fast, format, flags);
 }
-inline bool InputScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, const void* p_step = NULL,
-                         const void* p_step_fast = NULL, const char* format = NULL, ImGuiInputTextFlags flags = 0)
+inline bool InputScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components,
+                         const void* p_step = NULL, const void* p_step_fast = NULL,
+                         const char* format = NULL, ImGuiInputTextFlags flags = 0)
 {
-  using func_t = bool (*)(const char*, ImGuiDataType, void*, int, const void*, const void*, const char*, ImGuiInputTextFlags);
+  using func_t = bool (*)(const char*, ImGuiDataType, void*, int, const void*, const void*,
+                          const char*, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputScalarN"));
   return func(label, data_type, p_data, components, p_step, p_step_fast, format, flags);
 }
@@ -5361,13 +5494,15 @@ inline bool ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags fl
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorPicker3"));
   return func(label, col, flags);
 }
-inline bool ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags = 0, const float* ref_col = NULL)
+inline bool ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags = 0,
+                         const float* ref_col = NULL)
 {
   using func_t = bool (*)(const char*, float[4], ImGuiColorEditFlags, const float*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorPicker4"));
   return func(label, col, flags, ref_col);
 }
-inline bool ColorButton(const char* desc_id, const ImVec4 col, ImGuiColorEditFlags flags, const ImVec2 size)
+inline bool ColorButton(const char* desc_id, const ImVec4 col, ImGuiColorEditFlags flags,
+                        const ImVec2 size)
 {
   using func_t = bool (*)(const char*, const ImVec4, ImGuiColorEditFlags, const ImVec2);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorButton"));
@@ -5476,19 +5611,22 @@ inline void TreePop()
 inline float GetTreeNodeToLabelSpacing()
 {
   using func_t = float (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTreeNodeToLabelSpacing"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTreeNodeToLabelSpacing"));
   return func();
 }
 inline bool CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags = 0)
 {
   using func_t = bool (*)(const char*, ImGuiTreeNodeFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCollapsingHeader_TreeNodeFlags"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCollapsingHeader_TreeNodeFlags"));
   return func(label, flags);
 }
 inline bool CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFlags flags = 0)
 {
   using func_t = bool (*)(const char*, bool*, ImGuiTreeNodeFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCollapsingHeader_BoolPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCollapsingHeader_BoolPtr"));
   return func(label, p_visible, flags);
 }
 inline void SetNextItemOpen(bool is_open, ImGuiCond cond = 0)
@@ -5497,13 +5635,15 @@ inline void SetNextItemOpen(bool is_open, ImGuiCond cond = 0)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextItemOpen"));
   return func(is_open, cond);
 }
-inline bool Selectable(const char* label, bool selected, ImGuiSelectableFlags flags = 0, const ImVec2 size = ImVec2(0, 0))
+inline bool Selectable(const char* label, bool selected, ImGuiSelectableFlags flags = 0,
+                       const ImVec2 size = ImVec2(0, 0))
 {
   using func_t = bool (*)(const char*, bool, ImGuiSelectableFlags, const ImVec2);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSelectable_Bool"));
   return func(label, selected, flags, size);
 }
-inline bool Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2 size = ImVec2(0, 0))
+inline bool Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags = 0,
+                       const ImVec2 size = ImVec2(0, 0))
 {
   using func_t = bool (*)(const char*, bool*, ImGuiSelectableFlags, const ImVec2);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSelectable_BoolPtr"));
@@ -5521,46 +5661,65 @@ inline void EndListBox()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igEndListBox"));
   return func();
 }
-inline bool ListBox(const char* label, int* current_item, const char* const items[], int items_count, int height_in_items = -1)
+inline bool ListBox(const char* label, int* current_item, const char* const items[],
+                    int items_count, int height_in_items = -1)
 {
   using func_t = bool (*)(const char*, int*, const char* const[], int, int);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igListBox_Str_arr"));
   return func(label, current_item, items, items_count, height_in_items);
 }
-inline bool ListBox(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count,
-                    int height_in_items = -1)
+inline bool ListBox(const char* label, int* current_item,
+                    const char* (*getter)(void* user_data, int idx), void* user_data,
+                    int items_count, int height_in_items = -1)
 {
   using func_t = bool (*)(const char*, int*, const char* (*)(void*, int), void*, int, int);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igListBox_FnStrPtr"));
   return func(label, current_item, getter, user_data, items_count, height_in_items);
 }
-inline void PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL,
-                      float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float))
+inline void PlotLines(const char* label, const float* values, int values_count,
+                      int values_offset = 0, const char* overlay_text = NULL,
+                      float scale_min = FLT_MAX, float scale_max = FLT_MAX,
+                      ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float))
 {
-  using func_t = void (*)(const char*, const float*, int, int, const char*, float, float, ImVec2, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotLines_FloatPtr"));
-  return func(label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size, stride);
+  using func_t =
+      void (*)(const char*, const float*, int, int, const char*, float, float, ImVec2, int);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotLines_FloatPtr"));
+  return func(label, values, values_count, values_offset, overlay_text, scale_min, scale_max,
+              graph_size, stride);
 }
-inline void PlotLines(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0,
-                      const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0))
+inline void PlotLines(const char* label, float (*values_getter)(void* data, int idx), void* data,
+                      int values_count, int values_offset = 0, const char* overlay_text = NULL,
+                      float scale_min = FLT_MAX, float scale_max = FLT_MAX,
+                      ImVec2 graph_size = ImVec2(0, 0))
 {
-  using func_t = void (*)(const char*, float (*)(void*, int), void*, int, int, const char*, float, float, ImVec2);
+  using func_t = void (*)(const char*, float (*)(void*, int), void*, int, int, const char*, float,
+                          float, ImVec2);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotLines_FnFloatPtr"));
-  return func(label, values_getter, data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
+  return func(label, values_getter, data, values_count, values_offset, overlay_text, scale_min,
+              scale_max, graph_size);
 }
-inline void PlotHistogram(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL,
-                          float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float))
+inline void PlotHistogram(const char* label, const float* values, int values_count,
+                          int values_offset = 0, const char* overlay_text = NULL,
+                          float scale_min = FLT_MAX, float scale_max = FLT_MAX,
+                          ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float))
 {
-  using func_t = void (*)(const char*, const float*, int, int, const char*, float, float, ImVec2, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotHistogram_FloatPtr"));
-  return func(label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size, stride);
+  using func_t =
+      void (*)(const char*, const float*, int, int, const char*, float, float, ImVec2, int);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotHistogram_FloatPtr"));
+  return func(label, values, values_count, values_offset, overlay_text, scale_min, scale_max,
+              graph_size, stride);
 }
-inline void PlotHistogram(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0,
-                          const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0))
+inline void PlotHistogram(const char* label, float (*values_getter)(void* data, int idx),
+                          void* data, int values_count, int values_offset = 0,
+                          const char* overlay_text = NULL, float scale_min = FLT_MAX,
+                          float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0))
 {
-  using func_t = void (*)(const char*, float (*)(void*, int), void*, int, int, const char*, float, float, ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotHistogram_FnFloatPtr"));
-  return func(label, values_getter, data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
+  using func_t = void (*)(const char*, float (*)(void*, int), void*, int, int, const char*, float,
+                          float, ImVec2);
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotHistogram_FnFloatPtr"));
+  return func(label, values_getter, data, values_count, values_offset, overlay_text, scale_min,
+              scale_max, graph_size);
 }
 inline void Value(const char* prefix, bool b)
 {
@@ -5622,7 +5781,8 @@ inline void EndMenu()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igEndMenu"));
   return func();
 }
-inline bool MenuItem(const char* label, const char* shortcut = NULL, bool selected = false, bool enabled = true)
+inline bool MenuItem(const char* label, const char* shortcut = NULL, bool selected = false,
+                     bool enabled = true)
 {
   using func_t = bool (*)(const char*, const char*, bool, bool);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igMenuItem_Bool"));
@@ -5733,7 +5893,8 @@ inline bool BeginPopupContextItem(const char* str_id = NULL, ImGuiPopupFlags pop
 inline bool BeginPopupContextWindow(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1)
 {
   using func_t = bool (*)(const char*, ImGuiPopupFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginPopupContextWindow"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginPopupContextWindow"));
   return func(str_id, popup_flags);
 }
 inline bool BeginPopupContextVoid(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1)
@@ -5748,8 +5909,8 @@ inline bool IsPopupOpen(const char* str_id, ImGuiPopupFlags flags = 0)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsPopupOpen_Str"));
   return func(str_id, flags);
 }
-inline bool BeginTable(const char* str_id, int column, ImGuiTableFlags flags = 0, const ImVec2 outer_size = ImVec2(0.0f, 0.0f),
-                       float inner_width = 0.0f)
+inline bool BeginTable(const char* str_id, int column, ImGuiTableFlags flags = 0,
+                       const ImVec2 outer_size = ImVec2(0.0f, 0.0f), float inner_width = 0.0f)
 {
   using func_t = bool (*)(const char*, int, ImGuiTableFlags, const ImVec2, float);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginTable"));
@@ -5779,7 +5940,8 @@ inline bool TableSetColumnIndex(int column_n)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnIndex"));
   return func(column_n);
 }
-inline void TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0, float init_width_or_weight = 0.0f, ImGuiID user_id = 0)
+inline void TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0,
+                             float init_width_or_weight = 0.0f, ImGuiID user_id = 0)
 {
   using func_t = void (*)(const char*, ImGuiTableColumnFlags, float, ImGuiID);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetupColumn"));
@@ -5788,7 +5950,7 @@ inline void TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0,
 inline void TableSetupScrollFreeze(int cols, int rows)
 {
   using func_t = void (*)(int, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetupScrollFreeze"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetupScrollFreeze"));
   return func(cols, rows);
 }
 inline void TableHeader(const char* label)
@@ -5836,7 +5998,7 @@ inline int TableGetRowIndex()
 inline const char* TableGetColumnName(int column_n = -1)
 {
   using func_t = const char* (*)(int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnName_Int"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnName_Int"));
   return func(column_n);
 }
 inline ImGuiTableColumnFlags TableGetColumnFlags(int column_n = -1)
@@ -5941,17 +6103,20 @@ inline void SetTabItemClosed(const char* tab_or_docked_window_label)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetTabItemClosed"));
   return func(tab_or_docked_window_label);
 }
-inline ImGuiID DockSpace(ImGuiID dockspace_id, const ImVec2 size, ImGuiDockNodeFlags flags, const ImGuiWindowClass* window_class)
+inline ImGuiID DockSpace(ImGuiID dockspace_id, const ImVec2 size, ImGuiDockNodeFlags flags,
+                         const ImGuiWindowClass* window_class)
 {
   using func_t = ImGuiID (*)(ImGuiID, const ImVec2, ImGuiDockNodeFlags, const ImGuiWindowClass*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockSpace"));
   return func(dockspace_id, size, flags, window_class);
 }
-inline ImGuiID DockSpaceOverViewport(ImGuiID dockspace_id = 0, const ImGuiViewport* viewport = NULL, ImGuiDockNodeFlags flags = 0,
+inline ImGuiID DockSpaceOverViewport(ImGuiID dockspace_id = 0, const ImGuiViewport* viewport = NULL,
+                                     ImGuiDockNodeFlags flags             = 0,
                                      const ImGuiWindowClass* window_class = NULL)
 {
-  using func_t = ImGuiID (*)(ImGuiID, const ImGuiViewport*, ImGuiDockNodeFlags, const ImGuiWindowClass*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockSpaceOverViewport"));
+  using func_t =
+      ImGuiID (*)(ImGuiID, const ImGuiViewport*, ImGuiDockNodeFlags, const ImGuiWindowClass*);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockSpaceOverViewport"));
   return func(dockspace_id, viewport, flags, window_class);
 }
 inline void SetNextWindowDockID(ImGuiID dock_id, ImGuiCond cond = 0)
@@ -6068,7 +6233,8 @@ inline void EndDisabled()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igEndDisabled"));
   return func();
 }
-inline void PushClipRect(const ImVec2 clip_rect_min, const ImVec2 clip_rect_max, bool intersect_with_current_clip_rect = false)
+inline void PushClipRect(const ImVec2 clip_rect_min, const ImVec2 clip_rect_max,
+                         bool intersect_with_current_clip_rect = false)
 {
   using func_t = void (*)(const ImVec2, const ImVec2, bool);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPushClipRect"));
@@ -6095,7 +6261,8 @@ inline void SetKeyboardFocusHere(int offset = 0)
 inline void SetNextItemAllowOverlap()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextItemAllowOverlap"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextItemAllowOverlap"));
   return func();
 }
 inline bool IsItemHovered(ImGuiHoveredFlags flags = 0)
@@ -6149,7 +6316,8 @@ inline bool IsItemDeactivated()
 inline bool IsItemDeactivatedAfterEdit()
 {
   using func_t = bool (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsItemDeactivatedAfterEdit"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsItemDeactivatedAfterEdit"));
   return func();
 }
 inline bool IsItemToggledOpen()
@@ -6209,25 +6377,29 @@ inline ImGuiViewport* GetMainViewport()
 inline ImDrawList* GetBackgroundDrawList()
 {
   using func_t = ImDrawList* (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetBackgroundDrawList_Nil"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetBackgroundDrawList_Nil"));
   return func();
 }
 inline ImDrawList* GetForegroundDrawList()
 {
   using func_t = ImDrawList* (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetForegroundDrawList_Nil"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetForegroundDrawList_Nil"));
   return func();
 }
 inline ImDrawList* GetBackgroundDrawList(ImGuiViewport* viewport)
 {
   using func_t = ImDrawList* (*)(ImGuiViewport*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetBackgroundDrawList_ViewportPtr"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igGetBackgroundDrawList_ViewportPtr"));
   return func(viewport);
 }
 inline ImDrawList* GetForegroundDrawList(ImGuiViewport* viewport)
 {
   using func_t = ImDrawList* (*)(ImGuiViewport*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetForegroundDrawList_ViewportPtr"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igGetForegroundDrawList_ViewportPtr"));
   return func(viewport);
 }
 inline bool IsRectVisible(const ImVec2 size)
@@ -6278,7 +6450,8 @@ inline ImGuiStorage* GetStateStorage()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetStateStorage"));
   return func();
 }
-inline void CalcTextSize(ImVec2* pOut, const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width)
+inline void CalcTextSize(ImVec2* pOut, const char* text, const char* text_end,
+                         bool hide_text_after_double_hash, float wrap_width)
 {
   using func_t = void (*)(ImVec2*, const char*, const char*, bool, float);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCalcTextSize"));
@@ -6287,22 +6460,26 @@ inline void CalcTextSize(ImVec2* pOut, const char* text, const char* text_end, b
 inline void ColorConvertU32ToFloat4(ImVec4* pOut, ImU32 in)
 {
   using func_t = void (*)(ImVec4*, ImU32);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorConvertU32ToFloat4"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorConvertU32ToFloat4"));
   return func(pOut, in);
 }
 inline ImU32 ColorConvertFloat4ToU32(const ImVec4 in)
 {
   using func_t = ImU32 (*)(const ImVec4);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorConvertFloat4ToU32"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorConvertFloat4ToU32"));
   return func(in);
 }
-inline void ColorConvertRGBtoHSV(float r, float g, float b, float* out_h, float* out_s, float* out_v)
+inline void ColorConvertRGBtoHSV(float r, float g, float b, float* out_h, float* out_s,
+                                 float* out_v)
 {
   using func_t = void (*)(float, float, float, float*, float*, float*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorConvertRGBtoHSV"));
   return func(r, g, b, out_h, out_s, out_v);
 }
-inline void ColorConvertHSVtoRGB(float h, float s, float v, float* out_r, float* out_g, float* out_b)
+inline void ColorConvertHSVtoRGB(float h, float s, float v, float* out_r, float* out_g,
+                                 float* out_b)
 {
   using func_t = void (*)(float, float, float, float*, float*, float*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorConvertHSVtoRGB"));
@@ -6347,7 +6524,8 @@ inline const char* GetKeyName(ImGuiKey key)
 inline void SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard)
 {
   using func_t = void (*)(bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextFrameWantCaptureKeyboard"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextFrameWantCaptureKeyboard"));
   return func(want_capture_keyboard);
 }
 inline bool Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0)
@@ -6383,7 +6561,8 @@ inline bool IsMouseReleased(ImGuiMouseButton button)
 inline bool IsMouseDoubleClicked(ImGuiMouseButton button)
 {
   using func_t = bool (*)(ImGuiMouseButton);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseDoubleClicked_Nil"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseDoubleClicked_Nil"));
   return func(button);
 }
 inline int GetMouseClickedCount(ImGuiMouseButton button)
@@ -6419,7 +6598,8 @@ inline void GetMousePos(ImVec2* pOut)
 inline void GetMousePosOnOpeningCurrentPopup(ImVec2* pOut)
 {
   using func_t = void (*)(ImVec2*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetMousePosOnOpeningCurrentPopup"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetMousePosOnOpeningCurrentPopup"));
   return func(pOut);
 }
 inline bool IsMouseDragging(ImGuiMouseButton button, float lock_threshold = -1.0f)
@@ -6455,7 +6635,8 @@ inline void SetMouseCursor(ImGuiMouseCursor cursor_type)
 inline void SetNextFrameWantCaptureMouse(bool want_capture_mouse)
 {
   using func_t = void (*)(bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextFrameWantCaptureMouse"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextFrameWantCaptureMouse"));
   return func(want_capture_mouse);
 }
 inline const char* GetClipboardText()
@@ -6473,13 +6654,15 @@ inline void SetClipboardText(const char* text)
 inline void LoadIniSettingsFromDisk(const char* ini_filename)
 {
   using func_t = void (*)(const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLoadIniSettingsFromDisk"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLoadIniSettingsFromDisk"));
   return func(ini_filename);
 }
 inline void LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size = 0)
 {
   using func_t = void (*)(const char*, size_t);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLoadIniSettingsFromMemory"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLoadIniSettingsFromMemory"));
   return func(ini_data, ini_size);
 }
 inline void SaveIniSettingsToDisk(const char* ini_filename)
@@ -6491,7 +6674,8 @@ inline void SaveIniSettingsToDisk(const char* ini_filename)
 inline const char* SaveIniSettingsToMemory(size_t* out_ini_size = NULL)
 {
   using func_t = const char* (*)(size_t*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSaveIniSettingsToMemory"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSaveIniSettingsToMemory"));
   return func(out_ini_size);
 }
 inline void DebugTextEncoding(const char* text)
@@ -6512,20 +6696,24 @@ inline void DebugStartItemPicker()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugStartItemPicker"));
   return func();
 }
-inline bool DebugCheckVersionAndDataLayout(const char* version_str, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_drawvert,
+inline bool DebugCheckVersionAndDataLayout(const char* version_str, size_t sz_io, size_t sz_style,
+                                           size_t sz_vec2, size_t sz_vec4, size_t sz_drawvert,
                                            size_t sz_drawidx)
 {
   using func_t = bool (*)(const char*, size_t, size_t, size_t, size_t, size_t, size_t);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugCheckVersionAndDataLayout"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugCheckVersionAndDataLayout"));
   return func(version_str, sz_io, sz_style, sz_vec2, sz_vec4, sz_drawvert, sz_drawidx);
 }
-inline void SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc free_func, void* user_data = NULL)
+inline void SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc free_func,
+                                  void* user_data = NULL)
 {
   using func_t = void (*)(ImGuiMemAllocFunc, ImGuiMemFreeFunc, void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetAllocatorFunctions"));
   return func(alloc_func, free_func, user_data);
 }
-inline void GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data)
+inline void GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func,
+                                  void** p_user_data)
 {
   using func_t = void (*)(ImGuiMemAllocFunc*, ImGuiMemFreeFunc*, void**);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetAllocatorFunctions"));
@@ -6555,16 +6743,18 @@ inline void UpdatePlatformWindows()
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdatePlatformWindows"));
   return func();
 }
-inline void RenderPlatformWindowsDefault(void* platform_render_arg = NULL, void* renderer_render_arg = NULL)
+inline void RenderPlatformWindowsDefault(void* platform_render_arg = NULL,
+                                         void* renderer_render_arg = NULL)
 {
   using func_t = void (*)(void*, void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderPlatformWindowsDefault"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderPlatformWindowsDefault"));
   return func(platform_render_arg, renderer_render_arg);
 }
 inline void DestroyPlatformWindows()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDestroyPlatformWindows"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDestroyPlatformWindows"));
   return func();
 }
 inline ImGuiViewport* FindViewportByID(ImGuiID id)
@@ -6576,7 +6766,8 @@ inline ImGuiViewport* FindViewportByID(ImGuiID id)
 inline ImGuiViewport* FindViewportByPlatformHandle(void* platform_handle)
 {
   using func_t = ImGuiViewport* (*)(void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindViewportByPlatformHandle"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindViewportByPlatformHandle"));
   return func(platform_handle);
 }
 namespace ImGuiTableSortSpecsManager
@@ -6584,13 +6775,15 @@ namespace ImGuiTableSortSpecsManager
   inline ImGuiTableSortSpecs* Create(void)
   {
     using func_t = ImGuiTableSortSpecs* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableSortSpecs_ImGuiTableSortSpecs"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableSortSpecs_ImGuiTableSortSpecs"));
     return func();
   }
   inline void Destroy(ImGuiTableSortSpecs* self)
   {
     using func_t = void (*)(ImGuiTableSortSpecs*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableSortSpecs_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableSortSpecs_destroy"));
     return func(self);
   }
 }  // namespace ImGuiTableSortSpecsManager
@@ -6599,13 +6792,15 @@ namespace ImGuiTableColumnSortSpecsManager
   inline ImGuiTableColumnSortSpecs* Create(void)
   {
     using func_t = ImGuiTableColumnSortSpecs* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumnSortSpecs_ImGuiTableColumnSortSpecs"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableColumnSortSpecs_ImGuiTableColumnSortSpecs"));
     return func();
   }
   inline void Destroy(ImGuiTableColumnSortSpecs* self)
   {
     using func_t = void (*)(ImGuiTableColumnSortSpecs*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumnSortSpecs_destroy"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableColumnSortSpecs_destroy"));
     return func(self);
   }
 }  // namespace ImGuiTableColumnSortSpecsManager
@@ -6627,7 +6822,8 @@ namespace ImGuiStyleManager
   inline void ScaleAllSizes(ImGuiStyle* self, float scale_factor)
   {
     using func_t = void (*)(ImGuiStyle*, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStyle_ScaleAllSizes"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStyle_ScaleAllSizes"));
     return func(self, scale_factor);
   }
 
@@ -6643,37 +6839,43 @@ namespace ImGuiIOManager
   inline void AddKeyAnalogEvent(ImGuiIO* self, ImGuiKey key, bool down, float v)
   {
     using func_t = void (*)(ImGuiIO*, ImGuiKey, bool, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddKeyAnalogEvent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddKeyAnalogEvent"));
     return func(self, key, down, v);
   }
   inline void AddMousePosEvent(ImGuiIO* self, float x, float y)
   {
     using func_t = void (*)(ImGuiIO*, float, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMousePosEvent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMousePosEvent"));
     return func(self, x, y);
   }
   inline void AddMouseButtonEvent(ImGuiIO* self, int button, bool down)
   {
     using func_t = void (*)(ImGuiIO*, int, bool);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseButtonEvent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseButtonEvent"));
     return func(self, button, down);
   }
   inline void AddMouseWheelEvent(ImGuiIO* self, float wheel_x, float wheel_y)
   {
     using func_t = void (*)(ImGuiIO*, float, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseWheelEvent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseWheelEvent"));
     return func(self, wheel_x, wheel_y);
   }
   inline void AddMouseSourceEvent(ImGuiIO* self, ImGuiMouseSource source)
   {
     using func_t = void (*)(ImGuiIO*, ImGuiMouseSource);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseSourceEvent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseSourceEvent"));
     return func(self, source);
   }
   inline void AddMouseViewportEvent(ImGuiIO* self, ImGuiID id)
   {
     using func_t = void (*)(ImGuiIO*, ImGuiID);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseViewportEvent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddMouseViewportEvent"));
     return func(self, id);
   }
   inline void AddFocusEvent(ImGuiIO* self, bool focused)
@@ -6685,43 +6887,50 @@ namespace ImGuiIOManager
   inline void AddInputCharacter(ImGuiIO* self, unsigned int c)
   {
     using func_t = void (*)(ImGuiIO*, unsigned int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddInputCharacter"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddInputCharacter"));
     return func(self, c);
   }
   inline void AddInputCharacterUTF16(ImGuiIO* self, ImWchar16 c)
   {
     using func_t = void (*)(ImGuiIO*, ImWchar16);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddInputCharacterUTF16"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddInputCharacterUTF16"));
     return func(self, c);
   }
   inline void AddInputCharactersUTF8(ImGuiIO* self, const char* str)
   {
     using func_t = void (*)(ImGuiIO*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddInputCharactersUTF8"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_AddInputCharactersUTF8"));
     return func(self, str);
   }
-  inline void SetKeyEventNativeData(ImGuiIO* self, ImGuiKey key, int native_keycode, int native_scancode, int native_legacy_index)
+  inline void SetKeyEventNativeData(ImGuiIO* self, ImGuiKey key, int native_keycode,
+                                    int native_scancode, int native_legacy_index)
   {
     using func_t = void (*)(ImGuiIO*, ImGuiKey, int, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_SetKeyEventNativeData"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_SetKeyEventNativeData"));
     return func(self, key, native_keycode, native_scancode, native_legacy_index);
   }
   inline void SetAppAcceptingEvents(ImGuiIO* self, bool accepting_events)
   {
     using func_t = void (*)(ImGuiIO*, bool);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_SetAppAcceptingEvents"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_SetAppAcceptingEvents"));
     return func(self, accepting_events);
   }
   inline void ClearEventsQueue(ImGuiIO* self)
   {
     using func_t = void (*)(ImGuiIO*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_ClearEventsQueue"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_ClearEventsQueue"));
     return func(self);
   }
   inline void ClearInputKeys(ImGuiIO* self)
   {
     using func_t = void (*)(ImGuiIO*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_ClearInputKeys"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIO_ClearInputKeys"));
     return func(self);
   }
   inline ImGuiIO* Create(void)
@@ -6744,43 +6953,51 @@ namespace ImGuiInputTextCallbackDataManager
   inline ImGuiInputTextCallbackData* Create(void)
   {
     using func_t = ImGuiInputTextCallbackData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_ImGuiInputTextCallbackData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_ImGuiInputTextCallbackData"));
     return func();
   }
   inline void Destroy(ImGuiInputTextCallbackData* self)
   {
     using func_t = void (*)(ImGuiInputTextCallbackData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_destroy"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_destroy"));
     return func(self);
   }
   inline void DeleteChars(ImGuiInputTextCallbackData* self, int pos, int bytes_count)
   {
     using func_t = void (*)(ImGuiInputTextCallbackData*, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_DeleteChars"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_DeleteChars"));
     return func(self, pos, bytes_count);
   }
-  inline void InsertChars(ImGuiInputTextCallbackData* self, int pos, const char* text, const char* text_end)
+  inline void InsertChars(ImGuiInputTextCallbackData* self, int pos, const char* text,
+                          const char* text_end)
   {
     using func_t = void (*)(ImGuiInputTextCallbackData*, int, const char*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_InsertChars"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_InsertChars"));
     return func(self, pos, text, text_end);
   }
   inline void SelectAll(ImGuiInputTextCallbackData* self)
   {
     using func_t = void (*)(ImGuiInputTextCallbackData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_SelectAll"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_SelectAll"));
     return func(self);
   }
   inline void ClearSelection(ImGuiInputTextCallbackData* self)
   {
     using func_t = void (*)(ImGuiInputTextCallbackData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_ClearSelection"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_ClearSelection"));
     return func(self);
   }
   inline bool HasSelection(ImGuiInputTextCallbackData* self)
   {
     using func_t = bool (*)(ImGuiInputTextCallbackData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_HasSelection"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextCallbackData_HasSelection"));
     return func(self);
   }
 
@@ -6791,13 +7008,15 @@ namespace ImGuiWindowClassManager
   inline ImGuiWindowClass* Create(void)
   {
     using func_t = ImGuiWindowClass* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowClass_ImGuiWindowClass"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiWindowClass_ImGuiWindowClass"));
     return func();
   }
   inline void Destroy(ImGuiWindowClass* self)
   {
     using func_t = void (*)(ImGuiWindowClass*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowClass_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowClass_destroy"));
     return func(self);
   }
 }  // namespace ImGuiWindowClassManager
@@ -6807,7 +7026,8 @@ namespace ImGuiPayloadManager
   inline ImGuiPayload* Create(void)
   {
     using func_t = ImGuiPayload* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_ImGuiPayload"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_ImGuiPayload"));
     return func();
   }
   inline void Destroy(ImGuiPayload* self)
@@ -6825,19 +7045,21 @@ namespace ImGuiPayloadManager
   inline bool IsDataType(ImGuiPayload* self, const char* type)
   {
     using func_t = bool (*)(ImGuiPayload*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_IsDataType"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_IsDataType"));
     return func(self, type);
   }
   inline bool IsPreview(ImGuiPayload* self)
   {
     using func_t = bool (*)(ImGuiPayload*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_IsPreview"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_IsPreview"));
     return func(self);
   }
   inline bool IsDelivery(ImGuiPayload* self)
   {
     using func_t = bool (*)(ImGuiPayload*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_IsDelivery"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPayload_IsDelivery"));
     return func(self);
   }
 }  // namespace ImGuiPayloadManager
@@ -6847,13 +7069,15 @@ namespace ImGuiOnceUponAFrameManager
   inline ImGuiOnceUponAFrame* Create(void)
   {
     using func_t = ImGuiOnceUponAFrame* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOnceUponAFrame_ImGuiOnceUponAFrame"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiOnceUponAFrame_ImGuiOnceUponAFrame"));
     return func();
   }
   inline void Destroy(ImGuiOnceUponAFrame* self)
   {
     using func_t = void (*)(ImGuiOnceUponAFrame*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOnceUponAFrame_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOnceUponAFrame_destroy"));
     return func(self);
   }
 }  // namespace ImGuiOnceUponAFrameManager
@@ -6863,19 +7087,21 @@ namespace ImGuiTextRangeManager
   inline ImGuiTextRange* Create(void)
   {
     using func_t = ImGuiTextRange* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextRange_ImGuiTextRange_Nil"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTextRange_ImGuiTextRange_Nil"));
     return func();
   }
   inline void Destroy(ImGuiTextRange* self)
   {
     using func_t = void (*)(ImGuiTextRange*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextRange_destroy"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextRange_destroy"));
     return func(self);
   }
   inline ImGuiTextRange* Create(const char* _b, const char* _e)
   {
     using func_t = ImGuiTextRange* (*)(const char*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextRange_ImGuiTextRange_Str"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTextRange_ImGuiTextRange_Str"));
     return func(_b, _e);
   }
   inline bool Empty(ImGuiTextRange* self)
@@ -6898,13 +7124,15 @@ namespace ImGuiTextBufferManager
   inline ImGuiTextBuffer* Create(void)
   {
     using func_t = ImGuiTextBuffer* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_ImGuiTextBuffer"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_ImGuiTextBuffer"));
     return func();
   }
   inline void Destroy(ImGuiTextBuffer* self)
   {
     using func_t = void (*)(ImGuiTextBuffer*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_destroy"));
     return func(self);
   }
   inline const char* Begin(ImGuiTextBuffer* self)
@@ -6940,7 +7168,8 @@ namespace ImGuiTextBufferManager
   inline void Reserve(ImGuiTextBuffer* self, int capacity)
   {
     using func_t = void (*)(ImGuiTextBuffer*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_reserve"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_reserve"));
     return func(self, capacity);
   }
   inline const char* c_str(ImGuiTextBuffer* self)
@@ -6952,13 +7181,14 @@ namespace ImGuiTextBufferManager
   inline void Append(ImGuiTextBuffer* self, const char* str, const char* str_end)
   {
     using func_t = void (*)(ImGuiTextBuffer*, const char*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_append"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_append"));
     return func(self, str, str_end);
   }
   inline void Appendfv(ImGuiTextBuffer* self, const char* fmt, va_list args)
   {
     using func_t = void (*)(ImGuiTextBuffer*, const char*, va_list);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_appendfv"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_appendfv"));
     return func(self, fmt, args);
   }
 
@@ -6969,25 +7199,29 @@ namespace ImGuiStoragePairManger
   inline ImGuiStoragePair* Create(ImGuiID _key, int _val)
   {
     using func_t = ImGuiStoragePair* (*)(ImGuiID, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStoragePair_ImGuiStoragePair_Int"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiStoragePair_ImGuiStoragePair_Int"));
     return func(_key, _val);
   }
   inline void Destroy(ImGuiStoragePair* self)
   {
     using func_t = void (*)(ImGuiStoragePair*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStoragePair_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStoragePair_destroy"));
     return func(self);
   }
   inline ImGuiStoragePair* Create(ImGuiID _key, float _val)
   {
     using func_t = ImGuiStoragePair* (*)(ImGuiID, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStoragePair_ImGuiStoragePair_Float"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiStoragePair_ImGuiStoragePair_Float"));
     return func(_key, _val);
   }
   inline ImGuiStoragePair* Create(ImGuiID _key, void* _val)
   {
     using func_t = ImGuiStoragePair* (*)(ImGuiID, void*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStoragePair_ImGuiStoragePair_Ptr"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiStoragePair_ImGuiStoragePair_Ptr"));
     return func(_key, _val);
   }
 }  // namespace ImGuiStoragePairManger
@@ -7038,49 +7272,55 @@ namespace ImGuiStorageManger
   inline void* GetVoidPtr(ImGuiStorage* self, ImGuiID key)
   {
     using func_t = void* (*)(ImGuiStorage*, ImGuiID);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetVoidPtr"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetVoidPtr"));
     return func(self, key);
   }
   inline void SetVoidPtr(ImGuiStorage* self, ImGuiID key, void* val)
   {
     using func_t = void (*)(ImGuiStorage*, ImGuiID, void*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_SetVoidPtr"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_SetVoidPtr"));
     return func(self, key, val);
   }
   inline int* GetIntRef(ImGuiStorage* self, ImGuiID key, int default_val)
   {
     using func_t = int* (*)(ImGuiStorage*, ImGuiID, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetIntRef"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetIntRef"));
     return func(self, key, default_val);
   }
   inline bool* GetBoolRef(ImGuiStorage* self, ImGuiID key, bool default_val)
   {
     using func_t = bool* (*)(ImGuiStorage*, ImGuiID, bool);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetBoolRef"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetBoolRef"));
     return func(self, key, default_val);
   }
   inline float* GetFloatRef(ImGuiStorage* self, ImGuiID key, float default_val)
   {
     using func_t = float* (*)(ImGuiStorage*, ImGuiID, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetFloatRef"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetFloatRef"));
     return func(self, key, default_val);
   }
   inline void** GetVoidPtrRef(ImGuiStorage* self, ImGuiID key, void* default_val)
   {
     using func_t = void** (*)(ImGuiStorage*, ImGuiID, void*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetVoidPtrRef"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_GetVoidPtrRef"));
     return func(self, key, default_val);
   }
   inline void BuildSortByKey(ImGuiStorage* self)
   {
     using func_t = void (*)(ImGuiStorage*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_BuildSortByKey"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_BuildSortByKey"));
     return func(self);
   }
   inline void SetAllInt(ImGuiStorage* self, int val)
   {
     using func_t = void (*)(ImGuiStorage*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_SetAllInt"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStorage_SetAllInt"));
     return func(self, val);
   }
 }  // namespace ImGuiStorageManger
@@ -7091,19 +7331,21 @@ namespace ImGuiListClipperManager
   inline ImGuiListClipper* Create(void)
   {
     using func_t = ImGuiListClipper* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipper_ImGuiListClipper"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiListClipper_ImGuiListClipper"));
     return func();
   }
   inline void Destroy(ImGuiListClipper* self)
   {
     using func_t = void (*)(ImGuiListClipper*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipper_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipper_destroy"));
     return func(self);
   }
   inline void Begin(ImGuiListClipper* self, int items_count, float items_height)
   {
     using func_t = void (*)(ImGuiListClipper*, int, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipper_Begin"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipper_Begin"));
     return func(self, items_count, items_height);
   }
   inline void End(ImGuiListClipper* self)
@@ -7121,13 +7363,15 @@ namespace ImGuiListClipperManager
   inline void IncludeItemByIndex(ImGuiListClipper* self, int item_index)
   {
     using func_t = void (*)(ImGuiListClipper*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipper_IncludeItemByIndex"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiListClipper_IncludeItemByIndex"));
     return func(self, item_index);
   }
   inline void IncludeItemsByIndex(ImGuiListClipper* self, int item_begin, int item_end)
   {
     using func_t = void (*)(ImGuiListClipper*, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipper_IncludeItemsByIndex"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiListClipper_IncludeItemsByIndex"));
     return func(self, item_begin, item_end);
   }
 }  // namespace ImGuiListClipperManager
@@ -7211,43 +7455,50 @@ namespace ImDrawListSplitterManager
   inline ImDrawListSplitter* Create(void)
   {
     using func_t = ImDrawListSplitter* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_ImDrawListSplitter"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawListSplitter_ImDrawListSplitter"));
     return func();
   }
   inline void Destroy(ImDrawListSplitter* self)
   {
     using func_t = void (*)(ImDrawListSplitter*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_destroy"));
     return func(self);
   }
   inline void Clear(ImDrawListSplitter* self)
   {
     using func_t = void (*)(ImDrawListSplitter*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_Clear"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_Clear"));
     return func(self);
   }
   inline void ClearFreeMemory(ImDrawListSplitter* self)
   {
     using func_t = void (*)(ImDrawListSplitter*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_ClearFreeMemory"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawListSplitter_ClearFreeMemory"));
     return func(self);
   }
   inline void Split(ImDrawListSplitter* self, ImDrawList* draw_list, int count)
   {
     using func_t = void (*)(ImDrawListSplitter*, ImDrawList*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_Split"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_Split"));
     return func(self, draw_list, count);
   }
   inline void Merge(ImDrawListSplitter* self, ImDrawList* draw_list)
   {
     using func_t = void (*)(ImDrawListSplitter*, ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_Merge"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_Merge"));
     return func(self, draw_list);
   }
   inline void SetCurrentChannel(ImDrawListSplitter* self, ImDrawList* draw_list, int channel_idx)
   {
     using func_t = void (*)(ImDrawListSplitter*, ImDrawList*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSplitter_SetCurrentChannel"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawListSplitter_SetCurrentChannel"));
     return func(self, draw_list, channel_idx);
   }
 }  // namespace ImDrawListSplitterManager
@@ -7267,197 +7518,250 @@ namespace ImDrawListManager
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_destroy"));
     return func(self);
   }
-  inline void PushClipRect(ImDrawList* self, const ImVec2 clip_rect_min, const ImVec2 clip_rect_max, bool intersect_with_current_clip_rect)
+  inline void PushClipRect(ImDrawList* self, const ImVec2 clip_rect_min, const ImVec2 clip_rect_max,
+                           bool intersect_with_current_clip_rect)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, bool);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PushClipRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PushClipRect"));
     return func(self, clip_rect_min, clip_rect_max, intersect_with_current_clip_rect);
   }
   inline void PushClipRectFullScreen(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PushClipRectFullScreen"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawList_PushClipRectFullScreen"));
     return func(self);
   }
   inline void PopClipRect(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PopClipRect"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PopClipRect"));
     return func(self);
   }
   inline void PushTextureID(ImDrawList* self, ImTextureID texture_id)
   {
     using func_t = void (*)(ImDrawList*, ImTextureID);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PushTextureID"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PushTextureID"));
     return func(self, texture_id);
   }
   inline void PopTextureID(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PopTextureID"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PopTextureID"));
     return func(self);
   }
   inline void GetClipRectMin(ImVec2* pOut, ImDrawList* self)
   {
     using func_t = void (*)(ImVec2*, ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_GetClipRectMin"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_GetClipRectMin"));
     return func(pOut, self);
   }
   inline void GetClipRectMax(ImVec2* pOut, ImDrawList* self)
   {
     using func_t = void (*)(ImVec2*, ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_GetClipRectMax"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_GetClipRectMax"));
     return func(pOut, self);
   }
-  inline void AddLine(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, ImU32 col, float thickness)
+  inline void AddLine(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, ImU32 col,
+                      float thickness)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32, float);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddLine"));
     return func(self, p1, p2, col, thickness);
   }
-  inline void AddRect(ImDrawList* self, const ImVec2 p_min, const ImVec2 p_max, ImU32 col, float rounding, ImDrawFlags flags, float thickness)
+  inline void AddRect(ImDrawList* self, const ImVec2 p_min, const ImVec2 p_max, ImU32 col,
+                      float rounding, ImDrawFlags flags, float thickness)
   {
-    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32, float, ImDrawFlags, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddRect"));
+    using func_t =
+        void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32, float, ImDrawFlags, float);
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddRect"));
     return func(self, p_min, p_max, col, rounding, flags, thickness);
   }
-  inline void AddRectFilled(ImDrawList* self, const ImVec2 p_min, const ImVec2 p_max, ImU32 col, float rounding, ImDrawFlags flags)
+  inline void AddRectFilled(ImDrawList* self, const ImVec2 p_min, const ImVec2 p_max, ImU32 col,
+                            float rounding, ImDrawFlags flags)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32, float, ImDrawFlags);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddRectFilled"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddRectFilled"));
     return func(self, p_min, p_max, col, rounding, flags);
   }
-  inline void AddRectFilledMultiColor(ImDrawList* self, const ImVec2 p_min, const ImVec2 p_max, ImU32 col_upr_left, ImU32 col_upr_right,
-                                      ImU32 col_bot_right, ImU32 col_bot_left)
+  inline void AddRectFilledMultiColor(ImDrawList* self, const ImVec2 p_min, const ImVec2 p_max,
+                                      ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right,
+                                      ImU32 col_bot_left)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32, ImU32, ImU32, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddRectFilledMultiColor"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawList_AddRectFilledMultiColor"));
     return func(self, p_min, p_max, col_upr_left, col_upr_right, col_bot_right, col_bot_left);
   }
-  inline void AddQuad(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, ImU32 col, float thickness)
+  inline void AddQuad(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3,
+                      const ImVec2 p4, ImU32 col, float thickness)
   {
-    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddQuad"));
+    using func_t =
+        void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32, float);
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddQuad"));
     return func(self, p1, p2, p3, p4, col, thickness);
   }
-  inline void AddQuadFilled(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, ImU32 col)
+  inline void AddQuadFilled(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3,
+                            const ImVec2 p4, ImU32 col)
   {
-    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddQuadFilled"));
+    using func_t =
+        void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddQuadFilled"));
     return func(self, p1, p2, p3, p4, col);
   }
-  inline void AddTriangle(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, ImU32 col, float thickness)
+  inline void AddTriangle(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3,
+                          ImU32 col, float thickness)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, ImU32, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddTriangle"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddTriangle"));
     return func(self, p1, p2, p3, col, thickness);
   }
-  inline void AddTriangleFilled(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, ImU32 col)
+  inline void AddTriangleFilled(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3,
+                                ImU32 col)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddTriangleFilled"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddTriangleFilled"));
     return func(self, p1, p2, p3, col);
   }
-  inline void AddCircle(ImDrawList* self, const ImVec2 center, float radius, ImU32 col, int num_segments, float thickness)
+  inline void AddCircle(ImDrawList* self, const ImVec2 center, float radius, ImU32 col,
+                        int num_segments, float thickness)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, ImU32, int, float);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddCircle"));
     return func(self, center, radius, col, num_segments, thickness);
   }
-  inline void AddCircleFilled(ImDrawList* self, const ImVec2 center, float radius, ImU32 col, int num_segments)
+  inline void AddCircleFilled(ImDrawList* self, const ImVec2 center, float radius, ImU32 col,
+                              int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, ImU32, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddCircleFilled"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddCircleFilled"));
     return func(self, center, radius, col, num_segments);
   }
-  inline void AddNgon(ImDrawList* self, const ImVec2 center, float radius, ImU32 col, int num_segments, float thickness)
+  inline void AddNgon(ImDrawList* self, const ImVec2 center, float radius, ImU32 col,
+                      int num_segments, float thickness)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, ImU32, int, float);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddNgon"));
     return func(self, center, radius, col, num_segments, thickness);
   }
-  inline void AddNgonFilled(ImDrawList* self, const ImVec2 center, float radius, ImU32 col, int num_segments)
+  inline void AddNgonFilled(ImDrawList* self, const ImVec2 center, float radius, ImU32 col,
+                            int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, ImU32, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddNgonFilled"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddNgonFilled"));
     return func(self, center, radius, col, num_segments);
   }
-  inline void AddEllipse(ImDrawList* self, const ImVec2 center, const ImVec2 radius, ImU32 col, float rot, int num_segments, float thickness)
+  inline void AddEllipse(ImDrawList* self, const ImVec2 center, const ImVec2 radius, ImU32 col,
+                         float rot, int num_segments, float thickness)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32, float, int, float);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddEllipse"));
     return func(self, center, radius, col, rot, num_segments, thickness);
   }
-  inline void AddEllipseFilled(ImDrawList* self, const ImVec2 center, const ImVec2 radius, ImU32 col, float rot, int num_segments)
+  inline void AddEllipseFilled(ImDrawList* self, const ImVec2 center, const ImVec2 radius,
+                               ImU32 col, float rot, int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32, float, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddEllipseFilled"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddEllipseFilled"));
     return func(self, center, radius, col, rot, num_segments);
   }
-  inline void AddText(ImDrawList* self, const ImVec2 pos, ImU32 col, const char* text_begin, const char* text_end = 0)
+  inline void AddText(ImDrawList* self, const ImVec2 pos, ImU32 col, const char* text_begin,
+                      const char* text_end = 0)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, ImU32, const char*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddText_Vec2"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddText_Vec2"));
     return func(self, pos, col, text_begin, text_end);
   }
-  inline void AddText(ImDrawList* self, const ImFont* font, float font_size, const ImVec2 pos, ImU32 col, const char* text_begin,
-                      const char* text_end = 0, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = nullptr)
+  inline void AddText(ImDrawList* self, const ImFont* font, float font_size, const ImVec2 pos,
+                      ImU32 col, const char* text_begin, const char* text_end = 0,
+                      float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = nullptr)
   {
-    using func_t = void (*)(ImDrawList*, const ImFont*, float, const ImVec2, ImU32, const char*, const char*, float, const ImVec4*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddText_FontPtr"));
-    return func(self, font, font_size, pos, col, text_begin, text_end, wrap_width, cpu_fine_clip_rect);
+    using func_t = void (*)(ImDrawList*, const ImFont*, float, const ImVec2, ImU32, const char*,
+                            const char*, float, const ImVec4*);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddText_FontPtr"));
+    return func(self, font, font_size, pos, col, text_begin, text_end, wrap_width,
+                cpu_fine_clip_rect);
   }
-  inline void AddBezierCubic(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, ImU32 col, float thickness,
-                             int num_segments)
+  inline void AddBezierCubic(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3,
+                             const ImVec2 p4, ImU32 col, float thickness, int num_segments)
   {
-    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32, float, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddBezierCubic"));
+    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2,
+                            ImU32, float, int);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddBezierCubic"));
     return func(self, p1, p2, p3, p4, col, thickness, num_segments);
   }
-  inline void AddBezierQuadratic(ImDrawList* self, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, ImU32 col, float thickness, int num_segments)
+  inline void AddBezierQuadratic(ImDrawList* self, const ImVec2 p1, const ImVec2 p2,
+                                 const ImVec2 p3, ImU32 col, float thickness, int num_segments)
   {
-    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, ImU32, float, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddBezierQuadratic"));
+    using func_t =
+        void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, ImU32, float, int);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddBezierQuadratic"));
     return func(self, p1, p2, p3, col, thickness, num_segments);
   }
-  inline void AddPolyline(ImDrawList* self, const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness)
+  inline void AddPolyline(ImDrawList* self, const ImVec2* points, int num_points, ImU32 col,
+                          ImDrawFlags flags, float thickness)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2*, int, ImU32, ImDrawFlags, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddPolyline"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddPolyline"));
     return func(self, points, num_points, col, flags, thickness);
   }
   inline void AddConvexPolyFilled(ImDrawList* self, const ImVec2* points, int num_points, ImU32 col)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2*, int, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddConvexPolyFilled"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddConvexPolyFilled"));
     return func(self, points, num_points, col);
   }
-  inline void AddConcavePolyFilled(ImDrawList* self, const ImVec2* points, int num_points, ImU32 col)
+  inline void AddConcavePolyFilled(ImDrawList* self, const ImVec2* points, int num_points,
+                                   ImU32 col)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2*, int, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddConcavePolyFilled"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddConcavePolyFilled"));
     return func(self, points, num_points, col);
   }
-  inline void AddImage(ImDrawList* self, ImTextureID user_texture_id, const ImVec2 p_min, const ImVec2 p_max, const ImVec2 uv_min,
-                       const ImVec2 uv_max, ImU32 col)
+  inline void AddImage(ImDrawList* self, ImTextureID user_texture_id, const ImVec2 p_min,
+                       const ImVec2 p_max, const ImVec2 uv_min, const ImVec2 uv_max, ImU32 col)
   {
-    using func_t = void (*)(ImDrawList*, ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
+    using func_t = void (*)(ImDrawList*, ImTextureID, const ImVec2, const ImVec2, const ImVec2,
+                            const ImVec2, ImU32);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddImage"));
     return func(self, user_texture_id, p_min, p_max, uv_min, uv_max, col);
   }
-  inline void AddImageQuad(ImDrawList* self, ImTextureID user_texture_id, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4,
-                           const ImVec2 uv1, const ImVec2 uv2, const ImVec2 uv3, const ImVec2 uv4, ImU32 col)
+  inline void AddImageQuad(ImDrawList* self, ImTextureID user_texture_id, const ImVec2 p1,
+                           const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, const ImVec2 uv1,
+                           const ImVec2 uv2, const ImVec2 uv3, const ImVec2 uv4, ImU32 col)
   {
-    using func_t = void (*)(ImDrawList*, ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2,
-                            const ImVec2, const ImVec2, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddImageQuad"));
+    using func_t =
+        void (*)(ImDrawList*, ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec2,
+                 const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddImageQuad"));
     return func(self, user_texture_id, p1, p2, p3, p4, uv1, uv2, uv3, uv4, col);
   }
-  inline void AddImageRounded(ImDrawList* self, ImTextureID user_texture_id, const ImVec2 p_min, const ImVec2 p_max, const ImVec2 uv_min,
-                              const ImVec2 uv_max, ImU32 col, float rounding, ImDrawFlags flags)
+  inline void AddImageRounded(ImDrawList* self, ImTextureID user_texture_id, const ImVec2 p_min,
+                              const ImVec2 p_max, const ImVec2 uv_min, const ImVec2 uv_max,
+                              ImU32 col, float rounding, ImDrawFlags flags)
   {
-    using func_t = void (*)(ImDrawList*, ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32, float, ImDrawFlags);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddImageRounded"));
+    using func_t = void (*)(ImDrawList*, ImTextureID, const ImVec2, const ImVec2, const ImVec2,
+                            const ImVec2, ImU32, float, ImDrawFlags);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddImageRounded"));
     return func(self, user_texture_id, p_min, p_max, uv_min, uv_max, col, rounding, flags);
   }
   inline void PathClear(ImDrawList* self)
@@ -7475,19 +7779,22 @@ namespace ImDrawListManager
   inline void PathLineToMergeDuplicate(ImDrawList* self, const ImVec2 pos)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathLineToMergeDuplicate"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawList_PathLineToMergeDuplicate"));
     return func(self, pos);
   }
   inline void PathFillConvex(ImDrawList* self, ImU32 col)
   {
     using func_t = void (*)(ImDrawList*, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathFillConvex"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathFillConvex"));
     return func(self, col);
   }
   inline void PathFillConcave(ImDrawList* self, ImU32 col)
   {
     using func_t = void (*)(ImDrawList*, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathFillConcave"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathFillConcave"));
     return func(self, col);
   }
   inline void PathStroke(ImDrawList* self, ImU32 col, ImDrawFlags flags, float thickness)
@@ -7496,37 +7803,47 @@ namespace ImDrawListManager
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathStroke"));
     return func(self, col, flags, thickness);
   }
-  inline void PathArcTo(ImDrawList* self, const ImVec2 center, float radius, float a_min, float a_max, int num_segments)
+  inline void PathArcTo(ImDrawList* self, const ImVec2 center, float radius, float a_min,
+                        float a_max, int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, float, float, int);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathArcTo"));
     return func(self, center, radius, a_min, a_max, num_segments);
   }
-  inline void PathArcToFast(ImDrawList* self, const ImVec2 center, float radius, int a_min_of_12, int a_max_of_12)
+  inline void PathArcToFast(ImDrawList* self, const ImVec2 center, float radius, int a_min_of_12,
+                            int a_max_of_12)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathArcToFast"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathArcToFast"));
     return func(self, center, radius, a_min_of_12, a_max_of_12);
   }
-  inline void PathEllipticalArcTo(ImDrawList* self, const ImVec2 center, const ImVec2 radius, float rot, float a_min, float a_max, int num_segments)
+  inline void PathEllipticalArcTo(ImDrawList* self, const ImVec2 center, const ImVec2 radius,
+                                  float rot, float a_min, float a_max, int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, float, float, float, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathEllipticalArcTo"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathEllipticalArcTo"));
     return func(self, center, radius, rot, a_min, a_max, num_segments);
   }
-  inline void PathBezierCubicCurveTo(ImDrawList* self, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, int num_segments)
+  inline void PathBezierCubicCurveTo(ImDrawList* self, const ImVec2 p2, const ImVec2 p3,
+                                     const ImVec2 p4, int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathBezierCubicCurveTo"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawList_PathBezierCubicCurveTo"));
     return func(self, p2, p3, p4, num_segments);
   }
-  inline void PathBezierQuadraticCurveTo(ImDrawList* self, const ImVec2 p2, const ImVec2 p3, int num_segments)
+  inline void PathBezierQuadraticCurveTo(ImDrawList* self, const ImVec2 p2, const ImVec2 p3,
+                                         int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathBezierQuadraticCurveTo"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawList_PathBezierQuadraticCurveTo"));
     return func(self, p2, p3, num_segments);
   }
-  inline void PathRect(ImDrawList* self, const ImVec2 rect_min, const ImVec2 rect_max, float rounding, ImDrawFlags flags)
+  inline void PathRect(ImDrawList* self, const ImVec2 rect_min, const ImVec2 rect_max,
+                       float rounding, ImDrawFlags flags)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, float, ImDrawFlags);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PathRect"));
@@ -7535,7 +7852,7 @@ namespace ImDrawListManager
   inline void AddCallback(ImDrawList* self, ImDrawCallback callback, void* callback_data)
   {
     using func_t = void (*)(ImDrawList*, ImDrawCallback, void*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddCallback"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_AddCallback"));
     return func(self, callback, callback_data);
   }
   inline void AddDrawCmd(ImDrawList* self)
@@ -7547,37 +7864,41 @@ namespace ImDrawListManager
   inline ImDrawList* CloneOutput(ImDrawList* self)
   {
     using func_t = ImDrawList* (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_CloneOutput"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_CloneOutput"));
     return func(self);
   }
   inline void ChannelsSplit(ImDrawList* self, int count)
   {
     using func_t = void (*)(ImDrawList*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_ChannelsSplit"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_ChannelsSplit"));
     return func(self, count);
   }
   inline void ChannelsMerge(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_ChannelsMerge"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_ChannelsMerge"));
     return func(self);
   }
   inline void ChannelsSetCurrent(ImDrawList* self, int n)
   {
     using func_t = void (*)(ImDrawList*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_ChannelsSetCurrent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_ChannelsSetCurrent"));
     return func(self, n);
   }
   inline void PrimReserve(ImDrawList* self, int idx_count, int vtx_count)
   {
     using func_t = void (*)(ImDrawList*, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimReserve"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimReserve"));
     return func(self, idx_count, vtx_count);
   }
   inline void PrimUnreserve(ImDrawList* self, int idx_count, int vtx_count)
   {
     using func_t = void (*)(ImDrawList*, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimUnreserve"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimUnreserve"));
     return func(self, idx_count, vtx_count);
   }
   inline void PrimRect(ImDrawList* self, const ImVec2 a, const ImVec2 b, ImU32 col)
@@ -7586,30 +7907,35 @@ namespace ImDrawListManager
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimRect"));
     return func(self, a, b, col);
   }
-  inline void PrimRectUV(ImDrawList* self, const ImVec2 a, const ImVec2 b, const ImVec2 uv_a, const ImVec2 uv_b, ImU32 col)
-  {
-    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimRectUV"));
-    return func(self, a, b, uv_a, uv_b, col);
-  }
-  inline void PrimQuadUV(ImDrawList* self, const ImVec2 a, const ImVec2 b, const ImVec2 c, const ImVec2 d, const ImVec2 uv_a, const ImVec2 uv_b,
-                         const ImVec2 uv_c, const ImVec2 uv_d, ImU32 col)
+  inline void PrimRectUV(ImDrawList* self, const ImVec2 a, const ImVec2 b, const ImVec2 uv_a,
+                         const ImVec2 uv_b, ImU32 col)
   {
     using func_t =
-        void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
-    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimQuadUV"));
+        void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimRectUV"));
+    return func(self, a, b, uv_a, uv_b, col);
+  }
+  inline void PrimQuadUV(ImDrawList* self, const ImVec2 a, const ImVec2 b, const ImVec2 c,
+                         const ImVec2 d, const ImVec2 uv_a, const ImVec2 uv_b, const ImVec2 uv_c,
+                         const ImVec2 uv_d, ImU32 col)
+  {
+    using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const ImVec2, const ImVec2,
+                            const ImVec2, const ImVec2, const ImVec2, const ImVec2, ImU32);
+    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimQuadUV"));
     return func(self, a, b, c, d, uv_a, uv_b, uv_c, uv_d, col);
   }
   inline void PrimWriteVtx(ImDrawList* self, const ImVec2 pos, const ImVec2 uv, ImU32 col)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, ImU32);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimWriteVtx"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimWriteVtx"));
     return func(self, pos, uv, col);
   }
   inline void PrimWriteIdx(ImDrawList* self, ImDrawIdx idx)
   {
     using func_t = void (*)(ImDrawList*, ImDrawIdx);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimWriteIdx"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList_PrimWriteIdx"));
     return func(self, idx);
   }
   inline void PrimVtx(ImDrawList* self, const ImVec2 pos, const ImVec2 uv, ImU32 col)
@@ -7621,61 +7947,72 @@ namespace ImDrawListManager
   inline void _ResetForNewFrame(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__ResetForNewFrame"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__ResetForNewFrame"));
     return func(self);
   }
   inline void _ClearFreeMemory(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__ClearFreeMemory"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__ClearFreeMemory"));
     return func(self);
   }
   inline void _PopUnusedDrawCmd(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__PopUnusedDrawCmd"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__PopUnusedDrawCmd"));
     return func(self);
   }
   inline void _TryMergeDrawCmds(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__TryMergeDrawCmds"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__TryMergeDrawCmds"));
     return func(self);
   }
   inline void _OnChangedClipRect(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__OnChangedClipRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__OnChangedClipRect"));
     return func(self);
   }
   inline void _OnChangedTextureID(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__OnChangedTextureID"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__OnChangedTextureID"));
     return func(self);
   }
   inline void _OnChangedVtxOffset(ImDrawList* self)
   {
     using func_t = void (*)(ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__OnChangedVtxOffset"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__OnChangedVtxOffset"));
     return func(self);
   }
   inline int _CalcCircleAutoSegmentCount(ImDrawList* self, float radius)
   {
     using func_t = int (*)(ImDrawList*, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__CalcCircleAutoSegmentCount"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawList__CalcCircleAutoSegmentCount"));
     return func(self, radius);
   }
-  inline void _PathArcToFastEx(ImDrawList* self, const ImVec2 center, float radius, int a_min_sample, int a_max_sample, int a_step)
+  inline void _PathArcToFastEx(ImDrawList* self, const ImVec2 center, float radius,
+                               int a_min_sample, int a_max_sample, int a_step)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, int, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__PathArcToFastEx"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__PathArcToFastEx"));
     return func(self, center, radius, a_min_sample, a_max_sample, a_step);
   }
-  inline void _PathArcToN(ImDrawList* self, const ImVec2 center, float radius, float a_min, float a_max, int num_segments)
+  inline void _PathArcToN(ImDrawList* self, const ImVec2 center, float radius, float a_min,
+                          float a_max, int num_segments)
   {
     using func_t = void (*)(ImDrawList*, const ImVec2, float, float, float, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__PathArcToN"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawList__PathArcToN"));
     return func(self, center, radius, a_min, a_max, num_segments);
   }
 }  // namespace ImDrawListManager
@@ -7704,19 +8041,21 @@ namespace ImDrawDataManager
   inline void AddDrawList(ImDrawData* self, ImDrawList* draw_list)
   {
     using func_t = void (*)(ImDrawData*, ImDrawList*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawData_AddDrawList"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawData_AddDrawList"));
     return func(self, draw_list);
   }
   inline void DeIndexAllBuffers(ImDrawData* self)
   {
     using func_t = void (*)(ImDrawData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawData_DeIndexAllBuffers"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawData_DeIndexAllBuffers"));
     return func(self);
   }
   inline void ScaleClipRects(ImDrawData* self, const ImVec2 fb_scale)
   {
     using func_t = void (*)(ImDrawData*, const ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawData_ScaleClipRects"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawData_ScaleClipRects"));
     return func(self, fb_scale);
   }
 
@@ -7728,7 +8067,8 @@ namespace ImFontConfigManager
   inline ImFontConfig* Create(void)
   {
     using func_t = ImFontConfig* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontConfig_ImFontConfig"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontConfig_ImFontConfig"));
     return func();
   }
   inline void Destroy(ImFontConfig* self)
@@ -7745,55 +8085,64 @@ namespace ImFontGlyphRangesBuilderManager
   inline ImFontGlyphRangesBuilder* Create(void)
   {
     using func_t = ImFontGlyphRangesBuilder* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_ImFontGlyphRangesBuilder"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_ImFontGlyphRangesBuilder"));
     return func();
   }
   inline void Destroy(ImFontGlyphRangesBuilder* self)
   {
     using func_t = void (*)(ImFontGlyphRangesBuilder*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_destroy"));
     return func(self);
   }
   inline void Clear(ImFontGlyphRangesBuilder* self)
   {
     using func_t = void (*)(ImFontGlyphRangesBuilder*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_Clear"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_Clear"));
     return func(self);
   }
   inline bool GetBit(ImFontGlyphRangesBuilder* self, size_t n)
   {
     using func_t = bool (*)(ImFontGlyphRangesBuilder*, size_t);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_GetBit"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_GetBit"));
     return func(self, n);
   }
   inline void SetBit(ImFontGlyphRangesBuilder* self, size_t n)
   {
     using func_t = void (*)(ImFontGlyphRangesBuilder*, size_t);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_SetBit"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_SetBit"));
     return func(self, n);
   }
   inline void AddChar(ImFontGlyphRangesBuilder* self, ImWchar c)
   {
     using func_t = void (*)(ImFontGlyphRangesBuilder*, ImWchar);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_AddChar"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_AddChar"));
     return func(self, c);
   }
   inline void AddText(ImFontGlyphRangesBuilder* self, const char* text, const char* text_end)
   {
     using func_t = void (*)(ImFontGlyphRangesBuilder*, const char*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_AddText"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_AddText"));
     return func(self, text, text_end);
   }
   inline void AddRanges(ImFontGlyphRangesBuilder* self, const ImWchar* ranges)
   {
     using func_t = void (*)(ImFontGlyphRangesBuilder*, const ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_AddRanges"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_AddRanges"));
     return func(self, ranges);
   }
   inline void BuildRanges(ImFontGlyphRangesBuilder* self, ImVector_ImWchar* out_ranges)
   {
     using func_t = void (*)(ImFontGlyphRangesBuilder*, ImVector_ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_BuildRanges"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontGlyphRangesBuilder_BuildRanges"));
     return func(self, out_ranges);
   }
 }  // namespace ImFontGlyphRangesBuilderManager
@@ -7803,19 +8152,22 @@ namespace ImFontAtlasCustomRectManager
   inline ImFontAtlasCustomRect* Create(void)
   {
     using func_t = ImFontAtlasCustomRect* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlasCustomRect_ImFontAtlasCustomRect"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlasCustomRect_ImFontAtlasCustomRect"));
     return func();
   }
   inline void Destroy(ImFontAtlasCustomRect* self)
   {
     using func_t = void (*)(ImFontAtlasCustomRect*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlasCustomRect_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlasCustomRect_destroy"));
     return func(self);
   }
   inline bool IsPacked(ImFontAtlasCustomRect* self)
   {
     using func_t = bool (*)(ImFontAtlasCustomRect*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlasCustomRect_IsPacked"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlasCustomRect_IsPacked"));
     return func(self);
   }
 }  // namespace ImFontAtlasCustomRectManager
@@ -7825,7 +8177,8 @@ namespace ImFontAtlasManager
   inline ImFontAtlas* Create(void)
   {
     using func_t = ImFontAtlas* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ImFontAtlas"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ImFontAtlas"));
     return func();
   }
   inline void Destroy(ImFontAtlas* self)
@@ -7843,53 +8196,71 @@ namespace ImFontAtlasManager
   inline ImFont* AddFontDefault(ImFontAtlas* self, const ImFontConfig* font_cfg)
   {
     using func_t = ImFont* (*)(ImFontAtlas*, const ImFontConfig*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontDefault"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontDefault"));
     return func(self, font_cfg);
   }
-  inline ImFont* AddFontFromFileTTF(ImFontAtlas* self, const char* filename, float size_pixels, const ImFontConfig* font_cfg,
-                                    const ImWchar* glyph_ranges)
+  inline ImFont* AddFontFromFileTTF(ImFontAtlas* self, const char* filename, float size_pixels,
+                                    const ImFontConfig* font_cfg, const ImWchar* glyph_ranges)
   {
-    using func_t = ImFont* (*)(ImFontAtlas*, const char*, float, const ImFontConfig*, const ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromFileTTF"));
+    using func_t =
+        ImFont* (*)(ImFontAtlas*, const char*, float, const ImFontConfig*, const ImWchar*);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromFileTTF"));
     return func(self, filename, size_pixels, font_cfg, glyph_ranges);
   }
-  inline ImFont* AddFontFromMemoryTTF(ImFontAtlas* self, void* font_data, int font_data_size, float size_pixels, const ImFontConfig* font_cfg,
+  inline ImFont* AddFontFromMemoryTTF(ImFontAtlas* self, void* font_data, int font_data_size,
+                                      float size_pixels, const ImFontConfig* font_cfg,
                                       const ImWchar* glyph_ranges)
   {
-    using func_t = ImFont* (*)(ImFontAtlas*, void*, int, float, const ImFontConfig*, const ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromMemoryTTF"));
+    using func_t =
+        ImFont* (*)(ImFontAtlas*, void*, int, float, const ImFontConfig*, const ImWchar*);
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromMemoryTTF"));
     return func(self, font_data, font_data_size, size_pixels, font_cfg, glyph_ranges);
   }
-  inline ImFont* AddFontFromMemoryCompressedTTF(ImFontAtlas* self, const void* compressed_font_data, int compressed_font_data_size, float size_pixels,
-                                                const ImFontConfig* font_cfg, const ImWchar* glyph_ranges)
+  inline ImFont* AddFontFromMemoryCompressedTTF(ImFontAtlas* self, const void* compressed_font_data,
+                                                int compressed_font_data_size, float size_pixels,
+                                                const ImFontConfig* font_cfg,
+                                                const ImWchar* glyph_ranges)
   {
-    using func_t = ImFont* (*)(ImFontAtlas*, const void*, int, float, const ImFontConfig*, const ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromMemoryCompressedTTF"));
-    return func(self, compressed_font_data, compressed_font_data_size, size_pixels, font_cfg, glyph_ranges);
+    using func_t =
+        ImFont* (*)(ImFontAtlas*, const void*, int, float, const ImFontConfig*, const ImWchar*);
+    func_t func = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromMemoryCompressedTTF"));
+    return func(self, compressed_font_data, compressed_font_data_size, size_pixels, font_cfg,
+                glyph_ranges);
   }
-  inline ImFont* AddFontFromMemoryCompressedBase85TTF(ImFontAtlas* self, const char* compressed_font_data_base85, float size_pixels,
-                                                      const ImFontConfig* font_cfg, const ImWchar* glyph_ranges)
+  inline ImFont* AddFontFromMemoryCompressedBase85TTF(ImFontAtlas* self,
+                                                      const char* compressed_font_data_base85,
+                                                      float size_pixels,
+                                                      const ImFontConfig* font_cfg,
+                                                      const ImWchar* glyph_ranges)
   {
-    using func_t = ImFont* (*)(ImFontAtlas*, const char*, float, const ImFontConfig*, const ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromMemoryCompressedBase85TTF"));
+    using func_t =
+        ImFont* (*)(ImFontAtlas*, const char*, float, const ImFontConfig*, const ImWchar*);
+    func_t func = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_AddFontFromMemoryCompressedBase85TTF"));
     return func(self, compressed_font_data_base85, size_pixels, font_cfg, glyph_ranges);
   }
   inline void ClearInputData(ImFontAtlas* self)
   {
     using func_t = void (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ClearInputData"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ClearInputData"));
     return func(self);
   }
   inline void ClearTexData(ImFontAtlas* self)
   {
     using func_t = void (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ClearTexData"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ClearTexData"));
     return func(self);
   }
   inline void ClearFonts(ImFontAtlas* self)
   {
     using func_t = void (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ClearFonts"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_ClearFonts"));
     return func(self);
   }
   inline void Clear(ImFontAtlas* self)
@@ -7904,16 +8275,20 @@ namespace ImFontAtlasManager
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_Build"));
     return func(self);
   }
-  inline void GetTexDataAsAlpha8(ImFontAtlas* self, unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
+  inline void GetTexDataAsAlpha8(ImFontAtlas* self, unsigned char** out_pixels, int* out_width,
+                                 int* out_height, int* out_bytes_per_pixel)
   {
     using func_t = void (*)(ImFontAtlas*, unsigned char**, int*, int*, int*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetTexDataAsAlpha8"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetTexDataAsAlpha8"));
     return func(self, out_pixels, out_width, out_height, out_bytes_per_pixel);
   }
-  inline void GetTexDataAsRGBA32(ImFontAtlas* self, unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
+  inline void GetTexDataAsRGBA32(ImFontAtlas* self, unsigned char** out_pixels, int* out_width,
+                                 int* out_height, int* out_bytes_per_pixel)
   {
     using func_t = void (*)(ImFontAtlas*, unsigned char**, int*, int*, int*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetTexDataAsRGBA32"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetTexDataAsRGBA32"));
     return func(self, out_pixels, out_width, out_height, out_bytes_per_pixel);
   }
   inline bool IsBuilt(ImFontAtlas* self)
@@ -7931,86 +8306,103 @@ namespace ImFontAtlasManager
   inline const ImWchar* GetGlyphRangesDefault(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesDefault"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesDefault"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesGreek(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesGreek"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesGreek"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesKorean(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesKorean"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesKorean"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesJapanese(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesJapanese"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesJapanese"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesChineseFull(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesChineseFull"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesChineseFull"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesChineseSimplifiedCommon(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesChineseSimplifiedCommon"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesChineseSimplifiedCommon"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesCyrillic(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesCyrillic"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesCyrillic"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesThai(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesThai"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesThai"));
     return func(self);
   }
   inline const ImWchar* GetGlyphRangesVietnamese(ImFontAtlas* self)
   {
     using func_t = const ImWchar* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesVietnamese"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_GetGlyphRangesVietnamese"));
     return func(self);
   }
   inline int AddCustomRectRegular(ImFontAtlas* self, int width, int height)
   {
     using func_t = int (*)(ImFontAtlas*, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddCustomRectRegular"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddCustomRectRegular"));
     return func(self, width, height);
   }
-  inline int AddCustomRectFontGlyph(ImFontAtlas* self, ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2 offset)
+  inline int AddCustomRectFontGlyph(ImFontAtlas* self, ImFont* font, ImWchar id, int width,
+                                    int height, float advance_x, const ImVec2 offset)
   {
     using func_t = int (*)(ImFontAtlas*, ImFont*, ImWchar, int, int, float, const ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_AddCustomRectFontGlyph"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_AddCustomRectFontGlyph"));
     return func(self, font, id, width, height, advance_x, offset);
   }
   inline ImFontAtlasCustomRect* GetCustomRectByIndex(ImFontAtlas* self, int index)
   {
     using func_t = ImFontAtlasCustomRect* (*)(ImFontAtlas*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetCustomRectByIndex"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetCustomRectByIndex"));
     return func(self, index);
   }
-  inline void CalcCustomRectUV(ImFontAtlas* self, const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max)
+  inline void CalcCustomRectUV(ImFontAtlas* self, const ImFontAtlasCustomRect* rect,
+                               ImVec2* out_uv_min, ImVec2* out_uv_max)
   {
     using func_t = void (*)(ImFontAtlas*, const ImFontAtlasCustomRect*, ImVec2*, ImVec2*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_CalcCustomRectUV"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_CalcCustomRectUV"));
     return func(self, rect, out_uv_min, out_uv_max);
   }
-  inline bool GetMouseCursorTexData(ImFontAtlas* self, ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2],
+  inline bool GetMouseCursorTexData(ImFontAtlas* self, ImGuiMouseCursor cursor, ImVec2* out_offset,
+                                    ImVec2* out_size, ImVec2 out_uv_border[2],
                                     ImVec2 out_uv_fill[2])
   {
     using func_t = bool (*)(ImFontAtlas*, ImGuiMouseCursor, ImVec2*, ImVec2*, ImVec2[2], ImVec2[2]);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFontAtlas_GetMouseCursorTexData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImFontAtlas_GetMouseCursorTexData"));
     return func(self, cursor, out_offset, out_size, out_uv_border, out_uv_fill);
   }
 }  // namespace ImFontAtlasManager
@@ -8038,7 +8430,8 @@ namespace ImFontManger
   inline const ImFontGlyph* FindGlyphNoFallback(ImFont* self, ImWchar c)
   {
     using func_t = const ImFontGlyph* (*)(ImFont*, ImWchar);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_FindGlyphNoFallback"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_FindGlyphNoFallback"));
     return func(self, c);
   }
   inline float GetCharAdvance(ImFont* self, ImWchar c)
@@ -8059,42 +8452,51 @@ namespace ImFontManger
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_GetDebugName"));
     return func(self);
   }
-  inline void CalcTextSizeA(ImVec2* pOut, ImFont* self, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end,
+  inline void CalcTextSizeA(ImVec2* pOut, ImFont* self, float size, float max_width,
+                            float wrap_width, const char* text_begin, const char* text_end,
                             const char** remaining)
   {
-    using func_t = void (*)(ImVec2*, ImFont*, float, float, float, const char*, const char*, const char**);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_CalcTextSizeA"));
+    using func_t =
+        void (*)(ImVec2*, ImFont*, float, float, float, const char*, const char*, const char**);
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_CalcTextSizeA"));
     return func(pOut, self, size, max_width, wrap_width, text_begin, text_end, remaining);
   }
-  inline const char* CalcWordWrapPositionA(ImFont* self, float scale, const char* text, const char* text_end, float wrap_width)
+  inline const char* CalcWordWrapPositionA(ImFont* self, float scale, const char* text,
+                                           const char* text_end, float wrap_width)
   {
     using func_t = const char* (*)(ImFont*, float, const char*, const char*, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_CalcWordWrapPositionA"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_CalcWordWrapPositionA"));
     return func(self, scale, text, text_end, wrap_width);
   }
-  inline void RenderChar(ImFont* self, ImDrawList* draw_list, float size, const ImVec2 pos, ImU32 col, ImWchar c)
+  inline void RenderChar(ImFont* self, ImDrawList* draw_list, float size, const ImVec2 pos,
+                         ImU32 col, ImWchar c)
   {
     using func_t = void (*)(ImFont*, ImDrawList*, float, const ImVec2, ImU32, ImWchar);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_RenderChar"));
     return func(self, draw_list, size, pos, col, c);
   }
-  inline void RenderText(ImFont* self, ImDrawList* draw_list, float size, const ImVec2 pos, ImU32 col, const ImVec4 clip_rect, const char* text_begin,
+  inline void RenderText(ImFont* self, ImDrawList* draw_list, float size, const ImVec2 pos,
+                         ImU32 col, const ImVec4 clip_rect, const char* text_begin,
                          const char* text_end, float wrap_width, bool cpu_fine_clip)
   {
-    using func_t = void (*)(ImFont*, ImDrawList*, float, const ImVec2, ImU32, const ImVec4, const char*, const char*, float, bool);
+    using func_t = void (*)(ImFont*, ImDrawList*, float, const ImVec2, ImU32, const ImVec4,
+                            const char*, const char*, float, bool);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_RenderText"));
-    return func(self, draw_list, size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip);
+    return func(self, draw_list, size, pos, col, clip_rect, text_begin, text_end, wrap_width,
+                cpu_fine_clip);
   }
   inline void BuildLookupTable(ImFont* self)
   {
     using func_t = void (*)(ImFont*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_BuildLookupTable"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_BuildLookupTable"));
     return func(self);
   }
   inline void ClearOutputData(ImFont* self)
   {
     using func_t = void (*)(ImFont*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_ClearOutputData"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_ClearOutputData"));
     return func(self);
   }
   inline void GrowIndex(ImFont* self, int new_size)
@@ -8103,10 +8505,11 @@ namespace ImFontManger
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_GrowIndex"));
     return func(self, new_size);
   }
-  inline void AddGlyph(ImFont* self, const ImFontConfig* src_cfg, ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1,
-                       float v1, float advance_x)
+  inline void AddGlyph(ImFont* self, const ImFontConfig* src_cfg, ImWchar c, float x0, float y0,
+                       float x1, float y1, float u0, float v0, float u1, float v1, float advance_x)
   {
-    using func_t = void (*)(ImFont*, const ImFontConfig*, ImWchar, float, float, float, float, float, float, float, float, float);
+    using func_t = void (*)(ImFont*, const ImFontConfig*, ImWchar, float, float, float, float,
+                            float, float, float, float, float);
     func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_AddGlyph"));
     return func(self, src_cfg, c, x0, y0, x1, y1, u0, v0, u1, v1, advance_x);
   }
@@ -8119,13 +8522,14 @@ namespace ImFontManger
   inline void SetGlyphVisible(ImFont* self, ImWchar c, bool visible)
   {
     using func_t = void (*)(ImFont*, ImWchar, bool);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_SetGlyphVisible"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_SetGlyphVisible"));
     return func(self, c, visible);
   }
   inline bool IsGlyphRangeUnused(ImFont* self, unsigned int c_begin, unsigned int c_last)
   {
     using func_t = bool (*)(ImFont*, unsigned int, unsigned int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_IsGlyphRangeUnused"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImFont_IsGlyphRangeUnused"));
     return func(self, c_begin, c_last);
   }
 }  // namespace ImFontManger
@@ -8136,7 +8540,8 @@ namespace ImGuiViewportManager
   inline ImGuiViewport* Create(void)
   {
     using func_t = ImGuiViewport* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewport_ImGuiViewport"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewport_ImGuiViewport"));
     return func();
   }
   inline void Destroy(ImGuiViewport* self)
@@ -8148,13 +8553,15 @@ namespace ImGuiViewportManager
   inline void GetCenter(ImVec2* pOut, ImGuiViewport* self)
   {
     using func_t = void (*)(ImVec2*, ImGuiViewport*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewport_GetCenter"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewport_GetCenter"));
     return func(pOut, self);
   }
   inline void GetWorkCenter(ImVec2* pOut, ImGuiViewport* self)
   {
     using func_t = void (*)(ImVec2*, ImGuiViewport*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewport_GetWorkCenter"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewport_GetWorkCenter"));
     return func(pOut, self);
   }
 
@@ -8166,13 +8573,15 @@ namespace ImGuiPlatformIOManager
   inline ImGuiPlatformIO* Create(void)
   {
     using func_t = ImGuiPlatformIO* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformIO_ImGuiPlatformIO"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformIO_ImGuiPlatformIO"));
     return func();
   }
   inline void Destroy(ImGuiPlatformIO* self)
   {
     using func_t = void (*)(ImGuiPlatformIO*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformIO_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformIO_destroy"));
     return func(self);
   }
 }  // namespace ImGuiPlatformIOManager
@@ -8182,13 +8591,15 @@ namespace ImGuiPlatformMonitorManager
   inline ImGuiPlatformMonitor* Create(void)
   {
     using func_t = ImGuiPlatformMonitor* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformMonitor_ImGuiPlatformMonitor"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiPlatformMonitor_ImGuiPlatformMonitor"));
     return func();
   }
   inline void Destroy(ImGuiPlatformMonitor* self)
   {
     using func_t = void (*)(ImGuiPlatformMonitor*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformMonitor_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformMonitor_destroy"));
     return func(self);
   }
 }  // namespace ImGuiPlatformMonitorManager
@@ -8198,13 +8609,15 @@ namespace ImGuiPlatformImeDataManager
   inline ImGuiPlatformImeData* Create(void)
   {
     using func_t = ImGuiPlatformImeData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformImeData_ImGuiPlatformImeData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiPlatformImeData_ImGuiPlatformImeData"));
     return func();
   }
   inline void Destroy(ImGuiPlatformImeData* self)
   {
     using func_t = void (*)(ImGuiPlatformImeData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformImeData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPlatformImeData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiPlatformImeDataManager
@@ -8221,7 +8634,8 @@ inline ImGuiID ImHashStr(const char* data, size_t data_size, ImGuiID seed)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImHashStr"));
   return func(data, data_size, seed);
 }
-inline void ImQsort(void* base, size_t count, size_t size_of_element, int (*compare_func)(void const*, void const*))
+inline void ImQsort(void* base, size_t count, size_t size_of_element,
+                    int (*compare_func)(void const*, void const*))
 {
   using func_t = void (*)(void*, size_t, size_t, int (*)(void const*, void const*));
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImQsort"));
@@ -8293,7 +8707,8 @@ inline const char* ImStreolRange(const char* str, const char* str_end)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImStreolRange"));
   return func(str, str_end);
 }
-inline const char* ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end)
+inline const char* ImStristr(const char* haystack, const char* haystack_end, const char* needle,
+                             const char* needle_end)
 {
   using func_t = const char* (*)(const char*, const char*, const char*, const char*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImStristr"));
@@ -8356,25 +8771,29 @@ inline int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list 
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFormatStringV"));
   return func(buf, buf_size, fmt, args);
 }
-inline void ImFormatStringToTempBuffer(const char** out_buf, const char** out_buf_end, const char* fmt, ...)
+inline void ImFormatStringToTempBuffer(const char** out_buf, const char** out_buf_end,
+                                       const char* fmt, ...)
 {
   using func_t = void (*)(const char**, const char**, const char*, va_list);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFormatStringToTempBufferV"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFormatStringToTempBufferV"));
   va_list args;
   va_start(args, fmt);
   func(out_buf, out_buf_end, fmt, args);
   va_end(args);
 }
-inline void ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end, const char* fmt, va_list args)
+inline void ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end,
+                                        const char* fmt, va_list args)
 {
   using func_t = void (*)(const char**, const char**, const char*, va_list);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFormatStringToTempBufferV"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFormatStringToTempBufferV"));
   return func(out_buf, out_buf_end, fmt, args);
 }
 inline const char* ImParseFormatFindStart(const char* format)
 {
   using func_t = const char* (*)(const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatFindStart"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatFindStart"));
   return func(format);
 }
 inline const char* ImParseFormatFindEnd(const char* format)
@@ -8386,25 +8805,29 @@ inline const char* ImParseFormatFindEnd(const char* format)
 inline const char* ImParseFormatTrimDecorations(const char* format, char* buf, size_t buf_size)
 {
   using func_t = const char* (*)(const char*, char*, size_t);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatTrimDecorations"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatTrimDecorations"));
   return func(format, buf, buf_size);
 }
 inline void ImParseFormatSanitizeForPrinting(const char* fmt_in, char* fmt_out, size_t fmt_out_size)
 {
   using func_t = void (*)(const char*, char*, size_t);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatSanitizeForPrinting"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatSanitizeForPrinting"));
   return func(fmt_in, fmt_out, fmt_out_size);
 }
-inline const char* ImParseFormatSanitizeForScanning(const char* fmt_in, char* fmt_out, size_t fmt_out_size)
+inline const char* ImParseFormatSanitizeForScanning(const char* fmt_in, char* fmt_out,
+                                                    size_t fmt_out_size)
 {
   using func_t = const char* (*)(const char*, char*, size_t);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatSanitizeForScanning"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatSanitizeForScanning"));
   return func(fmt_in, fmt_out, fmt_out_size);
 }
 inline int ImParseFormatPrecision(const char* format, int default_value)
 {
   using func_t = int (*)(const char*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatPrecision"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImParseFormatPrecision"));
   return func(format, default_value);
 }
 inline const char* ImTextCharToUtf8(char out_buf[5], unsigned int c)
@@ -8413,7 +8836,8 @@ inline const char* ImTextCharToUtf8(char out_buf[5], unsigned int c)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCharToUtf8"));
   return func(out_buf, c);
 }
-inline int ImTextStrToUtf8(char* out_buf, int out_buf_size, const ImWchar* in_text, const ImWchar* in_text_end)
+inline int ImTextStrToUtf8(char* out_buf, int out_buf_size, const ImWchar* in_text,
+                           const ImWchar* in_text_end)
 {
   using func_t = int (*)(char*, int, const ImWchar*, const ImWchar*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextStrToUtf8"));
@@ -8425,7 +8849,8 @@ inline int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCharFromUtf8"));
   return func(out_char, in_text, in_text_end);
 }
-inline int ImTextStrFromUtf8(ImWchar* out_buf, int out_buf_size, const char* in_text, const char* in_text_end, const char** in_remaining)
+inline int ImTextStrFromUtf8(ImWchar* out_buf, int out_buf_size, const char* in_text,
+                             const char* in_text_end, const char** in_remaining)
 {
   using func_t = int (*)(ImWchar*, int, const char*, const char*, const char**);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextStrFromUtf8"));
@@ -8434,25 +8859,30 @@ inline int ImTextStrFromUtf8(ImWchar* out_buf, int out_buf_size, const char* in_
 inline int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end)
 {
   using func_t = int (*)(const char*, const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCountCharsFromUtf8"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCountCharsFromUtf8"));
   return func(in_text, in_text_end);
 }
 inline int ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end)
 {
   using func_t = int (*)(const char*, const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCountUtf8BytesFromChar"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCountUtf8BytesFromChar"));
   return func(in_text, in_text_end);
 }
 inline int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end)
 {
   using func_t = int (*)(const ImWchar*, const ImWchar*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCountUtf8BytesFromStr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextCountUtf8BytesFromStr"));
   return func(in_text, in_text_end);
 }
-inline const char* ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr)
+inline const char* ImTextFindPreviousUtf8Codepoint(const char* in_text_start,
+                                                   const char* in_text_curr)
 {
   using func_t = const char* (*)(const char*, const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextFindPreviousUtf8Codepoint"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTextFindPreviousUtf8Codepoint"));
   return func(in_text_start, in_text_curr);
 }
 inline int ImTextCountLines(const char* in_text, const char* in_text_end)
@@ -8491,7 +8921,8 @@ inline ImU64 ImFileWrite(const void* data, ImU64 size, ImU64 count, ImFileHandle
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFileWrite"));
   return func(data, size, count, file);
 }
-inline void* ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size, int padding_bytes)
+inline void* ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size,
+                                int padding_bytes)
 {
   using func_t = void* (*)(const char*, const char*, size_t*, int);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFileLoadToMemory"));
@@ -8680,36 +9111,46 @@ inline void ImMul(ImVec2* pOut, const ImVec2 lhs, const ImVec2 rhs)
 inline bool ImIsFloatAboveGuaranteedIntegerPrecision(float f)
 {
   using func_t = bool (*)(float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImIsFloatAboveGuaranteedIntegerPrecision"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImIsFloatAboveGuaranteedIntegerPrecision"));
   return func(f);
 }
 inline float ImExponentialMovingAverage(float avg, float sample, int n)
 {
   using func_t = float (*)(float, float, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImExponentialMovingAverage"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImExponentialMovingAverage"));
   return func(avg, sample, n);
 }
-inline void ImBezierCubicCalc(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, float t)
+inline void ImBezierCubicCalc(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3,
+                              const ImVec2 p4, float t)
 {
   using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, float);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBezierCubicCalc"));
   return func(pOut, p1, p2, p3, p4, t);
 }
-inline void ImBezierCubicClosestPoint(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, const ImVec2 p,
+inline void ImBezierCubicClosestPoint(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2,
+                                      const ImVec2 p3, const ImVec2 p4, const ImVec2 p,
                                       int num_segments)
 {
-  using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBezierCubicClosestPoint"));
+  using func_t =
+      void (*)(ImVec2*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, int);
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBezierCubicClosestPoint"));
   return func(pOut, p1, p2, p3, p4, p, num_segments);
 }
-inline void ImBezierCubicClosestPointCasteljau(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, const ImVec2 p4, const ImVec2 p,
+inline void ImBezierCubicClosestPointCasteljau(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2,
+                                               const ImVec2 p3, const ImVec2 p4, const ImVec2 p,
                                                float tess_tol)
 {
-  using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, const ImVec2, const ImVec2, const ImVec2, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBezierCubicClosestPointCasteljau"));
+  using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, const ImVec2, const ImVec2,
+                          const ImVec2, float);
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImBezierCubicClosestPointCasteljau"));
   return func(pOut, p1, p2, p3, p4, p, tess_tol);
 }
-inline void ImBezierQuadraticCalc(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3, float t)
+inline void ImBezierQuadraticCalc(ImVec2* pOut, const ImVec2 p1, const ImVec2 p2, const ImVec2 p3,
+                                  float t)
 {
   using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, const ImVec2, float);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBezierQuadraticCalc"));
@@ -8724,19 +9165,24 @@ inline void ImLineClosestPoint(ImVec2* pOut, const ImVec2 a, const ImVec2 b, con
 inline bool ImTriangleContainsPoint(const ImVec2 a, const ImVec2 b, const ImVec2 c, const ImVec2 p)
 {
   using func_t = bool (*)(const ImVec2, const ImVec2, const ImVec2, const ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTriangleContainsPoint"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTriangleContainsPoint"));
   return func(a, b, c, p);
 }
-inline void ImTriangleClosestPoint(ImVec2* pOut, const ImVec2 a, const ImVec2 b, const ImVec2 c, const ImVec2 p)
+inline void ImTriangleClosestPoint(ImVec2* pOut, const ImVec2 a, const ImVec2 b, const ImVec2 c,
+                                   const ImVec2 p)
 {
   using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, const ImVec2, const ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTriangleClosestPoint"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTriangleClosestPoint"));
   return func(pOut, a, b, c, p);
 }
-inline void ImTriangleBarycentricCoords(const ImVec2 a, const ImVec2 b, const ImVec2 c, const ImVec2 p, float* out_u, float* out_v, float* out_w)
+inline void ImTriangleBarycentricCoords(const ImVec2 a, const ImVec2 b, const ImVec2 c,
+                                        const ImVec2 p, float* out_u, float* out_v, float* out_w)
 {
-  using func_t = void (*)(const ImVec2, const ImVec2, const ImVec2, const ImVec2, float*, float*, float*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTriangleBarycentricCoords"));
+  using func_t =
+      void (*)(const ImVec2, const ImVec2, const ImVec2, const ImVec2, float*, float*, float*);
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImTriangleBarycentricCoords"));
   return func(a, b, c, p, out_u, out_v, out_w);
 }
 inline float ImTriangleArea(const ImVec2 a, const ImVec2 b, const ImVec2 c)
@@ -8790,13 +9236,14 @@ namespace ImVec2ihManager
   inline ImVec2ih* Create(short _x, short _y)
   {
     using func_t = ImVec2ih* (*)(short, short);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVec2ih_ImVec2ih_short"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVec2ih_ImVec2ih_short"));
     return func(_x, _y);
   }
   inline ImVec2ih* Create(const ImVec2 rhs)
   {
     using func_t = ImVec2ih* (*)(const ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVec2ih_ImVec2ih_Vec2"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVec2ih_ImVec2ih_Vec2"));
     return func(rhs);
   }
 }  // namespace ImVec2ihManager
@@ -8902,7 +9349,7 @@ namespace ImRectManager
   inline bool ContainsWithPad(ImRect* self, const ImVec2 p, const ImVec2 pad)
   {
     using func_t = bool (*)(ImRect*, const ImVec2, const ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImRect_ContainsWithPad"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImRect_ContainsWithPad"));
     return func(self, p, pad);
   }
   inline bool Overlaps(ImRect* self, const ImRect r)
@@ -8987,13 +9434,14 @@ namespace ImRectManager
 inline size_t ImBitArrayGetStorageSizeInBytes(int bitcount)
 {
   using func_t = size_t (*)(int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBitArrayGetStorageSizeInBytes"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBitArrayGetStorageSizeInBytes"));
   return func(bitcount);
 }
 inline void ImBitArrayClearAllBits(ImU32* arr, int bitcount)
 {
   using func_t = void (*)(ImU32*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBitArrayClearAllBits"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImBitArrayClearAllBits"));
   return func(arr, bitcount);
 }
 inline bool ImBitArrayTestBit(const ImU32* arr, int n)
@@ -9065,13 +9513,15 @@ inline int ImGuiTextIndexSize(ImGuiTextIndex* self)
 inline const char* ImGuiTextIndexGetLineBegin(ImGuiTextIndex* self, const char* base, int n)
 {
   using func_t = const char* (*)(ImGuiTextIndex*, const char*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextIndex_get_line_begin"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextIndex_get_line_begin"));
   return func(self, base, n);
 }
 inline const char* ImGuiTextIndexGetLineEnd(ImGuiTextIndex* self, const char* base, int n)
 {
   using func_t = const char* (*)(ImGuiTextIndex*, const char*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextIndex_get_line_end"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextIndex_get_line_end"));
   return func(self, base, n);
 }
 inline void ImGuiTextIndexAppend(ImGuiTextIndex* self, const char* base, int old_size, int new_size)
@@ -9086,19 +9536,22 @@ namespace ImDrawListSharedDataManager
   inline ImDrawListSharedData* Create(void)
   {
     using func_t = ImDrawListSharedData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSharedData_ImDrawListSharedData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawListSharedData_ImDrawListSharedData"));
     return func();
   }
   inline void Destroy(ImDrawListSharedData* self)
   {
     using func_t = void (*)(ImDrawListSharedData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSharedData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSharedData_destroy"));
     return func(self);
   }
   inline void SetCircleTessellationMaxError(ImDrawListSharedData* self, float max_error)
   {
     using func_t = void (*)(ImDrawListSharedData*, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawListSharedData_SetCircleTessellationMaxError"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawListSharedData_SetCircleTessellationMaxError"));
     return func(self, max_error);
   }
 }  // namespace ImDrawListSharedDataManager
@@ -9107,13 +9560,15 @@ namespace ImDrawDataBuilderManager
   inline ImDrawDataBuilder* Create(void)
   {
     using func_t = ImDrawDataBuilder* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawDataBuilder_ImDrawDataBuilder"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImDrawDataBuilder_ImDrawDataBuilder"));
     return func();
   }
   inline void Destroy(ImDrawDataBuilder* self)
   {
     using func_t = void (*)(ImDrawDataBuilder*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawDataBuilder_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImDrawDataBuilder_destroy"));
     return func(self);
   }
 }  // namespace ImDrawDataBuilderManager
@@ -9123,7 +9578,8 @@ namespace ImGuiDataVarInfoManager
   inline void* GetVarPtr(ImGuiDataVarInfo* self, void* parent)
   {
     using func_t = void* (*)(ImGuiDataVarInfo*, void*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDataVarInfo_GetVarPtr"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDataVarInfo_GetVarPtr"));
     return func(self, parent);
   }
 }  // namespace ImGuiDataVarInfoManager
@@ -9133,7 +9589,8 @@ namespace ImGuiStyleModManager
   inline ImGuiStyleMod* Create(ImGuiStyleVar idx, int v)
   {
     using func_t = ImGuiStyleMod* (*)(ImGuiStyleVar, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStyleMod_ImGuiStyleMod_Int"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStyleMod_ImGuiStyleMod_Int"));
     return func(idx, v);
   }
   inline void Destroy(ImGuiStyleMod* self)
@@ -9145,13 +9602,15 @@ namespace ImGuiStyleModManager
   inline ImGuiStyleMod* Create(ImGuiStyleVar idx, float v)
   {
     using func_t = ImGuiStyleMod* (*)(ImGuiStyleVar, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStyleMod_ImGuiStyleMod_Float"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiStyleMod_ImGuiStyleMod_Float"));
     return func(idx, v);
   }
   inline ImGuiStyleMod* Create(ImGuiStyleVar idx, ImVec2 v)
   {
     using func_t = ImGuiStyleMod* (*)(ImGuiStyleVar, ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStyleMod_ImGuiStyleMod_Vec2"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStyleMod_ImGuiStyleMod_Vec2"));
     return func(idx, v);
   }
 }  // namespace ImGuiStyleModManager
@@ -9162,13 +9621,15 @@ namespace ImGuiComboPreviewDataManager
   inline ImGuiComboPreviewData* Create(void)
   {
     using func_t = ImGuiComboPreviewData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiComboPreviewData_ImGuiComboPreviewData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiComboPreviewData_ImGuiComboPreviewData"));
     return func();
   }
   inline void Destroy(ImGuiComboPreviewData* self)
   {
     using func_t = void (*)(ImGuiComboPreviewData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiComboPreviewData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiComboPreviewData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiComboPreviewDataManager
@@ -9179,31 +9640,37 @@ namespace ImGuiMenuColumnsManager
   inline ImGuiMenuColumns* Craete(void)
   {
     using func_t = ImGuiMenuColumns* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_ImGuiMenuColumns"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiMenuColumns_ImGuiMenuColumns"));
     return func();
   }
   inline void Destroy(ImGuiMenuColumns* self)
   {
     using func_t = void (*)(ImGuiMenuColumns*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_destroy"));
     return func(self);
   }
   inline void Update(ImGuiMenuColumns* self, float spacing, bool window_reappearing)
   {
     using func_t = void (*)(ImGuiMenuColumns*, float, bool);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_Update"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_Update"));
     return func(self, spacing, window_reappearing);
   }
-  inline float DeclColumns(ImGuiMenuColumns* self, float w_icon, float w_label, float w_shortcut, float w_mark)
+  inline float DeclColumns(ImGuiMenuColumns* self, float w_icon, float w_label, float w_shortcut,
+                           float w_mark)
   {
     using func_t = float (*)(ImGuiMenuColumns*, float, float, float, float);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_DeclColumns"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_DeclColumns"));
     return func(self, w_icon, w_label, w_shortcut, w_mark);
   }
   inline void CalcNextTotalWidth(ImGuiMenuColumns* self, bool update_offsets)
   {
     using func_t = void (*)(ImGuiMenuColumns*, bool);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiMenuColumns_CalcNextTotalWidth"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiMenuColumns_CalcNextTotalWidth"));
     return func(self, update_offsets);
   }
 }  // namespace ImGuiMenuColumnsManager
@@ -9213,13 +9680,15 @@ namespace ImGuiInputTextDeactivatedStateManager
   inline ImGuiInputTextDeactivatedState* Create(void)
   {
     using func_t = ImGuiInputTextDeactivatedState* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextDeactivatedState_ImGuiInputTextDeactivatedState"));
+    func_t func  = reinterpret_cast<func_t>(GetProcAddress(
+        menuFramework, "ImGuiInputTextDeactivatedState_ImGuiInputTextDeactivatedState"));
     return func();
   }
   inline void Destroy(ImGuiInputTextDeactivatedState* self)
   {
     using func_t = void (*)(ImGuiInputTextDeactivatedState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextDeactivatedState_destroy"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextDeactivatedState_destroy"));
     return func(self);
   }
 }  // namespace ImGuiInputTextDeactivatedStateManager
@@ -9230,7 +9699,8 @@ namespace ImGuiInputTextDeactivatedStateManager
   inline void ClearFreeMemory(ImGuiInputTextDeactivatedState* self)
   {
     using func_t = void (*)(ImGuiInputTextDeactivatedState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextDeactivatedState_ClearFreeMemory"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextDeactivatedState_ClearFreeMemory"));
     return func(self);
   }
 }  // namespace ImGuiInputTextDeactivatedStateManager
@@ -9241,109 +9711,127 @@ namespace ImGuiInputTextStateManager
   inline ImGuiInputTextState* Create(void)
   {
     using func_t = ImGuiInputTextState* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ImGuiInputTextState"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_ImGuiInputTextState"));
     return func();
   }
   inline void Destroy(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_destroy"));
     return func(self);
   }
   inline void ClearText(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ClearText"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ClearText"));
     return func(self);
   }
   inline void ClearFreeMemory(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ClearFreeMemory"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_ClearFreeMemory"));
     return func(self);
   }
   inline int GetUndoAvailCount(ImGuiInputTextState* self)
   {
     using func_t = int (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_GetUndoAvailCount"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_GetUndoAvailCount"));
     return func(self);
   }
   inline int GetRedoAvailCount(ImGuiInputTextState* self)
   {
     using func_t = int (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_GetRedoAvailCount"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_GetRedoAvailCount"));
     return func(self);
   }
   inline void OnKeyPressed(ImGuiInputTextState* self, int key)
   {
     using func_t = void (*)(ImGuiInputTextState*, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_OnKeyPressed"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_OnKeyPressed"));
     return func(self, key);
   }
   inline void CursorAnimReset(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_CursorAnimReset"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_CursorAnimReset"));
     return func(self);
   }
   inline void CursorClamp(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_CursorClamp"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_CursorClamp"));
     return func(self);
   }
   inline bool HasSelection(ImGuiInputTextState* self)
   {
     using func_t = bool (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_HasSelection"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_HasSelection"));
     return func(self);
   }
   inline void ClearSelection(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ClearSelection"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_ClearSelection"));
     return func(self);
   }
   inline int GetCursorPos(ImGuiInputTextState* self)
   {
     using func_t = int (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_GetCursorPos"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_GetCursorPos"));
     return func(self);
   }
   inline int GetSelectionStart(ImGuiInputTextState* self)
   {
     using func_t = int (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_GetSelectionStart"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_GetSelectionStart"));
     return func(self);
   }
   inline int GetSelectionEnd(ImGuiInputTextState* self)
   {
     using func_t = int (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_GetSelectionEnd"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_GetSelectionEnd"));
     return func(self);
   }
   inline void SelectAll(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_SelectAll"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_SelectAll"));
     return func(self);
   }
   inline void ReloadUserBufAndSelectAll(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ReloadUserBufAndSelectAll"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_ReloadUserBufAndSelectAll"));
     return func(self);
   }
   inline void ReloadUserBufAndKeepSelection(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ReloadUserBufAndKeepSelection"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_ReloadUserBufAndKeepSelection"));
     return func(self);
   }
   inline void ReloadUserBufAndMoveToEnd(ImGuiInputTextState* self)
   {
     using func_t = void (*)(ImGuiInputTextState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputTextState_ReloadUserBufAndMoveToEnd"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiInputTextState_ReloadUserBufAndMoveToEnd"));
     return func(self);
   }
 
@@ -9354,19 +9842,22 @@ namespace ImGuiNextWindowDataManager
   inline ImGuiNextWindowData* Create(void)
   {
     using func_t = ImGuiNextWindowData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextWindowData_ImGuiNextWindowData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiNextWindowData_ImGuiNextWindowData"));
     return func();
   }
   inline void Destroy(ImGuiNextWindowData* self)
   {
     using func_t = void (*)(ImGuiNextWindowData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextWindowData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextWindowData_destroy"));
     return func(self);
   }
   inline void ClearFlags(ImGuiNextWindowData* self)
   {
     using func_t = void (*)(ImGuiNextWindowData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextWindowData_ClearFlags"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextWindowData_ClearFlags"));
     return func(self);
   }
 }  // namespace ImGuiNextWindowDataManager
@@ -9376,19 +9867,22 @@ namespace ImGuiNextItemDataManager
   inline ImGuiNextItemData* Create(void)
   {
     using func_t = ImGuiNextItemData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextItemData_ImGuiNextItemData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiNextItemData_ImGuiNextItemData"));
     return func();
   }
   inline void Destroy(ImGuiNextItemData* self)
   {
     using func_t = void (*)(ImGuiNextItemData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextItemData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextItemData_destroy"));
     return func(self);
   }
   inline void ClearFlags(ImGuiNextItemData* self)
   {
     using func_t = void (*)(ImGuiNextItemData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextItemData_ClearFlags"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNextItemData_ClearFlags"));
     return func(self);
   }
 }  // namespace ImGuiNextItemDataManager
@@ -9399,14 +9893,16 @@ namespace ImGuiLastItemDataManager
   inline ImGuiLastItemData* Create(void)
   {
     using func_t = ImGuiLastItemData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiLastItemData_ImGuiLastItemData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiLastItemData_ImGuiLastItemData"));
     return func();
   }
 
   inline void Destroy(ImGuiLastItemData* self)
   {
     using func_t = void (*)(ImGuiLastItemData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiLastItemData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiLastItemData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiLastItemDataManager
@@ -9417,25 +9913,29 @@ namespace ImGuiStackSizesManager
   inline ImGuiStackSizes* Create(void)
   {
     using func_t = ImGuiStackSizes* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackSizes_ImGuiStackSizes"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackSizes_ImGuiStackSizes"));
     return func();
   }
   inline void Destroy(ImGuiStackSizes* self)
   {
     using func_t = void (*)(ImGuiStackSizes*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackSizes_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackSizes_destroy"));
     return func(self);
   }
   inline void SetToContextState(ImGuiStackSizes* self, ImGuiContext* ctx)
   {
     using func_t = void (*)(ImGuiStackSizes*, ImGuiContext*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackSizes_SetToContextState"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiStackSizes_SetToContextState"));
     return func(self, ctx);
   }
   inline void CompareWithContextState(ImGuiStackSizes* self, ImGuiContext* ctx)
   {
     using func_t = void (*)(ImGuiStackSizes*, ImGuiContext*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackSizes_CompareWithContextState"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiStackSizes_CompareWithContextState"));
     return func(self, ctx);
   }
 }  // namespace ImGuiStackSizesManager
@@ -9445,19 +9945,22 @@ namespace ImGuiPtrOrIndexManager
   inline ImGuiPtrOrIndex* Create(void* ptr)
   {
     using func_t = ImGuiPtrOrIndex* (*)(void*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPtrOrIndex_ImGuiPtrOrIndex_Ptr"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiPtrOrIndex_ImGuiPtrOrIndex_Ptr"));
     return func(ptr);
   }
   inline void Destroy(ImGuiPtrOrIndex* self)
   {
     using func_t = void (*)(ImGuiPtrOrIndex*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPtrOrIndex_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPtrOrIndex_destroy"));
     return func(self);
   }
   inline ImGuiPtrOrIndex* Create(int index)
   {
     using func_t = ImGuiPtrOrIndex* (*)(int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPtrOrIndex_ImGuiPtrOrIndex_Int"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiPtrOrIndex_ImGuiPtrOrIndex_Int"));
     return func(index);
   }
 }  // namespace ImGuiPtrOrIndexManager
@@ -9468,13 +9971,14 @@ namespace ImGuiPopupDataManager
   inline ImGuiPopupData* Create(void)
   {
     using func_t = ImGuiPopupData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPopupData_ImGuiPopupData"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPopupData_ImGuiPopupData"));
     return func();
   }
   inline void Destroy(ImGuiPopupData* self)
   {
     using func_t = void (*)(ImGuiPopupData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPopupData_destroy"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiPopupData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiPopupDataManager
@@ -9485,13 +9989,15 @@ namespace ImGuiInputEventManager
   inline ImGuiInputEvent* Create(void)
   {
     using func_t = ImGuiInputEvent* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputEvent_ImGuiInputEvent"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputEvent_ImGuiInputEvent"));
     return func();
   }
   inline void Destroy(ImGuiInputEvent* self)
   {
     using func_t = void (*)(ImGuiInputEvent*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputEvent_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiInputEvent_destroy"));
     return func(self);
   }
 }  // namespace ImGuiInputEventManager
@@ -9502,13 +10008,15 @@ namespace ImGuiKeyRoutingDataManager
   inline ImGuiKeyRoutingData* Create(void)
   {
     using func_t = ImGuiKeyRoutingData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingData_ImGuiKeyRoutingData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiKeyRoutingData_ImGuiKeyRoutingData"));
     return func();
   }
   inline void Destroy(ImGuiKeyRoutingData* self)
   {
     using func_t = void (*)(ImGuiKeyRoutingData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiKeyRoutingDataManager
@@ -9518,19 +10026,22 @@ namespace ImGuiKeyRoutingTableManager
   inline ImGuiKeyRoutingTable* Create(void)
   {
     using func_t = ImGuiKeyRoutingTable* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingTable_ImGuiKeyRoutingTable"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiKeyRoutingTable_ImGuiKeyRoutingTable"));
     return func();
   }
   inline void Destroy(ImGuiKeyRoutingTable* self)
   {
     using func_t = void (*)(ImGuiKeyRoutingTable*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingTable_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingTable_destroy"));
     return func(self);
   }
   inline void Clear(ImGuiKeyRoutingTable* self)
   {
     using func_t = void (*)(ImGuiKeyRoutingTable*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingTable_Clear"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyRoutingTable_Clear"));
     return func(self);
   }
 }  // namespace ImGuiKeyRoutingTableManager
@@ -9539,13 +10050,15 @@ namespace ImGuiKeyOwnerDataManager
   inline ImGuiKeyOwnerData* Create(void)
   {
     using func_t = ImGuiKeyOwnerData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyOwnerData_ImGuiKeyOwnerData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiKeyOwnerData_ImGuiKeyOwnerData"));
     return func();
   }
   inline void Destroy(ImGuiKeyOwnerData* self)
   {
     using func_t = void (*)(ImGuiKeyOwnerData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyOwnerData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiKeyOwnerData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiKeyOwnerDataManager
@@ -9554,13 +10067,15 @@ namespace ImGuiListClipperRangeManager
   inline ImGuiListClipperRange FromIndices(int min, int max)
   {
     using func_t = ImGuiListClipperRange (*)(int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipperRange_FromIndices"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiListClipperRange_FromIndices"));
     return func(min, max);
   }
   inline ImGuiListClipperRange FromPositions(float y1, float y2, int off_min, int off_max)
   {
     using func_t = ImGuiListClipperRange (*)(float, float, int, int);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipperRange_FromPositions"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiListClipperRange_FromPositions"));
     return func(y1, y2, off_min, off_max);
   }
 }  // namespace ImGuiListClipperRangeManager
@@ -9570,19 +10085,22 @@ namespace ImGuiListClipperDataManager
   inline ImGuiListClipperData* Create(void)
   {
     using func_t = ImGuiListClipperData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipperData_ImGuiListClipperData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiListClipperData_ImGuiListClipperData"));
     return func();
   }
   inline void Destroy(ImGuiListClipperData* self)
   {
     using func_t = void (*)(ImGuiListClipperData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipperData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipperData_destroy"));
     return func(self);
   }
   inline void Reset(ImGuiListClipperData* self, ImGuiListClipper* clipper)
   {
     using func_t = void (*)(ImGuiListClipperData*, ImGuiListClipper*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipperData_Reset"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiListClipperData_Reset"));
     return func(self, clipper);
   }
 }  // namespace ImGuiListClipperDataManager
@@ -9592,19 +10110,21 @@ namespace ImGuiNavItemDataManager
   inline ImGuiNavItemData* Create(void)
   {
     using func_t = ImGuiNavItemData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNavItemData_ImGuiNavItemData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiNavItemData_ImGuiNavItemData"));
     return func();
   }
   inline void Destroy(ImGuiNavItemData* self)
   {
     using func_t = void (*)(ImGuiNavItemData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNavItemData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNavItemData_destroy"));
     return func(self);
   }
   inline void Clear(ImGuiNavItemData* self)
   {
     using func_t = void (*)(ImGuiNavItemData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNavItemData_Clear"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiNavItemData_Clear"));
     return func(self);
   }
 }  // namespace ImGuiNavItemDataManager
@@ -9613,19 +10133,22 @@ namespace ImGuiTypingSelectStateManager
   inline ImGuiTypingSelectState* Create(void)
   {
     using func_t = ImGuiTypingSelectState* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTypingSelectState_ImGuiTypingSelectState"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTypingSelectState_ImGuiTypingSelectState"));
     return func();
   }
   inline void Destroy(ImGuiTypingSelectState* self)
   {
     using func_t = void (*)(ImGuiTypingSelectState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTypingSelectState_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTypingSelectState_destroy"));
     return func(self);
   }
   inline void Clear(ImGuiTypingSelectState* self)
   {
     using func_t = void (*)(ImGuiTypingSelectState*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTypingSelectState_Clear"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTypingSelectState_Clear"));
     return func(self);
   }
 }  // namespace ImGuiTypingSelectStateManager
@@ -9634,13 +10157,15 @@ namespace ImGuiOldColumnDataManager
   inline ImGuiOldColumnData* Create(void)
   {
     using func_t = ImGuiOldColumnData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOldColumnData_ImGuiOldColumnData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiOldColumnData_ImGuiOldColumnData"));
     return func();
   }
   inline void Destroy(ImGuiOldColumnData* self)
   {
     using func_t = void (*)(ImGuiOldColumnData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOldColumnData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOldColumnData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiOldColumnDataManager
@@ -9651,13 +10176,15 @@ namespace ImGuiOldColumnsManager
   inline ImGuiOldColumns* Create(void)
   {
     using func_t = ImGuiOldColumns* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOldColumns_ImGuiOldColumns"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOldColumns_ImGuiOldColumns"));
     return func();
   }
   inline void Destroy(ImGuiOldColumns* self)
   {
     using func_t = void (*)(ImGuiOldColumns*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOldColumns_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiOldColumns_destroy"));
     return func(self);
   }
 }  // namespace ImGuiOldColumnsManager
@@ -9668,7 +10195,8 @@ namespace ImGuiDockNodeManager
   inline ImGuiDockNode* Create(ImGuiID id)
   {
     using func_t = ImGuiDockNode* (*)(ImGuiID);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_ImGuiDockNode"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_ImGuiDockNode"));
     return func(id);
   }
   inline void Destroy(ImGuiDockNode* self)
@@ -9680,49 +10208,57 @@ namespace ImGuiDockNodeManager
   inline bool IsRootNode(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsRootNode"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsRootNode"));
     return func(self);
   }
   inline bool IsDockSpace(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsDockSpace"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsDockSpace"));
     return func(self);
   }
   inline bool IsFloatingNode(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsFloatingNode"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsFloatingNode"));
     return func(self);
   }
   inline bool IsCentralNode(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsCentralNode"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsCentralNode"));
     return func(self);
   }
   inline bool IsHiddenTabBar(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsHiddenTabBar"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsHiddenTabBar"));
     return func(self);
   }
   inline bool IsNoTabBar(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsNoTabBar"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsNoTabBar"));
     return func(self);
   }
   inline bool IsSplitNode(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsSplitNode"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsSplitNode"));
     return func(self);
   }
   inline bool IsLeafNode(ImGuiDockNode* self)
   {
     using func_t = bool (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsLeafNode"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_IsLeafNode"));
     return func(self);
   }
   inline bool IsEmpty(ImGuiDockNode* self)
@@ -9740,13 +10276,15 @@ namespace ImGuiDockNodeManager
   inline void SetLocalFlags(ImGuiDockNode* self, ImGuiDockNodeFlags flags)
   {
     using func_t = void (*)(ImGuiDockNode*, ImGuiDockNodeFlags);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_SetLocalFlags"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_SetLocalFlags"));
     return func(self, flags);
   }
   inline void UpdateMergedFlags(ImGuiDockNode* self)
   {
     using func_t = void (*)(ImGuiDockNode*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_UpdateMergedFlags"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockNode_UpdateMergedFlags"));
     return func(self);
   }
 }  // namespace ImGuiDockNodeManager
@@ -9756,13 +10294,15 @@ namespace ImGuiDockContextManager
   inline ImGuiDockContext* Create(void)
   {
     using func_t = ImGuiDockContext* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockContext_ImGuiDockContext"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiDockContext_ImGuiDockContext"));
     return func();
   }
   inline void Destroy(ImGuiDockContext* self)
   {
     using func_t = void (*)(ImGuiDockContext*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockContext_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDockContext_destroy"));
     return func(self);
   }
 }  // namespace ImGuiDockContextManager
@@ -9772,55 +10312,64 @@ namespace ImGuiViewportPManager
   inline ImGuiViewportP* Create(void)
   {
     using func_t = ImGuiViewportP* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_ImGuiViewportP"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_ImGuiViewportP"));
     return func();
   }
   inline void Destroy(ImGuiViewportP* self)
   {
     using func_t = void (*)(ImGuiViewportP*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_destroy"));
+    func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_destroy"));
     return func(self);
   }
   inline void ClearRequestFlags(ImGuiViewportP* self)
   {
     using func_t = void (*)(ImGuiViewportP*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_ClearRequestFlags"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_ClearRequestFlags"));
     return func(self);
   }
   inline void CalcWorkRectPos(ImVec2* pOut, ImGuiViewportP* self, const ImVec2 off_min)
   {
     using func_t = void (*)(ImVec2*, ImGuiViewportP*, const ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_CalcWorkRectPos"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_CalcWorkRectPos"));
     return func(pOut, self, off_min);
   }
-  inline void CalcWorkRectSize(ImVec2* pOut, ImGuiViewportP* self, const ImVec2 off_min, const ImVec2 off_max)
+  inline void CalcWorkRectSize(ImVec2* pOut, ImGuiViewportP* self, const ImVec2 off_min,
+                               const ImVec2 off_max)
   {
     using func_t = void (*)(ImVec2*, ImGuiViewportP*, const ImVec2, const ImVec2);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_CalcWorkRectSize"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_CalcWorkRectSize"));
     return func(pOut, self, off_min, off_max);
   }
   inline void UpdateWorkRect(ImGuiViewportP* self)
   {
     using func_t = void (*)(ImGuiViewportP*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_UpdateWorkRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_UpdateWorkRect"));
     return func(self);
   }
   inline void GetMainRect(ImRect* pOut, ImGuiViewportP* self)
   {
     using func_t = void (*)(ImRect*, ImGuiViewportP*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_GetMainRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_GetMainRect"));
     return func(pOut, self);
   }
   inline void GetWorkRect(ImRect* pOut, ImGuiViewportP* self)
   {
     using func_t = void (*)(ImRect*, ImGuiViewportP*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_GetWorkRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_GetWorkRect"));
     return func(pOut, self);
   }
   inline void GetBuildWorkRect(ImRect* pOut, ImGuiViewportP* self)
   {
     using func_t = void (*)(ImRect*, ImGuiViewportP*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_GetBuildWorkRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiViewportP_GetBuildWorkRect"));
     return func(pOut, self);
   }
 }  // namespace ImGuiViewportPManager
@@ -9830,19 +10379,22 @@ namespace ImGuiWindowSettingsManager
   inline ImGuiWindowSettings* Create(void)
   {
     using func_t = ImGuiWindowSettings* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowSettings_ImGuiWindowSettings"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiWindowSettings_ImGuiWindowSettings"));
     return func();
   }
   inline void Destroy(ImGuiWindowSettings* self)
   {
     using func_t = void (*)(ImGuiWindowSettings*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowSettings_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowSettings_destroy"));
     return func(self);
   }
   inline char* GetName(ImGuiWindowSettings* self)
   {
     using func_t = char* (*)(ImGuiWindowSettings*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowSettings_GetName"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindowSettings_GetName"));
     return func(self);
   }
 }  // namespace ImGuiWindowSettingsManager
@@ -9852,13 +10404,15 @@ namespace ImGuiSettingsHandlerManager
   inline ImGuiSettingsHandler* Create(void)
   {
     using func_t = ImGuiSettingsHandler* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiSettingsHandler_ImGuiSettingsHandler"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiSettingsHandler_ImGuiSettingsHandler"));
     return func();
   }
   inline void Destroy(ImGuiSettingsHandler* self)
   {
     using func_t = void (*)(ImGuiSettingsHandler*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiSettingsHandler_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiSettingsHandler_destroy"));
     return func(self);
   }
 }  // namespace ImGuiSettingsHandlerManager
@@ -9868,13 +10422,15 @@ namespace ImGuiDebugAllocInfoManager
   inline ImGuiDebugAllocInfo* Create(void)
   {
     using func_t = ImGuiDebugAllocInfo* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDebugAllocInfo_ImGuiDebugAllocInfo"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiDebugAllocInfo_ImGuiDebugAllocInfo"));
     return func();
   }
   inline void Destroy(ImGuiDebugAllocInfo* self)
   {
     using func_t = void (*)(ImGuiDebugAllocInfo*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDebugAllocInfo_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiDebugAllocInfo_destroy"));
     return func(self);
   }
 }  // namespace ImGuiDebugAllocInfoManager
@@ -9884,13 +10440,15 @@ namespace ImGuiStackLevelInfoManager
   inline ImGuiStackLevelInfo* Create(void)
   {
     using func_t = ImGuiStackLevelInfo* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackLevelInfo_ImGuiStackLevelInfo"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiStackLevelInfo_ImGuiStackLevelInfo"));
     return func();
   }
   inline void Destroy(ImGuiStackLevelInfo* self)
   {
     using func_t = void (*)(ImGuiStackLevelInfo*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackLevelInfo_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiStackLevelInfo_destroy"));
     return func(self);
   }
 }  // namespace ImGuiStackLevelInfoManager
@@ -9899,13 +10457,15 @@ namespace ImGuiIDStackToolManager
   inline ImGuiIDStackTool* Create(void)
   {
     using func_t = ImGuiIDStackTool* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIDStackTool_ImGuiIDStackTool"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiIDStackTool_ImGuiIDStackTool"));
     return func();
   }
   inline void Destroy(ImGuiIDStackTool* self)
   {
     using func_t = void (*)(ImGuiIDStackTool*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIDStackTool_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiIDStackTool_destroy"));
     return func(self);
   }
 }  // namespace ImGuiIDStackToolManager
@@ -9915,13 +10475,15 @@ namespace ImGuiContextHookManager
   inline ImGuiContextHook* Create(void)
   {
     using func_t = ImGuiContextHook* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiContextHook_ImGuiContextHook"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiContextHook_ImGuiContextHook"));
     return func();
   }
   inline void Destroy(ImGuiContextHook* self)
   {
     using func_t = void (*)(ImGuiContextHook*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiContextHook_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiContextHook_destroy"));
     return func(self);
   }
 }  // namespace ImGuiContextHookManager
@@ -9931,7 +10493,8 @@ namespace ImGuiContextManager
   inline ImGuiContext* Create(ImFontAtlas* shared_font_atlas)
   {
     using func_t = ImGuiContext* (*)(ImFontAtlas*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiContext_ImGuiContext"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiContext_ImGuiContext"));
     return func(shared_font_atlas);
   }
   inline void Destroy(ImGuiContext* self)
@@ -9947,7 +10510,8 @@ namespace ImGuiWindowManager
   inline ImGuiWindow* Create(ImGuiContext* context, const char* name)
   {
     using func_t = ImGuiWindow* (*)(ImGuiContext*, const char*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_ImGuiWindow"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_ImGuiWindow"));
     return func(context, name);
   }
   inline void Destroy(ImGuiWindow* self)
@@ -9977,7 +10541,8 @@ namespace ImGuiWindowManager
   inline ImGuiID GetIDFromRectangle(ImGuiWindow* self, const ImRect r_abs)
   {
     using func_t = ImGuiID (*)(ImGuiWindow*, const ImRect);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_GetIDFromRectangle"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_GetIDFromRectangle"));
     return func(self, r_abs);
   }
   inline void Rect(ImRect* pOut, ImGuiWindow* self)
@@ -9989,19 +10554,22 @@ namespace ImGuiWindowManager
   inline float CalcFontSize(ImGuiWindow* self)
   {
     using func_t = float (*)(ImGuiWindow*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_CalcFontSize"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_CalcFontSize"));
     return func(self);
   }
   inline void TitleBarRect(ImRect* pOut, ImGuiWindow* self)
   {
     using func_t = void (*)(ImRect*, ImGuiWindow*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_TitleBarRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_TitleBarRect"));
     return func(pOut, self);
   }
   inline void MenuBarRect(ImRect* pOut, ImGuiWindow* self)
   {
     using func_t = void (*)(ImRect*, ImGuiWindow*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_MenuBarRect"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiWindow_MenuBarRect"));
     return func(pOut, self);
   }
 }  // namespace ImGuiWindowManager
@@ -10011,7 +10579,8 @@ namespace ImGuiTabItemManager
   inline ImGuiTabItem* Create(void)
   {
     using func_t = ImGuiTabItem* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTabItem_ImGuiTabItem"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTabItem_ImGuiTabItem"));
     return func();
   }
   inline void Destroy(ImGuiTabItem* self)
@@ -10026,7 +10595,8 @@ namespace ImGuiTabBarManager
   inline ImGuiTabBar* Create(void)
   {
     using func_t = ImGuiTabBar* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTabBar_ImGuiTabBar"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTabBar_ImGuiTabBar"));
     return func();
   }
   inline void Destroy(ImGuiTabBar* self)
@@ -10041,13 +10611,15 @@ namespace ImGuiTableColumnManager
   inline ImGuiTableColumn* Create(void)
   {
     using func_t = ImGuiTableColumn* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumn_ImGuiTableColumn"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableColumn_ImGuiTableColumn"));
     return func();
   }
   inline void Destroy(ImGuiTableColumn* self)
   {
     using func_t = void (*)(ImGuiTableColumn*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumn_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumn_destroy"));
     return func(self);
   }
 }  // namespace ImGuiTableColumnManager
@@ -10056,13 +10628,15 @@ namespace ImGuiTableInstanceDataManager
   inline ImGuiTableInstanceData* Create(void)
   {
     using func_t = ImGuiTableInstanceData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableInstanceData_ImGuiTableInstanceData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableInstanceData_ImGuiTableInstanceData"));
     return func();
   }
   inline void Destroy(ImGuiTableInstanceData* self)
   {
     using func_t = void (*)(ImGuiTableInstanceData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableInstanceData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableInstanceData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiTableInstanceDataManager
@@ -10086,13 +10660,15 @@ namespace ImGuiTableTempDataManager
   inline ImGuiTableTempData* Create(void)
   {
     using func_t = ImGuiTableTempData* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableTempData_ImGuiTableTempData"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableTempData_ImGuiTableTempData"));
     return func();
   }
   inline void Destroy(ImGuiTableTempData* self)
   {
     using func_t = void (*)(ImGuiTableTempData*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableTempData_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableTempData_destroy"));
     return func(self);
   }
 }  // namespace ImGuiTableTempDataManager
@@ -10101,13 +10677,15 @@ namespace ImGuiTableColumnSettingsManager
   inline ImGuiTableColumnSettings* Create(void)
   {
     using func_t = ImGuiTableColumnSettings* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumnSettings_ImGuiTableColumnSettings"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableColumnSettings_ImGuiTableColumnSettings"));
     return func();
   }
   inline void Destroy(ImGuiTableColumnSettings* self)
   {
     using func_t = void (*)(ImGuiTableColumnSettings*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumnSettings_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableColumnSettings_destroy"));
     return func(self);
   }
 }  // namespace ImGuiTableColumnSettingsManager
@@ -10116,19 +10694,22 @@ namespace ImGuiTableSettingsManager
   inline ImGuiTableSettings* Create(void)
   {
     using func_t = ImGuiTableSettings* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableSettings_ImGuiTableSettings"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableSettings_ImGuiTableSettings"));
     return func();
   }
   inline void Destroy(ImGuiTableSettings* self)
   {
     using func_t = void (*)(ImGuiTableSettings*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableSettings_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableSettings_destroy"));
     return func(self);
   }
   inline ImGuiTableColumnSettings* GetColumnSettings(ImGuiTableSettings* self)
   {
     using func_t = ImGuiTableColumnSettings* (*)(ImGuiTableSettings*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTableSettings_GetColumnSettings"));
+    func_t func  = reinterpret_cast<func_t>(
+        GetProcAddress(menuFramework, "ImGuiTableSettings_GetColumnSettings"));
     return func(self);
   }
 }  // namespace ImGuiTableSettingsManager
@@ -10156,25 +10737,30 @@ inline ImGuiWindow* FindWindowByName(const char* name)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindWindowByName"));
   return func(name);
 }
-inline void UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window)
+inline void UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags,
+                                           ImGuiWindow* parent_window)
 {
   using func_t = void (*)(ImGuiWindow*, ImGuiWindowFlags, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateWindowParentAndRootLinks"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateWindowParentAndRootLinks"));
   return func(window, flags, parent_window);
 }
 inline void UpdateWindowSkipRefresh(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateWindowSkipRefresh"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateWindowSkipRefresh"));
   return func(window);
 }
 inline void CalcWindowNextAutoFitSize(ImVec2* pOut, ImGuiWindow* window)
 {
   using func_t = void (*)(ImVec2*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCalcWindowNextAutoFitSize"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCalcWindowNextAutoFitSize"));
   return func(pOut, window);
 }
-inline bool IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent, bool popup_hierarchy, bool dock_hierarchy)
+inline bool IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent,
+                            bool popup_hierarchy, bool dock_hierarchy)
 {
   using func_t = bool (*)(ImGuiWindow*, ImGuiWindow*, bool, bool);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsWindowChildOf"));
@@ -10183,7 +10769,8 @@ inline bool IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent, 
 inline bool IsWindowWithinBeginStackOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
 {
   using func_t = bool (*)(ImGuiWindow*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsWindowWithinBeginStackOf"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsWindowWithinBeginStackOf"));
   return func(window, potential_parent);
 }
 inline bool IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_below)
@@ -10201,19 +10788,21 @@ inline bool IsWindowNavFocusable(ImGuiWindow* window)
 inline void SetWindowPos(ImGuiWindow* window, const ImVec2 pos, ImGuiCond cond)
 {
   using func_t = void (*)(ImGuiWindow*, const ImVec2, ImGuiCond);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowPos_WindowPtr"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowPos_WindowPtr"));
   return func(window, pos, cond);
 }
 inline void SetWindowSize(ImGuiWindow* window, const ImVec2 size, ImGuiCond cond)
 {
   using func_t = void (*)(ImGuiWindow*, const ImVec2, ImGuiCond);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowSize_WindowPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowSize_WindowPtr"));
   return func(window, size, cond);
 }
 inline void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond)
 {
   using func_t = void (*)(ImGuiWindow*, bool, ImGuiCond);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowCollapsed_WindowPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowCollapsed_WindowPtr"));
   return func(window, collapsed, cond);
 }
 inline void SetWindowHitTestHole(ImGuiWindow* window, const ImVec2 pos, const ImVec2 size)
@@ -10225,13 +10814,15 @@ inline void SetWindowHitTestHole(ImGuiWindow* window, const ImVec2 pos, const Im
 inline void SetWindowHiddenAndSkipItemsForCurrentFrame(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowHiddenAndSkipItemsForCurrentFrame"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igSetWindowHiddenAndSkipItemsForCurrentFrame"));
   return func(window);
 }
 inline void SetWindowParentWindowForFocusRoute(ImGuiWindow* window, ImGuiWindow* parent_window)
 {
   using func_t = void (*)(ImGuiWindow*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowParentWindowForFocusRoute"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igSetWindowParentWindowForFocusRoute"));
   return func(window, parent_window);
 }
 inline void WindowRectAbsToRel(ImRect* pOut, ImGuiWindow* window, const ImRect r)
@@ -10258,53 +10849,60 @@ inline void FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFocusWindow"));
   return func(window, flags);
 }
-inline void FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window, ImGuiViewport* filter_viewport,
-                                       ImGuiFocusRequestFlags flags)
+inline void FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window,
+                                       ImGuiViewport* filter_viewport, ImGuiFocusRequestFlags flags)
 {
   using func_t = void (*)(ImGuiWindow*, ImGuiWindow*, ImGuiViewport*, ImGuiFocusRequestFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFocusTopMostWindowUnderOne"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFocusTopMostWindowUnderOne"));
   return func(under_this_window, ignore_window, filter_viewport, flags);
 }
 inline void BringWindowToFocusFront(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToFocusFront"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToFocusFront"));
   return func(window);
 }
 inline void BringWindowToDisplayFront(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToDisplayFront"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToDisplayFront"));
   return func(window);
 }
 inline void BringWindowToDisplayBack(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToDisplayBack"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToDisplayBack"));
   return func(window);
 }
 inline void BringWindowToDisplayBehind(ImGuiWindow* window, ImGuiWindow* above_window)
 {
   using func_t = void (*)(ImGuiWindow*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToDisplayBehind"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBringWindowToDisplayBehind"));
   return func(window, above_window);
 }
 inline int FindWindowDisplayIndex(ImGuiWindow* window)
 {
   using func_t = int (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindWindowDisplayIndex"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindWindowDisplayIndex"));
   return func(window);
 }
 inline ImGuiWindow* FindBottomMostVisibleWindowWithinBeginStack(ImGuiWindow* window)
 {
   using func_t = ImGuiWindow* (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindBottomMostVisibleWindowWithinBeginStack"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igFindBottomMostVisibleWindowWithinBeginStack"));
   return func(window);
 }
 inline void SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags flags)
 {
   using func_t = void (*)(ImGuiWindowRefreshFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowRefreshPolicy"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextWindowRefreshPolicy"));
   return func(flags);
 }
 inline void SetCurrentFont(ImFont* font)
@@ -10322,13 +10920,16 @@ inline ImFont* GetDefaultFont()
 inline ImDrawList* GetForegroundDrawList(ImGuiWindow* window)
 {
   using func_t = ImDrawList* (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetForegroundDrawList_WindowPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetForegroundDrawList_WindowPtr"));
   return func(window);
 }
-inline void AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector_ImDrawListPtr* out_list, ImDrawList* draw_list)
+inline void AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector_ImDrawListPtr* out_list,
+                                    ImDrawList* draw_list)
 {
   using func_t = void (*)(ImDrawData*, ImVector_ImDrawListPtr*, ImDrawList*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igAddDrawListToDrawDataEx"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igAddDrawListToDrawDataEx"));
   return func(draw_data, out_list, draw_list);
 }
 inline void Initialize()
@@ -10352,38 +10953,44 @@ inline void UpdateInputEvents(bool trickle_fast_inputs)
 inline void UpdateHoveredWindowAndCaptureFlags()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateHoveredWindowAndCaptureFlags"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igUpdateHoveredWindowAndCaptureFlags"));
   return func();
 }
-inline void FindHoveredWindowEx(const ImVec2 pos, bool find_first_and_in_any_viewport, ImGuiWindow** out_hovered_window,
+inline void FindHoveredWindowEx(const ImVec2 pos, bool find_first_and_in_any_viewport,
+                                ImGuiWindow** out_hovered_window,
                                 ImGuiWindow** out_hovered_window_under_moving_window)
 {
   using func_t = void (*)(const ImVec2, bool, ImGuiWindow**, ImGuiWindow**);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindHoveredWindowEx"));
-  return func(pos, find_first_and_in_any_viewport, out_hovered_window, out_hovered_window_under_moving_window);
+  return func(pos, find_first_and_in_any_viewport, out_hovered_window,
+              out_hovered_window_under_moving_window);
 }
 inline void StartMouseMovingWindow(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igStartMouseMovingWindow"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igStartMouseMovingWindow"));
   return func(window);
 }
 inline void StartMouseMovingWindowOrNode(ImGuiWindow* window, ImGuiDockNode* node, bool undock)
 {
   using func_t = void (*)(ImGuiWindow*, ImGuiDockNode*, bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igStartMouseMovingWindowOrNode"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igStartMouseMovingWindowOrNode"));
   return func(window, node, undock);
 }
 inline void UpdateMouseMovingWindowNewFrame()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateMouseMovingWindowNewFrame"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateMouseMovingWindowNewFrame"));
   return func();
 }
 inline void UpdateMouseMovingWindowEndFrame()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateMouseMovingWindowEndFrame"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igUpdateMouseMovingWindowEndFrame"));
   return func();
 }
 inline ImGuiID AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook)
@@ -10404,16 +11011,18 @@ inline void CallContextHooks(ImGuiContext* context, ImGuiContextHookType type)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCallContextHooks"));
   return func(context, type);
 }
-inline void TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2 old_pos, const ImVec2 new_pos)
+inline void TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2 old_pos,
+                                       const ImVec2 new_pos)
 {
   using func_t = void (*)(ImGuiViewportP*, const ImVec2, const ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTranslateWindowsInViewport"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTranslateWindowsInViewport"));
   return func(viewport, old_pos, new_pos);
 }
 inline void ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
 {
   using func_t = void (*)(ImGuiViewportP*, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScaleWindowsInViewport"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScaleWindowsInViewport"));
   return func(viewport, scale);
 }
 inline void DestroyPlatformWindow(ImGuiViewportP* viewport)
@@ -10437,25 +11046,29 @@ inline void SetCurrentViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 inline const ImGuiPlatformMonitor* GetViewportPlatformMonitor(ImGuiViewport* viewport)
 {
   using func_t = const ImGuiPlatformMonitor* (*)(ImGuiViewport*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetViewportPlatformMonitor"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetViewportPlatformMonitor"));
   return func(viewport);
 }
 inline ImGuiViewportP* FindHoveredViewportFromPlatformWindowStack(const ImVec2 mouse_platform_pos)
 {
   using func_t = ImGuiViewportP* (*)(const ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindHoveredViewportFromPlatformWindowStack"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igFindHoveredViewportFromPlatformWindowStack"));
   return func(mouse_platform_pos);
 }
 inline void MarkIniSettingsDirty()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igMarkIniSettingsDirty_Nil"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igMarkIniSettingsDirty_Nil"));
   return func();
 }
 inline void MarkIniSettingsDirty(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igMarkIniSettingsDirty_WindowPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igMarkIniSettingsDirty_WindowPtr"));
   return func(window);
 }
 inline void ClearIniSettings()
@@ -10485,19 +11098,21 @@ inline ImGuiSettingsHandler* FindSettingsHandler(const char* type_name)
 inline ImGuiWindowSettings* CreateNewWindowSettings(const char* name)
 {
   using func_t = ImGuiWindowSettings* (*)(const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCreateNewWindowSettings"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCreateNewWindowSettings"));
   return func(name);
 }
 inline ImGuiWindowSettings* FindWindowSettingsByID(ImGuiID id)
 {
   using func_t = ImGuiWindowSettings* (*)(ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindWindowSettingsByID"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindWindowSettingsByID"));
   return func(id);
 }
 inline ImGuiWindowSettings* FindWindowSettingsByWindow(ImGuiWindow* window)
 {
   using func_t = ImGuiWindowSettings* (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindWindowSettingsByWindow"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindWindowSettingsByWindow"));
   return func(window);
 }
 inline void ClearWindowSettings(const char* name)
@@ -10509,7 +11124,8 @@ inline void ClearWindowSettings(const char* name)
 inline void LocalizeRegisterEntries(const ImGuiLocEntry* entries, int count)
 {
   using func_t = void (*)(const ImGuiLocEntry*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLocalizeRegisterEntries"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLocalizeRegisterEntries"));
   return func(entries, count);
 }
 inline const char* LocalizeGetMsg(ImGuiLocKey key)
@@ -10533,13 +11149,15 @@ inline void SetScrollY(ImGuiWindow* window, float scroll_y)
 inline void SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x_ratio)
 {
   using func_t = void (*)(ImGuiWindow*, float, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosX_WindowPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosX_WindowPtr"));
   return func(window, local_x, center_x_ratio);
 }
 inline void SetScrollFromPosY(ImGuiWindow* window, float local_y, float center_y_ratio)
 {
   using func_t = void (*)(ImGuiWindow*, float, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosY_WindowPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetScrollFromPosY_WindowPtr"));
   return func(window, local_y, center_y_ratio);
 }
 inline void ScrollToItem(ImGuiScrollFlags flags)
@@ -10554,7 +11172,8 @@ inline void ScrollToRect(ImGuiWindow* window, const ImRect rect, ImGuiScrollFlag
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScrollToRect"));
   return func(window, rect, flags);
 }
-inline void ScrollToRectEx(ImVec2* pOut, ImGuiWindow* window, const ImRect rect, ImGuiScrollFlags flags)
+inline void ScrollToRectEx(ImVec2* pOut, ImGuiWindow* window, const ImRect rect,
+                           ImGuiScrollFlags flags)
 {
   using func_t = void (*)(ImVec2*, ImGuiWindow*, const ImRect, ImGuiScrollFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScrollToRectEx"));
@@ -10563,7 +11182,8 @@ inline void ScrollToRectEx(ImVec2* pOut, ImGuiWindow* window, const ImRect rect,
 inline void ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect rect)
 {
   using func_t = void (*)(ImGuiWindow*, const ImRect);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScrollToBringRectIntoView"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScrollToBringRectIntoView"));
   return func(window, rect);
 }
 inline ImGuiItemStatusFlags GetItemStatusFlags()
@@ -10677,7 +11297,8 @@ inline bool ItemHoverable(const ImRect bb, ImGuiID id, ImGuiItemFlags item_flags
 inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags)
 {
   using func_t = bool (*)(ImGuiWindow*, ImGuiHoveredFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsWindowContentHoverable"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsWindowContentHoverable"));
   return func(window, flags);
 }
 inline bool IsClippedEx(const ImRect bb, ImGuiID id)
@@ -10686,7 +11307,8 @@ inline bool IsClippedEx(const ImRect bb, ImGuiID id)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsClippedEx"));
   return func(bb, id);
 }
-inline void SetLastItemData(ImGuiID item_id, ImGuiItemFlags in_flags, ImGuiItemStatusFlags status_flags, const ImRect item_rect)
+inline void SetLastItemData(ImGuiID item_id, ImGuiItemFlags in_flags,
+                            ImGuiItemStatusFlags status_flags, const ImRect item_rect)
 {
   using func_t = void (*)(ImGuiID, ImGuiItemFlags, ImGuiItemStatusFlags, const ImRect);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetLastItemData"));
@@ -10713,13 +11335,13 @@ inline void PushMultiItemsWidths(int components, float width_full)
 inline bool IsItemToggledSelection()
 {
   using func_t = bool (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsItemToggledSelection"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsItemToggledSelection"));
   return func();
 }
 inline void GetContentRegionMaxAbs(ImVec2* pOut)
 {
   using func_t = void (*)(ImVec2*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetContentRegionMaxAbs"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetContentRegionMaxAbs"));
   return func(pOut);
 }
 inline void ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_excess)
@@ -10749,13 +11371,15 @@ inline const ImGuiDataVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
 inline void BeginDisabledOverrideReenable()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDisabledOverrideReenable"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDisabledOverrideReenable"));
   return func();
 }
 inline void EndDisabledOverrideReenable()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igEndDisabledOverrideReenable"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igEndDisabledOverrideReenable"));
   return func();
 }
 inline void LogBegin(ImGuiLogType type, int auto_open_depth)
@@ -10779,10 +11403,12 @@ inline void LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
 inline void LogSetNextTextDecoration(const char* prefix, const char* suffix)
 {
   using func_t = void (*)(const char*, const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLogSetNextTextDecoration"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igLogSetNextTextDecoration"));
   return func(prefix, suffix);
 }
-inline bool BeginChildEx(const char* name, ImGuiID id, const ImVec2 size_arg, ImGuiChildFlags child_flags, ImGuiWindowFlags window_flags)
+inline bool BeginChildEx(const char* name, ImGuiID id, const ImVec2 size_arg,
+                         ImGuiChildFlags child_flags, ImGuiWindowFlags window_flags)
 {
   using func_t = bool (*)(const char*, ImGuiID, const ImVec2, ImGuiChildFlags, ImGuiWindowFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginChildEx"));
@@ -10809,7 +11435,8 @@ inline void ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to
 inline void ClosePopupsExceptModals()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igClosePopupsExceptModals"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igClosePopupsExceptModals"));
   return func();
 }
 inline bool IsPopupOpen(ImGuiID id, ImGuiPopupFlags popup_flags)
@@ -10839,7 +11466,8 @@ inline bool BeginTooltipHidden()
 inline void GetPopupAllowedExtentRect(ImRect* pOut, ImGuiWindow* window)
 {
   using func_t = void (*)(ImRect*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetPopupAllowedExtentRect"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetPopupAllowedExtentRect"));
   return func(pOut, window);
 }
 inline ImGuiWindow* GetTopMostPopupModal()
@@ -10851,7 +11479,8 @@ inline ImGuiWindow* GetTopMostPopupModal()
 inline ImGuiWindow* GetTopMostAndVisiblePopupModal()
 {
   using func_t = ImGuiWindow* (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTopMostAndVisiblePopupModal"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTopMostAndVisiblePopupModal"));
   return func();
 }
 inline ImGuiWindow* FindBlockingModal(ImGuiWindow* window)
@@ -10863,17 +11492,22 @@ inline ImGuiWindow* FindBlockingModal(ImGuiWindow* window)
 inline void FindBestWindowPosForPopup(ImVec2* pOut, ImGuiWindow* window)
 {
   using func_t = void (*)(ImVec2*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindBestWindowPosForPopup"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindBestWindowPosForPopup"));
   return func(pOut, window);
 }
-inline void FindBestWindowPosForPopupEx(ImVec2* pOut, const ImVec2 ref_pos, const ImVec2 size, ImGuiDir* last_dir, const ImRect r_outer,
+inline void FindBestWindowPosForPopupEx(ImVec2* pOut, const ImVec2 ref_pos, const ImVec2 size,
+                                        ImGuiDir* last_dir, const ImRect r_outer,
                                         const ImRect r_avoid, ImGuiPopupPositionPolicy policy)
 {
-  using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, ImGuiDir*, const ImRect, const ImRect, ImGuiPopupPositionPolicy);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindBestWindowPosForPopupEx"));
+  using func_t = void (*)(ImVec2*, const ImVec2, const ImVec2, ImGuiDir*, const ImRect,
+                          const ImRect, ImGuiPopupPositionPolicy);
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindBestWindowPosForPopupEx"));
   return func(pOut, ref_pos, size, last_dir, r_outer, r_avoid, policy);
 }
-inline bool BeginViewportSideBar(const char* name, ImGuiViewport* viewport, ImGuiDir dir, float size, ImGuiWindowFlags window_flags)
+inline bool BeginViewportSideBar(const char* name, ImGuiViewport* viewport, ImGuiDir dir,
+                                 float size, ImGuiWindowFlags window_flags)
 {
   using func_t = bool (*)(const char*, ImGuiViewport*, ImGuiDir, float, ImGuiWindowFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginViewportSideBar"));
@@ -10885,7 +11519,8 @@ inline bool BeginMenuEx(const char* label, const char* icon, bool enabled)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginMenuEx"));
   return func(label, icon, enabled);
 }
-inline bool MenuItemEx(const char* label, const char* icon, const char* shortcut, bool selected, bool enabled)
+inline bool MenuItemEx(const char* label, const char* icon, const char* shortcut, bool selected,
+                       bool enabled)
 {
   using func_t = bool (*)(const char*, const char*, const char*, bool, bool);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igMenuItemEx"));
@@ -10918,22 +11553,26 @@ inline void NavInitWindow(ImGuiWindow* window, bool force_reinit)
 inline void NavInitRequestApplyResult()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavInitRequestApplyResult"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavInitRequestApplyResult"));
   return func();
 }
 inline bool NavMoveRequestButNoResultYet()
 {
   using func_t = bool (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestButNoResultYet"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestButNoResultYet"));
   return func();
 }
-inline void NavMoveRequestSubmit(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavMoveFlags move_flags, ImGuiScrollFlags scroll_flags)
+inline void NavMoveRequestSubmit(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavMoveFlags move_flags,
+                                 ImGuiScrollFlags scroll_flags)
 {
   using func_t = void (*)(ImGuiDir, ImGuiDir, ImGuiNavMoveFlags, ImGuiScrollFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestSubmit"));
   return func(move_dir, clip_dir, move_flags, scroll_flags);
 }
-inline void NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavMoveFlags move_flags, ImGuiScrollFlags scroll_flags)
+inline void NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir,
+                                  ImGuiNavMoveFlags move_flags, ImGuiScrollFlags scroll_flags)
 {
   using func_t = void (*)(ImGuiDir, ImGuiDir, ImGuiNavMoveFlags, ImGuiScrollFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestForward"));
@@ -10942,13 +11581,16 @@ inline void NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNav
 inline void NavMoveRequestResolveWithLastItem(ImGuiNavItemData* result)
 {
   using func_t = void (*)(ImGuiNavItemData*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestResolveWithLastItem"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igNavMoveRequestResolveWithLastItem"));
   return func(result);
 }
-inline void NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result, ImGuiNavTreeNodeData* tree_node_data)
+inline void NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result,
+                                                  ImGuiNavTreeNodeData* tree_node_data)
 {
   using func_t = void (*)(ImGuiNavItemData*, ImGuiNavTreeNodeData*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestResolveWithPastTreeNode"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igNavMoveRequestResolveWithPastTreeNode"));
   return func(result, tree_node_data);
 }
 inline void NavMoveRequestCancel()
@@ -10960,13 +11602,15 @@ inline void NavMoveRequestCancel()
 inline void NavMoveRequestApplyResult()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestApplyResult"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestApplyResult"));
   return func();
 }
 inline void NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags)
 {
   using func_t = void (*)(ImGuiWindow*, ImGuiNavMoveFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestTryWrapping"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavMoveRequestTryWrapping"));
   return func(window, move_flags);
 }
 inline void NavHighlightActivated(ImGuiID id)
@@ -10978,19 +11622,22 @@ inline void NavHighlightActivated(ImGuiID id)
 inline void NavClearPreferredPosForAxis(ImGuiAxis axis)
 {
   using func_t = void (*)(ImGuiAxis);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavClearPreferredPosForAxis"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavClearPreferredPosForAxis"));
   return func(axis);
 }
 inline void NavRestoreHighlightAfterMove()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavRestoreHighlightAfterMove"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavRestoreHighlightAfterMove"));
   return func();
 }
 inline void NavUpdateCurrentWindowIsScrollPushableX()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igNavUpdateCurrentWindowIsScrollPushableX"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igNavUpdateCurrentWindowIsScrollPushableX"));
   return func();
 }
 inline void SetNavWindow(ImGuiWindow* window)
@@ -10999,7 +11646,8 @@ inline void SetNavWindow(ImGuiWindow* window)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNavWindow"));
   return func(window);
 }
-inline void SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id, const ImRect rect_rel)
+inline void SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id,
+                     const ImRect rect_rel)
 {
   using func_t = void (*)(ImGuiID, ImGuiNavLayer, ImGuiID, const ImRect);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNavID"));
@@ -11080,7 +11728,8 @@ inline ImGuiKeyChord FixupKeyChord(ImGuiKeyChord key_chord)
 inline ImGuiKey ConvertSingleModFlagToKey(ImGuiKey key)
 {
   using func_t = ImGuiKey (*)(ImGuiKey);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igConvertSingleModFlagToKey"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igConvertSingleModFlagToKey"));
   return func(key);
 }
 inline ImGuiKeyData* GetKeyData(ImGuiContext* ctx, ImGuiKey key)
@@ -11110,10 +11759,12 @@ inline ImGuiKey MouseButtonToKey(ImGuiMouseButton button)
 inline bool IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold)
 {
   using func_t = bool (*)(ImGuiMouseButton, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseDragPastThreshold"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseDragPastThreshold"));
   return func(button, lock_threshold);
 }
-inline void GetKeyMagnitude2d(ImVec2* pOut, ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up, ImGuiKey key_down)
+inline void GetKeyMagnitude2d(ImVec2* pOut, ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up,
+                              ImGuiKey key_down)
 {
   using func_t = void (*)(ImVec2*, ImGuiKey, ImGuiKey, ImGuiKey, ImGuiKey);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetKeyMagnitude2d"));
@@ -11122,19 +11773,21 @@ inline void GetKeyMagnitude2d(ImVec2* pOut, ImGuiKey key_left, ImGuiKey key_righ
 inline float GetNavTweakPressedAmount(ImGuiAxis axis)
 {
   using func_t = float (*)(ImGuiAxis);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetNavTweakPressedAmount"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetNavTweakPressedAmount"));
   return func(axis);
 }
 inline int CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate)
 {
   using func_t = int (*)(float, float, float, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCalcTypematicRepeatAmount"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCalcTypematicRepeatAmount"));
   return func(t0, t1, repeat_delay, repeat_rate);
 }
 inline void GetTypematicRepeatRate(ImGuiInputFlags flags, float* repeat_delay, float* repeat_rate)
 {
   using func_t = void (*)(ImGuiInputFlags, float*, float*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTypematicRepeatRate"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTypematicRepeatRate"));
   return func(flags, repeat_delay, repeat_rate);
 }
 inline void TeleportMousePos(const ImVec2 pos)
@@ -11146,7 +11799,8 @@ inline void TeleportMousePos(const ImVec2 pos)
 inline void SetActiveIdUsingAllKeyboardKeys()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetActiveIdUsingAllKeyboardKeys"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetActiveIdUsingAllKeyboardKeys"));
   return func();
 }
 inline bool IsActiveIdUsingNavDir(ImGuiDir dir)
@@ -11170,7 +11824,8 @@ inline void SetKeyOwner(ImGuiKey key, ImGuiID owner_id, ImGuiInputFlags flags)
 inline void SetKeyOwnersForKeyChord(ImGuiKeyChord key, ImGuiID owner_id, ImGuiInputFlags flags)
 {
   using func_t = void (*)(ImGuiKeyChord, ImGuiID, ImGuiInputFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetKeyOwnersForKeyChord"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetKeyOwnersForKeyChord"));
   return func(key, owner_id, flags);
 }
 inline void SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
@@ -11200,7 +11855,8 @@ inline bool IsKeyDown(ImGuiKey key, ImGuiID owner_id)
 inline bool IsKeyPressed(ImGuiKey key, ImGuiInputFlags flags, ImGuiID owner_id)
 {
   using func_t = bool (*)(ImGuiKey, ImGuiInputFlags, ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsKeyPressed_InputFlags"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsKeyPressed_InputFlags"));
   return func(key, flags, owner_id);
 }
 inline bool IsKeyReleased(ImGuiKey key, ImGuiID owner_id)
@@ -11212,7 +11868,8 @@ inline bool IsKeyReleased(ImGuiKey key, ImGuiID owner_id)
 inline bool IsKeyChordPressed(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id)
 {
   using func_t = bool (*)(ImGuiKeyChord, ImGuiInputFlags, ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsKeyChordPressed_InputFlags"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsKeyChordPressed_InputFlags"));
   return func(key_chord, flags, owner_id);
 }
 inline bool IsMouseDown(ImGuiMouseButton button, ImGuiID owner_id)
@@ -11224,7 +11881,8 @@ inline bool IsMouseDown(ImGuiMouseButton button, ImGuiID owner_id)
 inline bool IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGuiID owner_id)
 {
   using func_t = bool (*)(ImGuiMouseButton, ImGuiInputFlags, ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseClicked_InputFlags"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseClicked_InputFlags"));
   return func(button, flags, owner_id);
 }
 inline bool IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id)
@@ -11236,7 +11894,8 @@ inline bool IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id)
 inline bool IsMouseDoubleClicked(ImGuiMouseButton button, ImGuiID owner_id)
 {
   using func_t = bool (*)(ImGuiMouseButton, ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseDoubleClicked_ID"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsMouseDoubleClicked_ID"));
   return func(button, owner_id);
 }
 inline bool Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id)
@@ -11260,7 +11919,7 @@ inline bool TestShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id)
 inline ImGuiKeyRoutingData* GetShortcutRoutingData(ImGuiKeyChord key_chord)
 {
   using func_t = ImGuiKeyRoutingData* (*)(ImGuiKeyChord);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetShortcutRoutingData"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetShortcutRoutingData"));
   return func(key_chord);
 }
 inline void DockContextInitialize(ImGuiContext* ctx)
@@ -11284,19 +11943,22 @@ inline void DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear
 inline void DockContextRebuildNodes(ImGuiContext* ctx)
 {
   using func_t = void (*)(ImGuiContext*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextRebuildNodes"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextRebuildNodes"));
   return func(ctx);
 }
 inline void DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
 {
   using func_t = void (*)(ImGuiContext*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextNewFrameUpdateUndocking"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igDockContextNewFrameUpdateUndocking"));
   return func(ctx);
 }
 inline void DockContextNewFrameUpdateDocking(ImGuiContext* ctx)
 {
   using func_t = void (*)(ImGuiContext*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextNewFrameUpdateDocking"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextNewFrameUpdateDocking"));
   return func(ctx);
 }
 inline void DockContextEndFrame(ImGuiContext* ctx)
@@ -11311,66 +11973,80 @@ inline ImGuiID DockContextGenNodeID(ImGuiContext* ctx)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextGenNodeID"));
   return func(ctx);
 }
-inline void DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir,
-                                 float split_ratio, bool split_outer)
+inline void DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node,
+                                 ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio,
+                                 bool split_outer)
 {
-  using func_t = void (*)(ImGuiContext*, ImGuiWindow*, ImGuiDockNode*, ImGuiWindow*, ImGuiDir, float, bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextQueueDock"));
+  using func_t =
+      void (*)(ImGuiContext*, ImGuiWindow*, ImGuiDockNode*, ImGuiWindow*, ImGuiDir, float, bool);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextQueueDock"));
   return func(ctx, target, target_node, payload, split_dir, split_ratio, split_outer);
 }
 inline void DockContextQueueUndockWindow(ImGuiContext* ctx, ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiContext*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextQueueUndockWindow"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextQueueUndockWindow"));
   return func(ctx, window);
 }
 inline void DockContextQueueUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
 {
   using func_t = void (*)(ImGuiContext*, ImGuiDockNode*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextQueueUndockNode"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextQueueUndockNode"));
   return func(ctx, node);
 }
-inline void DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window, bool clear_persistent_docking_ref)
+inline void DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window,
+                                           bool clear_persistent_docking_ref)
 {
   using func_t = void (*)(ImGuiContext*, ImGuiWindow*, bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextProcessUndockWindow"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextProcessUndockWindow"));
   return func(ctx, window, clear_persistent_docking_ref);
 }
 inline void DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
 {
   using func_t = void (*)(ImGuiContext*, ImGuiDockNode*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextProcessUndockNode"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextProcessUndockNode"));
   return func(ctx, node);
 }
-inline bool DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload_window,
-                                             ImGuiDockNode* payload_node, ImGuiDir split_dir, bool split_outer, ImVec2* out_pos)
+inline bool DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode* target_node,
+                                             ImGuiWindow* payload_window,
+                                             ImGuiDockNode* payload_node, ImGuiDir split_dir,
+                                             bool split_outer, ImVec2* out_pos)
 {
-  using func_t = bool (*)(ImGuiWindow*, ImGuiDockNode*, ImGuiWindow*, ImGuiDockNode*, ImGuiDir, bool, ImVec2*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextCalcDropPosForDocking"));
+  using func_t =
+      bool (*)(ImGuiWindow*, ImGuiDockNode*, ImGuiWindow*, ImGuiDockNode*, ImGuiDir, bool, ImVec2*);
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextCalcDropPosForDocking"));
   return func(target, target_node, payload_window, payload_node, split_dir, split_outer, out_pos);
 }
 inline ImGuiDockNode* DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id)
 {
   using func_t = ImGuiDockNode* (*)(ImGuiContext*, ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextFindNodeByID"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockContextFindNodeByID"));
   return func(ctx, id);
 }
 inline void DockNodeWindowMenuHandler(ImGuiContext* ctx, ImGuiDockNode* node, ImGuiTabBar* tab_bar)
 {
   using func_t = void (*)(ImGuiContext*, ImGuiDockNode*, ImGuiTabBar*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeWindowMenuHandler_Default"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igDockNodeWindowMenuHandler_Default"));
   return func(ctx, node, tab_bar);
 }
 inline bool DockNodeBeginAmendTabBar(ImGuiDockNode* node)
 {
   using func_t = bool (*)(ImGuiDockNode*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeBeginAmendTabBar"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeBeginAmendTabBar"));
   return func(node);
 }
 inline void DockNodeEndAmendTabBar()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeEndAmendTabBar"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeEndAmendTabBar"));
   return func();
 }
 inline ImGuiDockNode* DockNodeGetRootNode(ImGuiDockNode* node)
@@ -11382,7 +12058,8 @@ inline ImGuiDockNode* DockNodeGetRootNode(ImGuiDockNode* node)
 inline bool DockNodeIsInHierarchyOf(ImGuiDockNode* node, ImGuiDockNode* parent)
 {
   using func_t = bool (*)(ImGuiDockNode*, ImGuiDockNode*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeIsInHierarchyOf"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeIsInHierarchyOf"));
   return func(node, parent);
 }
 inline int DockNodeGetDepth(const ImGuiDockNode* node)
@@ -11394,7 +12071,8 @@ inline int DockNodeGetDepth(const ImGuiDockNode* node)
 inline ImGuiID DockNodeGetWindowMenuButtonId(const ImGuiDockNode* node)
 {
   using func_t = ImGuiID (*)(const ImGuiDockNode*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeGetWindowMenuButtonId"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockNodeGetWindowMenuButtonId"));
   return func(node);
 }
 inline ImGuiDockNode* GetWindowDockNode()
@@ -11406,7 +12084,8 @@ inline ImGuiDockNode* GetWindowDockNode()
 inline bool GetWindowAlwaysWantOwnTabBar(ImGuiWindow* window)
 {
   using func_t = bool (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowAlwaysWantOwnTabBar"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowAlwaysWantOwnTabBar"));
   return func(window);
 }
 inline void BeginDocked(ImGuiWindow* window, bool* p_open)
@@ -11418,13 +12097,15 @@ inline void BeginDocked(ImGuiWindow* window, bool* p_open)
 inline void BeginDockableDragDropSource(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDockableDragDropSource"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDockableDragDropSource"));
   return func(window);
 }
 inline void BeginDockableDragDropTarget(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDockableDragDropTarget"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDockableDragDropTarget"));
   return func(window);
 }
 inline void SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
@@ -11448,7 +12129,8 @@ inline ImGuiDockNode* DockBuilderGetNode(ImGuiID node_id)
 inline ImGuiDockNode* DockBuilderGetCentralNode(ImGuiID node_id)
 {
   using func_t = ImGuiDockNode* (*)(ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderGetCentralNode"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderGetCentralNode"));
   return func(node_id);
 }
 inline ImGuiID DockBuilderAddNode(ImGuiID node_id, ImGuiDockNodeFlags flags)
@@ -11466,13 +12148,15 @@ inline void DockBuilderRemoveNode(ImGuiID node_id)
 inline void DockBuilderRemoveNodeDockedWindows(ImGuiID node_id, bool clear_settings_refs)
 {
   using func_t = void (*)(ImGuiID, bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderRemoveNodeDockedWindows"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igDockBuilderRemoveNodeDockedWindows"));
   return func(node_id, clear_settings_refs);
 }
 inline void DockBuilderRemoveNodeChildNodes(ImGuiID node_id)
 {
   using func_t = void (*)(ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderRemoveNodeChildNodes"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderRemoveNodeChildNodes"));
   return func(node_id);
 }
 inline void DockBuilderSetNodePos(ImGuiID node_id, ImVec2 pos)
@@ -11484,23 +12168,28 @@ inline void DockBuilderSetNodePos(ImGuiID node_id, ImVec2 pos)
 inline void DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
 {
   using func_t = void (*)(ImGuiID, ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderSetNodeSize"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderSetNodeSize"));
   return func(node_id, size);
 }
-inline ImGuiID DockBuilderSplitNode(ImGuiID node_id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir,
+inline ImGuiID DockBuilderSplitNode(ImGuiID node_id, ImGuiDir split_dir,
+                                    float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir,
                                     ImGuiID* out_id_at_opposite_dir)
 {
   using func_t = ImGuiID (*)(ImGuiID, ImGuiDir, float, ImGuiID*, ImGuiID*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderSplitNode"));
-  return func(node_id, split_dir, size_ratio_for_node_at_dir, out_id_at_dir, out_id_at_opposite_dir);
+  return func(node_id, split_dir, size_ratio_for_node_at_dir, out_id_at_dir,
+              out_id_at_opposite_dir);
 }
-inline void DockBuilderCopyDockSpace(ImGuiID src_dockspace_id, ImGuiID dst_dockspace_id, ImVector_const_charPtr* in_window_remap_pairs)
+inline void DockBuilderCopyDockSpace(ImGuiID src_dockspace_id, ImGuiID dst_dockspace_id,
+                                     ImVector_const_charPtr* in_window_remap_pairs)
 {
   using func_t = void (*)(ImGuiID, ImGuiID, ImVector_const_charPtr*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderCopyDockSpace"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderCopyDockSpace"));
   return func(src_dockspace_id, dst_dockspace_id, in_window_remap_pairs);
 }
-inline void DockBuilderCopyNode(ImGuiID src_node_id, ImGuiID dst_node_id, ImVector_ImGuiID* out_node_remap_pairs)
+inline void DockBuilderCopyNode(ImGuiID src_node_id, ImGuiID dst_node_id,
+                                ImVector_ImGuiID* out_node_remap_pairs)
 {
   using func_t = void (*)(ImGuiID, ImGuiID, ImVector_ImGuiID*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderCopyNode"));
@@ -11509,7 +12198,8 @@ inline void DockBuilderCopyNode(ImGuiID src_node_id, ImGuiID dst_node_id, ImVect
 inline void DockBuilderCopyWindowSettings(const char* src_name, const char* dst_name)
 {
   using func_t = void (*)(const char*, const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderCopyWindowSettings"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDockBuilderCopyWindowSettings"));
   return func(src_name, dst_name);
 }
 inline void DockBuilderFinish(ImGuiID node_id)
@@ -11545,7 +12235,8 @@ inline bool IsDragDropActive()
 inline bool BeginDragDropTargetCustom(const ImRect bb, ImGuiID id)
 {
   using func_t = bool (*)(const ImRect, ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDragDropTargetCustom"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginDragDropTargetCustom"));
   return func(bb, id);
 }
 inline void ClearDragDrop()
@@ -11557,46 +12248,54 @@ inline void ClearDragDrop()
 inline bool IsDragDropPayloadBeingAccepted()
 {
   using func_t = bool (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsDragDropPayloadBeingAccepted"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igIsDragDropPayloadBeingAccepted"));
   return func();
 }
 inline void RenderDragDropTargetRect(const ImRect bb, const ImRect item_clip_rect)
 {
   using func_t = void (*)(const ImRect, const ImRect);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderDragDropTargetRect"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderDragDropTargetRect"));
   return func(bb, item_clip_rect);
 }
 inline ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags)
 {
   using func_t = ImGuiTypingSelectRequest* (*)(ImGuiTypingSelectFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTypingSelectRequest"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetTypingSelectRequest"));
   return func(flags);
 }
-inline int TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data,
+inline int TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count,
+                                 const char* (*get_item_name_func)(void*, int), void* user_data,
                                  int nav_item_idx)
 {
   using func_t = int (*)(ImGuiTypingSelectRequest*, int, const char* (*)(void*, int), void*, int);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTypingSelectFindMatch"));
   return func(req, items_count, get_item_name_func, user_data, nav_item_idx);
 }
-inline int TypingSelectFindNextSingleCharMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int),
+inline int TypingSelectFindNextSingleCharMatch(ImGuiTypingSelectRequest* req, int items_count,
+                                               const char* (*get_item_name_func)(void*, int),
                                                void* user_data, int nav_item_idx)
 {
   using func_t = int (*)(ImGuiTypingSelectRequest*, int, const char* (*)(void*, int), void*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTypingSelectFindNextSingleCharMatch"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igTypingSelectFindNextSingleCharMatch"));
   return func(req, items_count, get_item_name_func, user_data, nav_item_idx);
 }
-inline int TypingSelectFindBestLeadingMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int),
+inline int TypingSelectFindBestLeadingMatch(ImGuiTypingSelectRequest* req, int items_count,
+                                            const char* (*get_item_name_func)(void*, int),
                                             void* user_data)
 {
   using func_t = int (*)(ImGuiTypingSelectRequest*, int, const char* (*)(void*, int), void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTypingSelectFindBestLeadingMatch"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTypingSelectFindBestLeadingMatch"));
   return func(req, items_count, get_item_name_func, user_data);
 }
 inline void SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect clip_rect)
 {
   using func_t = void (*)(ImGuiWindow*, const ImRect);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetWindowClipRectBeforeSetChannel"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igSetWindowClipRectBeforeSetChannel"));
   return func(window, clip_rect);
 }
 inline void BeginColumns(const char* str_id, int count, ImGuiOldColumnFlags flags)
@@ -11644,13 +12343,15 @@ inline ImGuiOldColumns* FindOrCreateColumns(ImGuiWindow* window, ImGuiID id)
 inline float GetColumnOffsetFromNorm(const ImGuiOldColumns* columns, float offset_norm)
 {
   using func_t = float (*)(const ImGuiOldColumns*, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetColumnOffsetFromNorm"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetColumnOffsetFromNorm"));
   return func(columns, offset_norm);
 }
 inline float GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offset)
 {
   using func_t = float (*)(const ImGuiOldColumns*, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetColumnNormFromOffset"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetColumnNormFromOffset"));
   return func(columns, offset);
 }
 inline void TableOpenContextMenu(int column_n)
@@ -11665,10 +12366,12 @@ inline void TableSetColumnWidth(int column_n, float width)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnWidth"));
   return func(column_n, width);
 }
-inline void TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
+inline void TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction,
+                                        bool append_to_sort_specs)
 {
   using func_t = void (*)(int, ImGuiSortDirection, bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnSortDirection"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnSortDirection"));
   return func(column_n, sort_direction, append_to_sort_specs);
 }
 inline int TableGetHoveredColumn()
@@ -11686,31 +12389,37 @@ inline int TableGetHoveredRow()
 inline float TableGetHeaderRowHeight()
 {
   using func_t = float (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetHeaderRowHeight"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetHeaderRowHeight"));
   return func();
 }
 inline float TableGetHeaderAngledMaxLabelWidth()
 {
   using func_t = float (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetHeaderAngledMaxLabelWidth"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igTableGetHeaderAngledMaxLabelWidth"));
   return func();
 }
 inline void TablePushBackgroundChannel()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTablePushBackgroundChannel"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTablePushBackgroundChannel"));
   return func();
 }
 inline void TablePopBackgroundChannel()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTablePopBackgroundChannel"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTablePopBackgroundChannel"));
   return func();
 }
-inline void TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label_width, const ImGuiTableHeaderData* data, int data_count)
+inline void TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label_width,
+                                    const ImGuiTableHeaderData* data, int data_count)
 {
   using func_t = void (*)(ImGuiID, float, float, const ImGuiTableHeaderData*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableAngledHeadersRowEx"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableAngledHeadersRowEx"));
   return func(row_id, angle, max_label_width, data, data_count);
 }
 inline ImGuiTable* GetCurrentTable()
@@ -11725,7 +12434,8 @@ inline ImGuiTable* TableFindByID(ImGuiID id)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableFindByID"));
   return func(id);
 }
-inline bool BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, const ImVec2 outer_size, float inner_width)
+inline bool BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags,
+                         const ImVec2 outer_size, float inner_width)
 {
   using func_t = bool (*)(const char*, ImGuiID, int, ImGuiTableFlags, const ImVec2, float);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igBeginTableEx"));
@@ -11740,13 +12450,14 @@ inline void TableBeginInitMemory(ImGuiTable* table, int columns_count)
 inline void TableBeginApplyRequests(ImGuiTable* table)
 {
   using func_t = void (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableBeginApplyRequests"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableBeginApplyRequests"));
   return func(table);
 }
 inline void TableSetupDrawChannels(ImGuiTable* table)
 {
   using func_t = void (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetupDrawChannels"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetupDrawChannels"));
   return func(table);
 }
 inline void TableUpdateLayout(ImGuiTable* table)
@@ -11764,7 +12475,8 @@ inline void TableUpdateBorders(ImGuiTable* table)
 inline void TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
 {
   using func_t = void (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableUpdateColumnsWeightFromWidth"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igTableUpdateColumnsWeightFromWidth"));
   return func(table);
 }
 inline void TableDrawBorders(ImGuiTable* table)
@@ -11773,22 +12485,25 @@ inline void TableDrawBorders(ImGuiTable* table)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableDrawBorders"));
   return func(table);
 }
-inline void TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags_for_section_to_display)
+inline void TableDrawDefaultContextMenu(ImGuiTable* table,
+                                        ImGuiTableFlags flags_for_section_to_display)
 {
   using func_t = void (*)(ImGuiTable*, ImGuiTableFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableDrawDefaultContextMenu"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableDrawDefaultContextMenu"));
   return func(table, flags_for_section_to_display);
 }
 inline bool TableBeginContextMenuPopup(ImGuiTable* table)
 {
   using func_t = bool (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableBeginContextMenuPopup"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableBeginContextMenuPopup"));
   return func(table);
 }
 inline void TableMergeDrawChannels(ImGuiTable* table)
 {
   using func_t = void (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableMergeDrawChannels"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableMergeDrawChannels"));
   return func(table);
 }
 inline ImGuiTableInstanceData* TableGetInstanceData(ImGuiTable* table, int instance_no)
@@ -11806,7 +12521,7 @@ inline ImGuiID TableGetInstanceID(ImGuiTable* table, int instance_no)
 inline void TableSortSpecsSanitize(ImGuiTable* table)
 {
   using func_t = void (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSortSpecsSanitize"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSortSpecsSanitize"));
   return func(table);
 }
 inline void TableSortSpecsBuild(ImGuiTable* table)
@@ -11818,19 +12533,22 @@ inline void TableSortSpecsBuild(ImGuiTable* table)
 inline ImGuiSortDirection TableGetColumnNextSortDirection(ImGuiTableColumn* column)
 {
   using func_t = ImGuiSortDirection (*)(ImGuiTableColumn*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnNextSortDirection"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnNextSortDirection"));
   return func(column);
 }
 inline void TableFixColumnSortDirection(ImGuiTable* table, ImGuiTableColumn* column)
 {
   using func_t = void (*)(ImGuiTable*, ImGuiTableColumn*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableFixColumnSortDirection"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableFixColumnSortDirection"));
   return func(table, column);
 }
 inline float TableGetColumnWidthAuto(ImGuiTable* table, ImGuiTableColumn* column)
 {
   using func_t = float (*)(ImGuiTable*, ImGuiTableColumn*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnWidthAuto"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnWidthAuto"));
   return func(table, column);
 }
 inline void TableBeginRow(ImGuiTable* table)
@@ -11866,31 +12584,34 @@ inline void TableGetCellBgRect(ImRect* pOut, const ImGuiTable* table, int column
 inline const char* TableGetColumnName(const ImGuiTable* table, int column_n)
 {
   using func_t = const char* (*)(const ImGuiTable*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnName_TablePtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnName_TablePtr"));
   return func(table, column_n);
 }
 inline ImGuiID TableGetColumnResizeID(ImGuiTable* table, int column_n, int instance_no)
 {
   using func_t = ImGuiID (*)(ImGuiTable*, int, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnResizeID"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetColumnResizeID"));
   return func(table, column_n, instance_no);
 }
 inline float TableGetMaxColumnWidth(const ImGuiTable* table, int column_n)
 {
   using func_t = float (*)(const ImGuiTable*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetMaxColumnWidth"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGetMaxColumnWidth"));
   return func(table, column_n);
 }
 inline void TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
 {
   using func_t = void (*)(ImGuiTable*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnWidthAutoSingle"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnWidthAutoSingle"));
   return func(table, column_n);
 }
 inline void TableSetColumnWidthAutoAll(ImGuiTable* table)
 {
   using func_t = void (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnWidthAutoAll"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSetColumnWidthAutoAll"));
   return func(table);
 }
 inline void TableRemove(ImGuiTable* table)
@@ -11902,19 +12623,21 @@ inline void TableRemove(ImGuiTable* table)
 inline void TableGcCompactTransientBuffers(ImGuiTable* table)
 {
   using func_t = void (*)(ImGuiTable*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGcCompactTransientBuffers_TablePtr"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igTableGcCompactTransientBuffers_TablePtr"));
   return func(table);
 }
 inline void TableGcCompactTransientBuffers(ImGuiTableTempData* table)
 {
   using func_t = void (*)(ImGuiTableTempData*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGcCompactTransientBuffers_TableTempDataPtr"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igTableGcCompactTransientBuffers_TableTempDataPtr"));
   return func(table);
 }
 inline void TableGcCompactSettings()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGcCompactSettings"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableGcCompactSettings"));
   return func();
 }
 inline void TableLoadSettings(ImGuiTable* table)
@@ -11944,7 +12667,8 @@ inline ImGuiTableSettings* TableGetBoundSettings(ImGuiTable* table)
 inline void TableSettingsAddSettingsHandler()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSettingsAddSettingsHandler"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTableSettingsAddSettingsHandler"));
   return func();
 }
 inline ImGuiTableSettings* TableSettingsCreate(ImGuiID id, int columns_count)
@@ -11986,7 +12710,8 @@ inline ImGuiTabItem* TabBarFindTabByOrder(ImGuiTabBar* tab_bar, int order)
 inline ImGuiTabItem* TabBarFindMostRecentlySelectedTabForActiveWindow(ImGuiTabBar* tab_bar)
 {
   using func_t = ImGuiTabItem* (*)(ImGuiTabBar*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabBarFindMostRecentlySelectedTabForActiveWindow"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igTabBarFindMostRecentlySelectedTabForActiveWindow"));
   return func(tab_bar);
 }
 inline ImGuiTabItem* TabBarGetCurrentTab(ImGuiTabBar* tab_bar)
@@ -12037,10 +12762,12 @@ inline void TabBarQueueReorder(ImGuiTabBar* tab_bar, ImGuiTabItem* tab, int offs
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabBarQueueReorder"));
   return func(tab_bar, tab, offset);
 }
-inline void TabBarQueueReorderFromMousePos(ImGuiTabBar* tab_bar, ImGuiTabItem* tab, ImVec2 mouse_pos)
+inline void TabBarQueueReorderFromMousePos(ImGuiTabBar* tab_bar, ImGuiTabItem* tab,
+                                           ImVec2 mouse_pos)
 {
   using func_t = void (*)(ImGuiTabBar*, ImGuiTabItem*, ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabBarQueueReorderFromMousePos"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabBarQueueReorderFromMousePos"));
   return func(tab_bar, tab, mouse_pos);
 }
 inline bool TabBarProcessReorder(ImGuiTabBar* tab_bar)
@@ -12049,13 +12776,15 @@ inline bool TabBarProcessReorder(ImGuiTabBar* tab_bar)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabBarProcessReorder"));
   return func(tab_bar);
 }
-inline bool TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags, ImGuiWindow* docked_window)
+inline bool TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open,
+                      ImGuiTabItemFlags flags, ImGuiWindow* docked_window)
 {
   using func_t = bool (*)(ImGuiTabBar*, const char*, bool*, ImGuiTabItemFlags, ImGuiWindow*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabItemEx"));
   return func(tab_bar, label, p_open, flags, docked_window);
 }
-inline void TabItemCalcSize(ImVec2* pOut, const char* label, bool has_close_button_or_unsaved_marker)
+inline void TabItemCalcSize(ImVec2* pOut, const char* label,
+                            bool has_close_button_or_unsaved_marker)
 {
   using func_t = void (*)(ImVec2*, const char*, bool);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabItemCalcSize_Str"));
@@ -12064,24 +12793,32 @@ inline void TabItemCalcSize(ImVec2* pOut, const char* label, bool has_close_butt
 inline void TabItemCalcSize(ImVec2* pOut, ImGuiWindow* window)
 {
   using func_t = void (*)(ImVec2*, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabItemCalcSize_WindowPtr"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabItemCalcSize_WindowPtr"));
   return func(pOut, window);
 }
-inline void TabItemBackground(ImDrawList* draw_list, const ImRect bb, ImGuiTabItemFlags flags, ImU32 col)
+inline void TabItemBackground(ImDrawList* draw_list, const ImRect bb, ImGuiTabItemFlags flags,
+                              ImU32 col)
 {
   using func_t = void (*)(ImDrawList*, const ImRect, ImGuiTabItemFlags, ImU32);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabItemBackground"));
   return func(draw_list, bb, flags, col);
 }
-inline void TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect bb, ImGuiTabItemFlags flags, ImVec2 frame_padding, const char* label,
-                                       ImGuiID tab_id, ImGuiID close_button_id, bool is_contents_visible, bool* out_just_closed,
+inline void TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect bb,
+                                       ImGuiTabItemFlags flags, ImVec2 frame_padding,
+                                       const char* label, ImGuiID tab_id, ImGuiID close_button_id,
+                                       bool is_contents_visible, bool* out_just_closed,
                                        bool* out_text_clipped)
 {
-  using func_t = void (*)(ImDrawList*, const ImRect, ImGuiTabItemFlags, ImVec2, const char*, ImGuiID, ImGuiID, bool, bool*, bool*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabItemLabelAndCloseButton"));
-  return func(draw_list, bb, flags, frame_padding, label, tab_id, close_button_id, is_contents_visible, out_just_closed, out_text_clipped);
+  using func_t = void (*)(ImDrawList*, const ImRect, ImGuiTabItemFlags, ImVec2, const char*,
+                          ImGuiID, ImGuiID, bool, bool*, bool*);
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTabItemLabelAndCloseButton"));
+  return func(draw_list, bb, flags, frame_padding, label, tab_id, close_button_id,
+              is_contents_visible, out_just_closed, out_text_clipped);
 }
-inline void RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash)
+inline void RenderText(ImVec2 pos, const char* text, const char* text_end,
+                       bool hide_text_after_hash)
 {
   using func_t = void (*)(ImVec2, const char*, const char*, bool);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderText"));
@@ -12093,26 +12830,34 @@ inline void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderTextWrapped"));
   return func(pos, text, text_end, wrap_width);
 }
-inline void RenderTextClipped(const ImVec2 pos_min, const ImVec2 pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known,
+inline void RenderTextClipped(const ImVec2 pos_min, const ImVec2 pos_max, const char* text,
+                              const char* text_end, const ImVec2* text_size_if_known,
                               const ImVec2 align, const ImRect* clip_rect)
 {
-  using func_t = void (*)(const ImVec2, const ImVec2, const char*, const char*, const ImVec2*, const ImVec2, const ImRect*);
+  using func_t = void (*)(const ImVec2, const ImVec2, const char*, const char*, const ImVec2*,
+                          const ImVec2, const ImRect*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderTextClipped"));
   return func(pos_min, pos_max, text, text_end, text_size_if_known, align, clip_rect);
 }
-inline void RenderTextClippedEx(ImDrawList* draw_list, const ImVec2 pos_min, const ImVec2 pos_max, const char* text, const char* text_end,
-                                const ImVec2* text_size_if_known, const ImVec2 align, const ImRect* clip_rect)
+inline void RenderTextClippedEx(ImDrawList* draw_list, const ImVec2 pos_min, const ImVec2 pos_max,
+                                const char* text, const char* text_end,
+                                const ImVec2* text_size_if_known, const ImVec2 align,
+                                const ImRect* clip_rect)
 {
-  using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const char*, const char*, const ImVec2*, const ImVec2, const ImRect*);
+  using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, const char*, const char*,
+                          const ImVec2*, const ImVec2, const ImRect*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderTextClippedEx"));
   return func(draw_list, pos_min, pos_max, text, text_end, text_size_if_known, align, clip_rect);
 }
-inline void RenderTextEllipsis(ImDrawList* draw_list, const ImVec2 pos_min, const ImVec2 pos_max, float clip_max_x, float ellipsis_max_x,
-                               const char* text, const char* text_end, const ImVec2* text_size_if_known)
+inline void RenderTextEllipsis(ImDrawList* draw_list, const ImVec2 pos_min, const ImVec2 pos_max,
+                               float clip_max_x, float ellipsis_max_x, const char* text,
+                               const char* text_end, const ImVec2* text_size_if_known)
 {
-  using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, float, float, const char*, const char*, const ImVec2*);
+  using func_t = void (*)(ImDrawList*, const ImVec2, const ImVec2, float, float, const char*,
+                          const char*, const ImVec2*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderTextEllipsis"));
-  return func(draw_list, pos_min, pos_max, clip_max_x, ellipsis_max_x, text, text_end, text_size_if_known);
+  return func(draw_list, pos_min, pos_max, clip_max_x, ellipsis_max_x, text, text_end,
+              text_size_if_known);
 }
 inline void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border, float rounding)
 {
@@ -12126,11 +12871,13 @@ inline void RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderFrameBorder"));
   return func(p_min, p_max, rounding);
 }
-inline void RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off,
+inline void RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max,
+                                                 ImU32 fill_col, float grid_step, ImVec2 grid_off,
                                                  float rounding, ImDrawFlags flags)
 {
   using func_t = void (*)(ImDrawList*, ImVec2, ImVec2, ImU32, float, ImVec2, float, ImDrawFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderColorRectWithAlphaCheckerboard"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igRenderColorRectWithAlphaCheckerboard"));
   return func(draw_list, p_min, p_max, fill_col, grid_step, grid_off, rounding, flags);
 }
 inline void RenderNavHighlight(const ImRect bb, ImGuiID id, ImGuiNavHighlightFlags flags)
@@ -12145,7 +12892,8 @@ inline const char* FindRenderedTextEnd(const char* text, const char* text_end)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igFindRenderedTextEnd"));
   return func(text, text_end);
 }
-inline void RenderMouseCursor(ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
+inline void RenderMouseCursor(ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor,
+                              ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
 {
   using func_t = void (*)(ImVec2, float, ImGuiMouseCursor, ImU32, ImU32, ImU32);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderMouseCursor"));
@@ -12169,7 +12917,8 @@ inline void RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderCheckMark"));
   return func(draw_list, pos, col, sz);
 }
-inline void RenderArrowPointingAt(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, ImGuiDir direction, ImU32 col)
+inline void RenderArrowPointingAt(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz,
+                                  ImGuiDir direction, ImU32 col)
 {
   using func_t = void (*)(ImDrawList*, ImVec2, ImVec2, ImGuiDir, ImU32);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderArrowPointingAt"));
@@ -12181,22 +12930,27 @@ inline void RenderArrowDockMenu(ImDrawList* draw_list, ImVec2 p_min, float sz, I
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderArrowDockMenu"));
   return func(draw_list, p_min, sz, col);
 }
-inline void RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding)
+inline void RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect rect, ImU32 col,
+                                   float x_start_norm, float x_end_norm, float rounding)
 {
   using func_t = void (*)(ImDrawList*, const ImRect, ImU32, float, float, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderRectFilledRangeH"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderRectFilledRangeH"));
   return func(draw_list, rect, col, x_start_norm, x_end_norm, rounding);
 }
-inline void RenderRectFilledWithHole(ImDrawList* draw_list, const ImRect outer, const ImRect inner, ImU32 col, float rounding)
+inline void RenderRectFilledWithHole(ImDrawList* draw_list, const ImRect outer, const ImRect inner,
+                                     ImU32 col, float rounding)
 {
   using func_t = void (*)(ImDrawList*, const ImRect, const ImRect, ImU32, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderRectFilledWithHole"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igRenderRectFilledWithHole"));
   return func(draw_list, outer, inner, col, rounding);
 }
-inline ImDrawFlags CalcRoundingFlagsForRectInRect(const ImRect r_in, const ImRect r_outer, float threshold)
+inline ImDrawFlags CalcRoundingFlagsForRectInRect(const ImRect r_in, const ImRect r_outer,
+                                                  float threshold)
 {
   using func_t = ImDrawFlags (*)(const ImRect, const ImRect, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCalcRoundingFlagsForRectInRect"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igCalcRoundingFlagsForRectInRect"));
   return func(r_in, r_outer, threshold);
 }
 inline void TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
@@ -12217,10 +12971,12 @@ inline bool ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size_arg, ImG
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igArrowButtonEx"));
   return func(str_id, dir, size_arg, flags);
 }
-inline bool ImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2 image_size, const ImVec2 uv0, const ImVec2 uv1, const ImVec4 bg_col,
+inline bool ImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2 image_size,
+                          const ImVec2 uv0, const ImVec2 uv1, const ImVec4 bg_col,
                           const ImVec4 tint_col, ImGuiButtonFlags flags)
 {
-  using func_t = bool (*)(ImGuiID, ImTextureID, const ImVec2, const ImVec2, const ImVec2, const ImVec4, const ImVec4, ImGuiButtonFlags);
+  using func_t = bool (*)(ImGuiID, ImTextureID, const ImVec2, const ImVec2, const ImVec2,
+                          const ImVec4, const ImVec4, ImGuiButtonFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImageButtonEx"));
   return func(id, texture_id, image_size, uv0, uv1, bg_col, tint_col, flags);
 }
@@ -12266,7 +13022,8 @@ inline void Scrollbar(ImGuiAxis axis)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScrollbar"));
   return func(axis);
 }
-inline bool ScrollbarEx(const ImRect bb, ImGuiID id, ImGuiAxis axis, ImS64* p_scroll_v, ImS64 avail_v, ImS64 contents_v, ImDrawFlags flags)
+inline bool ScrollbarEx(const ImRect bb, ImGuiID id, ImGuiAxis axis, ImS64* p_scroll_v,
+                        ImS64 avail_v, ImS64 contents_v, ImDrawFlags flags)
 {
   using func_t = bool (*)(const ImRect, ImGuiID, ImGuiAxis, ImS64*, ImS64, ImS64, ImDrawFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igScrollbarEx"));
@@ -12275,7 +13032,7 @@ inline bool ScrollbarEx(const ImRect bb, ImGuiID id, ImGuiAxis axis, ImS64* p_sc
 inline void GetWindowScrollbarRect(ImRect* pOut, ImGuiWindow* window, ImGuiAxis axis)
 {
   using func_t = void (*)(ImRect*, ImGuiWindow*, ImGuiAxis);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowScrollbarRect"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowScrollbarRect"));
   return func(pOut, window, axis);
 }
 inline ImGuiID GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
@@ -12287,43 +13044,54 @@ inline ImGuiID GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
 inline ImGuiID GetWindowResizeCornerID(ImGuiWindow* window, int n)
 {
   using func_t = ImGuiID (*)(ImGuiWindow*, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowResizeCornerID"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowResizeCornerID"));
   return func(window, n);
 }
 inline ImGuiID GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir)
 {
   using func_t = ImGuiID (*)(ImGuiWindow*, ImGuiDir);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowResizeBorderID"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGetWindowResizeBorderID"));
   return func(window, dir);
 }
-inline bool ButtonBehavior(const ImRect bb, ImGuiID id, bool* out_hovered, bool* out_held, ImGuiButtonFlags flags)
+inline bool ButtonBehavior(const ImRect bb, ImGuiID id, bool* out_hovered, bool* out_held,
+                           ImGuiButtonFlags flags)
 {
   using func_t = bool (*)(const ImRect, ImGuiID, bool*, bool*, ImGuiButtonFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igButtonBehavior"));
   return func(bb, id, out_hovered, out_held, flags);
 }
-inline bool DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format,
+inline bool DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed,
+                         const void* p_min, const void* p_max, const char* format,
                          ImGuiSliderFlags flags)
 {
-  using func_t = bool (*)(ImGuiID, ImGuiDataType, void*, float, const void*, const void*, const char*, ImGuiSliderFlags);
+  using func_t = bool (*)(ImGuiID, ImGuiDataType, void*, float, const void*, const void*,
+                          const char*, ImGuiSliderFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDragBehavior"));
   return func(id, data_type, p_v, v_speed, p_min, p_max, format, flags);
 }
-inline bool SliderBehavior(const ImRect bb, ImGuiID id, ImGuiDataType data_type, void* p_v, const void* p_min, const void* p_max, const char* format,
+inline bool SliderBehavior(const ImRect bb, ImGuiID id, ImGuiDataType data_type, void* p_v,
+                           const void* p_min, const void* p_max, const char* format,
                            ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
-  using func_t = bool (*)(const ImRect, ImGuiID, ImGuiDataType, void*, const void*, const void*, const char*, ImGuiSliderFlags, ImRect*);
+  using func_t = bool (*)(const ImRect, ImGuiID, ImGuiDataType, void*, const void*, const void*,
+                          const char*, ImGuiSliderFlags, ImRect*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSliderBehavior"));
   return func(bb, id, data_type, p_v, p_min, p_max, format, flags, out_grab_bb);
 }
-inline bool SplitterBehavior(const ImRect bb, ImGuiID id, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2,
-                             float hover_extend, float hover_visibility_delay, ImU32 bg_col)
+inline bool SplitterBehavior(const ImRect bb, ImGuiID id, ImGuiAxis axis, float* size1,
+                             float* size2, float min_size1, float min_size2, float hover_extend,
+                             float hover_visibility_delay, ImU32 bg_col)
 {
-  using func_t = bool (*)(const ImRect, ImGuiID, ImGuiAxis, float*, float*, float, float, float, float, ImU32);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSplitterBehavior"));
-  return func(bb, id, axis, size1, size2, min_size1, min_size2, hover_extend, hover_visibility_delay, bg_col);
+  using func_t =
+      bool (*)(const ImRect, ImGuiID, ImGuiAxis, float*, float*, float, float, float, float, ImU32);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSplitterBehavior"));
+  return func(bb, id, axis, size1, size2, min_size1, min_size2, hover_extend,
+              hover_visibility_delay, bg_col);
 }
-inline bool TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
+inline bool TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label,
+                             const char* label_end)
 {
   using func_t = bool (*)(ImGuiID, ImGuiTreeNodeFlags, const char*, const char*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTreeNodeBehavior"));
@@ -12344,13 +13112,14 @@ inline void TreeNodeSetOpen(ImGuiID id, bool open)
 inline bool TreeNodeUpdateNextOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
 {
   using func_t = bool (*)(ImGuiID, ImGuiTreeNodeFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTreeNodeUpdateNextOpen"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTreeNodeUpdateNextOpen"));
   return func(id, flags);
 }
 inline void SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data)
 {
   using func_t = void (*)(ImGuiSelectionUserData);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextItemSelectionUserData"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igSetNextItemSelectionUserData"));
   return func(selection_user_data);
 }
 inline const ImGuiDataTypeInfo* DataTypeGetInfo(ImGuiDataType data_type)
@@ -12359,19 +13128,22 @@ inline const ImGuiDataTypeInfo* DataTypeGetInfo(ImGuiDataType data_type)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDataTypeGetInfo"));
   return func(data_type);
 }
-inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* p_data, const char* format)
+inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type,
+                                const void* p_data, const char* format)
 {
   using func_t = int (*)(char*, int, ImGuiDataType, const void*, const char*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDataTypeFormatString"));
   return func(buf, buf_size, data_type, p_data, format);
 }
-inline void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, const void* arg_1, const void* arg_2)
+inline void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, const void* arg_1,
+                            const void* arg_2)
 {
   using func_t = void (*)(ImGuiDataType, int, void*, const void*, const void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDataTypeApplyOp"));
   return func(data_type, op, output, arg_1, arg_2);
 }
-inline bool DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void* p_data, const char* format, void* p_data_when_empty)
+inline bool DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void* p_data,
+                                  const char* format, void* p_data_when_empty)
 {
   using func_t = bool (*)(const char*, ImGuiDataType, void*, const char*, void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDataTypeApplyFromText"));
@@ -12383,35 +13155,42 @@ inline int DataTypeCompare(ImGuiDataType data_type, const void* arg_1, const voi
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDataTypeCompare"));
   return func(data_type, arg_1, arg_2);
 }
-inline bool DataTypeClamp(ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max)
+inline bool DataTypeClamp(ImGuiDataType data_type, void* p_data, const void* p_min,
+                          const void* p_max)
 {
   using func_t = bool (*)(ImGuiDataType, void*, const void*, const void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDataTypeClamp"));
   return func(data_type, p_data, p_min, p_max);
 }
-inline bool InputTextEx(const char* label, const char* hint, char* buf, int buf_size, const ImVec2 size_arg, ImGuiInputTextFlags flags,
+inline bool InputTextEx(const char* label, const char* hint, char* buf, int buf_size,
+                        const ImVec2 size_arg, ImGuiInputTextFlags flags,
                         ImGuiInputTextCallback callback, void* user_data)
 {
-  using func_t = bool (*)(const char*, const char*, char*, int, const ImVec2, ImGuiInputTextFlags, ImGuiInputTextCallback, void*);
+  using func_t = bool (*)(const char*, const char*, char*, int, const ImVec2, ImGuiInputTextFlags,
+                          ImGuiInputTextCallback, void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputTextEx"));
   return func(label, hint, buf, buf_size, size_arg, flags, callback, user_data);
 }
 inline void InputTextDeactivateHook(ImGuiID id)
 {
   using func_t = void (*)(ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputTextDeactivateHook"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igInputTextDeactivateHook"));
   return func(id);
 }
-inline bool TempInputText(const ImRect bb, ImGuiID id, const char* label, char* buf, int buf_size, ImGuiInputTextFlags flags)
+inline bool TempInputText(const ImRect bb, ImGuiID id, const char* label, char* buf, int buf_size,
+                          ImGuiInputTextFlags flags)
 {
   using func_t = bool (*)(const ImRect, ImGuiID, const char*, char*, int, ImGuiInputTextFlags);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTempInputText"));
   return func(bb, id, label, buf, buf_size, flags);
 }
-inline bool TempInputScalar(const ImRect bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format,
-                            const void* p_clamp_min, const void* p_clamp_max)
+inline bool TempInputScalar(const ImRect bb, ImGuiID id, const char* label, ImGuiDataType data_type,
+                            void* p_data, const char* format, const void* p_clamp_min,
+                            const void* p_clamp_max)
 {
-  using func_t = bool (*)(const ImRect, ImGuiID, const char*, ImGuiDataType, void*, const char*, const void*, const void*);
+  using func_t = bool (*)(const ImRect, ImGuiID, const char*, ImGuiDataType, void*, const char*,
+                          const void*, const void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igTempInputScalar"));
   return func(bb, id, label, data_type, p_data, format, p_clamp_min, p_clamp_max);
 }
@@ -12448,53 +13227,66 @@ inline void ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags)
 inline void ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags flags)
 {
   using func_t = void (*)(const float*, ImGuiColorEditFlags);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorPickerOptionsPopup"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igColorPickerOptionsPopup"));
   return func(ref_col, flags);
 }
-inline int PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count,
-                  int values_offset, const char* overlay_text, float scale_min, float scale_max, const ImVec2 size_arg)
+inline int PlotEx(ImGuiPlotType plot_type, const char* label,
+                  float (*values_getter)(void* data, int idx), void* data, int values_count,
+                  int values_offset, const char* overlay_text, float scale_min, float scale_max,
+                  const ImVec2 size_arg)
 {
-  using func_t = int (*)(ImGuiPlotType, const char*, float (*)(void*, int), void*, int, int, const char*, float, float, const ImVec2);
+  using func_t = int (*)(ImGuiPlotType, const char*, float (*)(void*, int), void*, int, int,
+                         const char*, float, float, const ImVec2);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igPlotEx"));
-  return func(plot_type, label, values_getter, data, values_count, values_offset, overlay_text, scale_min, scale_max, size_arg);
+  return func(plot_type, label, values_getter, data, values_count, values_offset, overlay_text,
+              scale_min, scale_max, size_arg);
 }
-inline void ShadeVertsLinearColorGradientKeepAlpha(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, ImVec2 gradient_p0,
+inline void ShadeVertsLinearColorGradientKeepAlpha(ImDrawList* draw_list, int vert_start_idx,
+                                                   int vert_end_idx, ImVec2 gradient_p0,
                                                    ImVec2 gradient_p1, ImU32 col0, ImU32 col1)
 {
   using func_t = void (*)(ImDrawList*, int, int, ImVec2, ImVec2, ImU32, ImU32);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igShadeVertsLinearColorGradientKeepAlpha"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igShadeVertsLinearColorGradientKeepAlpha"));
   return func(draw_list, vert_start_idx, vert_end_idx, gradient_p0, gradient_p1, col0, col1);
 }
-inline void ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, const ImVec2 a, const ImVec2 b, const ImVec2 uv_a,
-                               const ImVec2 uv_b, bool clamp)
+inline void ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx,
+                               const ImVec2 a, const ImVec2 b, const ImVec2 uv_a, const ImVec2 uv_b,
+                               bool clamp)
 {
-  using func_t = void (*)(ImDrawList*, int, int, const ImVec2, const ImVec2, const ImVec2, const ImVec2, bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igShadeVertsLinearUV"));
+  using func_t =
+      void (*)(ImDrawList*, int, int, const ImVec2, const ImVec2, const ImVec2, const ImVec2, bool);
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igShadeVertsLinearUV"));
   return func(draw_list, vert_start_idx, vert_end_idx, a, b, uv_a, uv_b, clamp);
 }
-inline void ShadeVertsTransformPos(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, const ImVec2 pivot_in, float cos_a, float sin_a,
+inline void ShadeVertsTransformPos(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx,
+                                   const ImVec2 pivot_in, float cos_a, float sin_a,
                                    const ImVec2 pivot_out)
 {
   using func_t = void (*)(ImDrawList*, int, int, const ImVec2, float, float, const ImVec2);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igShadeVertsTransformPos"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igShadeVertsTransformPos"));
   return func(draw_list, vert_start_idx, vert_end_idx, pivot_in, cos_a, sin_a, pivot_out);
 }
 inline void GcCompactTransientMiscBuffers()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGcCompactTransientMiscBuffers"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGcCompactTransientMiscBuffers"));
   return func();
 }
 inline void GcCompactTransientWindowBuffers(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGcCompactTransientWindowBuffers"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGcCompactTransientWindowBuffers"));
   return func(window);
 }
 inline void GcAwakeTransientWindowBuffers(ImGuiWindow* window)
 {
   using func_t = void (*)(ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGcAwakeTransientWindowBuffers"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igGcAwakeTransientWindowBuffers"));
   return func(window);
 }
 inline void DebugLog(const char* fmt, ...)
@@ -12521,19 +13313,22 @@ inline void DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr
 inline void ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data)
 {
   using func_t = void (*)(ImGuiErrorLogCallback, void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igErrorCheckEndFrameRecover"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igErrorCheckEndFrameRecover"));
   return func(log_callback, user_data);
 }
 inline void ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data)
 {
   using func_t = void (*)(ImGuiErrorLogCallback, void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igErrorCheckEndWindowRecover"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igErrorCheckEndWindowRecover"));
   return func(log_callback, user_data);
 }
 inline void ErrorCheckUsingSetCursorPosToExtendParentBoundaries()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igErrorCheckUsingSetCursorPosToExtendParentBoundaries"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igErrorCheckUsingSetCursorPosToExtendParentBoundaries"));
   return func();
 }
 inline void DebugDrawCursorPos(ImU32 col)
@@ -12557,7 +13352,8 @@ inline void DebugDrawItemRect(ImU32 col)
 inline void DebugTextUnformattedWithLocateItem(const char* line_begin, const char* line_end)
 {
   using func_t = void (*)(const char*, const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugTextUnformattedWithLocateItem"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igDebugTextUnformattedWithLocateItem"));
   return func(line_begin, line_end);
 }
 inline void DebugLocateItem(ImGuiID target_id)
@@ -12569,13 +13365,14 @@ inline void DebugLocateItem(ImGuiID target_id)
 inline void DebugLocateItemOnHover(ImGuiID target_id)
 {
   using func_t = void (*)(ImGuiID);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugLocateItemOnHover"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugLocateItemOnHover"));
   return func(target_id);
 }
 inline void DebugLocateItemResolveWithLastItem()
 {
   using func_t = void (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugLocateItemResolveWithLastItem"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igDebugLocateItemResolveWithLastItem"));
   return func();
 }
 inline void DebugBreakClearData()
@@ -12593,7 +13390,8 @@ inline bool DebugBreakButton(const char* label, const char* description_of_locat
 inline void DebugBreakButtonTooltip(bool keyboard_only, const char* description_of_location)
 {
   using func_t = void (*)(bool, const char*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugBreakButtonTooltip"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugBreakButtonTooltip"));
   return func(keyboard_only, description_of_location);
 }
 inline void ShowFontAtlas(ImFontAtlas* atlas)
@@ -12602,7 +13400,8 @@ inline void ShowFontAtlas(ImFontAtlas* atlas)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igShowFontAtlas"));
   return func(atlas);
 }
-inline void DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id, const void* data_id_end)
+inline void DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id,
+                            const void* data_id_end)
 {
   using func_t = void (*)(ImGuiID, ImGuiDataType, const void*, const void*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugHookIdInfo"));
@@ -12620,17 +13419,21 @@ inline void DebugNodeDockNode(ImGuiDockNode* node, const char* label)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeDockNode"));
   return func(node, label);
 }
-inline void DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, const ImDrawList* draw_list, const char* label)
+inline void DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport,
+                              const ImDrawList* draw_list, const char* label)
 {
   using func_t = void (*)(ImGuiWindow*, ImGuiViewportP*, const ImDrawList*, const char*);
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeDrawList"));
   return func(window, viewport, draw_list, label);
 }
-inline void DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh,
+inline void DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list,
+                                                   const ImDrawList* draw_list,
+                                                   const ImDrawCmd* draw_cmd, bool show_mesh,
                                                    bool show_aabb)
 {
   using func_t = void (*)(ImDrawList*, const ImDrawList*, const ImDrawCmd*, bool, bool);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeDrawCmdShowMeshAndBoundingBox"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igDebugNodeDrawCmdShowMeshAndBoundingBox"));
   return func(out_draw_list, draw_list, draw_cmd, show_mesh, show_aabb);
 }
 inline void DebugNodeFont(ImFont* font)
@@ -12666,19 +13469,21 @@ inline void DebugNodeTable(ImGuiTable* table)
 inline void DebugNodeTableSettings(ImGuiTableSettings* settings)
 {
   using func_t = void (*)(ImGuiTableSettings*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeTableSettings"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeTableSettings"));
   return func(settings);
 }
 inline void DebugNodeInputTextState(ImGuiInputTextState* state)
 {
   using func_t = void (*)(ImGuiInputTextState*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeInputTextState"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeInputTextState"));
   return func(state);
 }
 inline void DebugNodeTypingSelectState(ImGuiTypingSelectState* state)
 {
   using func_t = void (*)(ImGuiTypingSelectState*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeTypingSelectState"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeTypingSelectState"));
   return func(state);
 }
 inline void DebugNodeWindow(ImGuiWindow* window, const char* label)
@@ -12690,7 +13495,8 @@ inline void DebugNodeWindow(ImGuiWindow* window, const char* label)
 inline void DebugNodeWindowSettings(ImGuiWindowSettings* settings)
 {
   using func_t = void (*)(ImGuiWindowSettings*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeWindowSettings"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeWindowSettings"));
   return func(settings);
 }
 inline void DebugNodeWindowsList(ImVector_ImGuiWindowPtr* windows, const char* label)
@@ -12699,10 +13505,12 @@ inline void DebugNodeWindowsList(ImVector_ImGuiWindowPtr* windows, const char* l
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeWindowsList"));
   return func(windows, label);
 }
-inline void DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int windows_size, ImGuiWindow* parent_in_begin_stack)
+inline void DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int windows_size,
+                                                   ImGuiWindow* parent_in_begin_stack)
 {
   using func_t = void (*)(ImGuiWindow**, int, ImGuiWindow*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugNodeWindowsListByBeginStackParent"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igDebugNodeWindowsListByBeginStackParent"));
   return func(windows, windows_size, parent_in_begin_stack);
 }
 inline void DebugNodeViewport(ImGuiViewportP* viewport)
@@ -12714,25 +13522,30 @@ inline void DebugNodeViewport(ImGuiViewportP* viewport)
 inline void DebugRenderKeyboardPreview(ImDrawList* draw_list)
 {
   using func_t = void (*)(ImDrawList*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugRenderKeyboardPreview"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugRenderKeyboardPreview"));
   return func(draw_list);
 }
-inline void DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect bb)
+inline void DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport,
+                                         const ImRect bb)
 {
   using func_t = void (*)(ImDrawList*, ImGuiViewportP*, const ImRect);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugRenderViewportThumbnail"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igDebugRenderViewportThumbnail"));
   return func(draw_list, viewport, bb);
 }
 inline const ImFontBuilderIO* ImFontAtlasGetBuilderForStbTruetype()
 {
   using func_t = const ImFontBuilderIO* (*)();
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasGetBuilderForStbTruetype"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImFontAtlasGetBuilderForStbTruetype"));
   return func();
 }
 inline void ImFontAtlasUpdateConfigDataPointers(ImFontAtlas* atlas)
 {
   using func_t = void (*)(ImFontAtlas*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasUpdateConfigDataPointers"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImFontAtlasUpdateConfigDataPointers"));
   return func(atlas);
 }
 inline void ImFontAtlasBuildInit(ImFontAtlas* atlas)
@@ -12741,48 +13554,61 @@ inline void ImFontAtlasBuildInit(ImFontAtlas* atlas)
   func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildInit"));
   return func(atlas);
 }
-inline void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent)
+inline void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config,
+                                      float ascent, float descent)
 {
   using func_t = void (*)(ImFontAtlas*, ImFont*, ImFontConfig*, float, float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildSetupFont"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildSetupFont"));
   return func(atlas, font, font_config, ascent, descent);
 }
 inline void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
 {
   using func_t = void (*)(ImFontAtlas*, void*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildPackCustomRects"));
+  func_t func =
+      reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildPackCustomRects"));
   return func(atlas, stbrp_context_opaque);
 }
 inline void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 {
   using func_t = void (*)(ImFontAtlas*);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildFinish"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildFinish"));
   return func(atlas);
 }
-inline void ImFontAtlasBuildRender8bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char,
+inline void ImFontAtlasBuildRender8bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h,
+                                                     const char* in_str, char in_marker_char,
                                                      unsigned char in_marker_pixel_value)
 {
   using func_t = void (*)(ImFontAtlas*, int, int, int, int, const char*, char, unsigned char);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildRender8bppRectFromString"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImFontAtlasBuildRender8bppRectFromString"));
   return func(atlas, x, y, w, h, in_str, in_marker_char, in_marker_pixel_value);
 }
-inline void ImFontAtlasBuildRender32bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char,
+inline void ImFontAtlasBuildRender32bppRectFromString(ImFontAtlas* atlas, int x, int y, int w,
+                                                      int h, const char* in_str,
+                                                      char in_marker_char,
                                                       unsigned int in_marker_pixel_value)
 {
   using func_t = void (*)(ImFontAtlas*, int, int, int, int, const char*, char, unsigned int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildRender32bppRectFromString"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImFontAtlasBuildRender32bppRectFromString"));
   return func(atlas, x, y, w, h, in_str, in_marker_char, in_marker_pixel_value);
 }
-inline void ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor)
+inline void ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256],
+                                                    float in_multiply_factor)
 {
   using func_t = void (*)(unsigned char[256], float);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildMultiplyCalcLookupTable"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImFontAtlasBuildMultiplyCalcLookupTable"));
   return func(out_table, in_multiply_factor);
 }
-inline void ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride)
+inline void ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256],
+                                               unsigned char* pixels, int x, int y, int w, int h,
+                                               int stride)
 {
   using func_t = void (*)(const unsigned char[256], unsigned char*, int, int, int, int, int);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "igImFontAtlasBuildMultiplyRectAlpha8"));
+  func_t func  = reinterpret_cast<func_t>(
+      GetProcAddress(menuFramework, "igImFontAtlasBuildMultiplyRectAlpha8"));
   return func(table, pixels, x, y, w, h, stride);
 }
 
@@ -12799,7 +13625,7 @@ inline void LogText(CONST char* fmt, ...)
 inline void ImGuiTextBufferAppend(struct ImGuiTextBuffer* buffer, const char* fmt, ...)
 {
   using func_t = void (*)(ImGuiTextBuffer*, const char*, va_list);
-  func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_appendfv"));
+  func_t func = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImGuiTextBuffer_appendfv"));
   va_list args;
   va_start(args, fmt);
   func(buffer, fmt, args);
@@ -12826,14 +13652,16 @@ namespace ImVector_ImWcharManager
   inline ImVector_ImWchar* Create()
   {
     using func_t = ImVector_ImWchar* (*)();
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVector_ImWchar_create"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVector_ImWchar_create"));
     return func();
   }
 
   inline void Destroy(ImVector_ImWchar* self)
   {
     using func_t = void (*)(ImVector_ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVector_ImWchar_destroy"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVector_ImWchar_destroy"));
     return func(self);
   }
 
@@ -12846,7 +13674,8 @@ namespace ImVector_ImWcharManager
   inline void UnInit(ImVector_ImWchar* p)
   {
     using func_t = void (*)(ImVector_ImWchar*);
-    func_t func  = reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVector_ImWchar_UnInit"));
+    func_t func =
+        reinterpret_cast<func_t>(GetProcAddress(menuFramework, "ImVector_ImWchar_UnInit"));
     return func(p);
   }
 }  // namespace ImVector_ImWcharManager
@@ -12869,7 +13698,8 @@ inline bool ToggleButton(const char* label, bool* v)
   ImGuiMCP::PushStyleColor(ImGuiMCP::ImGuiCol_HeaderHovered, ImGuiMCP::ImVec4(0, 0, 0, 0));
   ImGuiMCP::PushStyleColor(ImGuiMCP::ImGuiCol_HeaderActive, ImGuiMCP::ImVec4(0, 0, 0, 0));
 
-  bool clicked = ImGuiMCP::Selectable(std::format("##toggle-{}", label).c_str(), false, 0, ImGuiMCP::ImVec2(width, height));
+  bool clicked = ImGuiMCP::Selectable(std::format("##toggle-{}", label).c_str(), false, 0,
+                                      ImGuiMCP::ImVec2(width, height));
 
   ImGuiMCP::PopStyleColor(3);
   ImGuiMCP::PopID();
@@ -12886,8 +13716,9 @@ inline bool ToggleButton(const char* label, bool* v)
   ImGuiMCP::ImU32 col_bg = *v ? IM_COL32(0, 160, 0, 255) : IM_COL32(160, 0, 0, 255);
 
   ImGuiMCP::ImDrawListManager::AddRectFilled(draw_list, p_min, p_max, col_bg, height * 0.5f, 0);
-  ImGuiMCP::ImDrawListManager::AddCircleFilled(draw_list, ImGuiMCP::ImVec2(p.x + radius + t * (width - radius * 2.0f), p.y + radius), radius - 1.5f,
-                                               IM_COL32(255, 255, 255, 255), 32);
+  ImGuiMCP::ImDrawListManager::AddCircleFilled(
+      draw_list, ImGuiMCP::ImVec2(p.x + radius + t * (width - radius * 2.0f), p.y + radius),
+      radius - 1.5f, IM_COL32(255, 255, 255, 255), 32);
 
   ImGuiMCP::SameLine();
 

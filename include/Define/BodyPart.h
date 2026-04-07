@@ -10,13 +10,15 @@ namespace Define
 using Point3f  = Eigen::Vector3f;
 using Vector3f = Eigen::Vector3f;
 
-using NodeName    = std::string_view;
-using MidNodeName = std::array<std::string_view, 2>;
-using PointName   = std::variant<NodeName, MidNodeName>;
+using NodeName        = std::string_view;
+using MidNodeName     = std::array<std::string_view, 2>;
+using CentralNodeName = std::array<std::string_view, 3>;
+using PointName       = std::variant<NodeName, MidNodeName, CentralNodeName>;
 
-using Node    = RE::NiNode*;
-using MidNode = std::array<RE::NiNode*, 2>;
-using Point   = std::variant<Node, MidNode>;
+using Node        = RE::NiNode*;
+using MidNode     = std::array<RE::NiNode*, 2>;
+using CentralNode = std::array<RE::NiNode*, 3>;
+using Point       = std::variant<Node, MidNode, CentralNode>;
 
 class BodyPart
 {

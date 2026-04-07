@@ -137,7 +137,8 @@ void Collision::ConfigureControllerForScene(RE::bhkCharacterController* controll
   controller->flags.set(RE::CHARACTER_FLAGS::kNoGravityOnGround, RE::CHARACTER_FLAGS::kNoSim,
                         RE::CHARACTER_FLAGS::kSupport);
 
-  controller->flags.reset(RE::CHARACTER_FLAGS::kCheckSupport, RE::CHARACTER_FLAGS::kHasPotentialSupportManifold,
+  controller->flags.reset(RE::CHARACTER_FLAGS::kCheckSupport,
+                          RE::CHARACTER_FLAGS::kHasPotentialSupportManifold,
                           RE::CHARACTER_FLAGS::kStuckQuad, RE::CHARACTER_FLAGS::kOnStairs,
                           RE::CHARACTER_FLAGS::kTryStep);
 

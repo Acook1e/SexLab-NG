@@ -46,7 +46,9 @@ public:
     Pillory = 1 << 26,
   };
 
-  Furniture(Type type, std::array<float, 4> offset = {0.0f, 0.0f, 0.0f, 0.0f}) : type(type), offset(offset) {}
+  Furniture(Type type, std::array<float, 4> offset = {0.0f, 0.0f, 0.0f, 0.0f})
+      : type(type), offset(offset)
+  {}
 
   bool IsType(Type a_type) const { return type.all(a_type); }
 

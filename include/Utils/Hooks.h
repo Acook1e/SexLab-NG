@@ -10,7 +10,8 @@ public:
     auto& trampoline = SKSE::GetTrampoline();
     SKSE::AllocTrampoline(14);
 
-    REL::Relocation addr{REL::VariantID(35565, 36564, 0x5BAB10), REL::VariantOffset(0x748, 0xc26, 0x7ee)};
+    REL::Relocation addr{REL::VariantID(35565, 36564, 0x5BAB10),
+                         REL::VariantOffset(0x748, 0xc26, 0x7ee)};
     _Update = trampoline.write_call<5>(addr.address(), Update);
   }
 
@@ -58,7 +59,8 @@ public:
 
 private:
   static bool* IsCollisionEnabled(RE::hkpCollidableCollidableFilter* a_this, bool* a_result,
-                                  const RE::hkpCollidable* a_collidableA, const RE::hkpCollidable* a_collidableB);
+                                  const RE::hkpCollidable* a_collidableA,
+                                  const RE::hkpCollidable* a_collidableB);
   static inline REL::Relocation<decltype(IsCollisionEnabled)> _IsCollisionEnabled;
 };
 
@@ -71,7 +73,8 @@ public:
     SKSE::AllocTrampoline(14);
 
     // TODO: Find VR address
-    REL::Relocation<uintptr_t> addr{REL::VariantID(36359, 37350, 0x0), REL::VariantOffset(0xF0, 0xFB, 0x0)};
+    REL::Relocation<uintptr_t> addr{REL::VariantID(36359, 37350, 0x0),
+                                    REL::VariantOffset(0xF0, 0xFB, 0x0)};
     _ApplyMovementDelta = trampoline.write_call<5>(addr.address(), ApplyMovementDelta);
   }
 

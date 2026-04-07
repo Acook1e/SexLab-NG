@@ -72,7 +72,8 @@ bool* CollisionEnable::IsCollisionEnabled(RE::hkpCollidableCollidableFilter* a_t
   auto* actorB = refB->As<RE::Actor>();
 
   if (actorA && actorB)
-    if (Instance::Collision::GetSingleton().HasActor(actorA) || Instance::Collision::GetSingleton().HasActor(actorB))
+    if (Instance::Collision::GetSingleton().HasActor(actorA) ||
+        Instance::Collision::GetSingleton().HasActor(actorB))
       *a_result = false;
 
   return a_result;

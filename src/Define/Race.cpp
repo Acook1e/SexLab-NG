@@ -53,7 +53,8 @@ namespace Define
       {"WitchlightBehavior.hkx", Type::Wisp},
   };
 
-  auto behaviorPath = actor->GetRace()->rootBehaviorGraphNames[actor->GetActorBase()->IsFemale() ? 1 : 0].data();
+  auto behaviorPath =
+      actor->GetRace()->rootBehaviorGraphNames[actor->GetActorBase()->IsFemale() ? 1 : 0].data();
   auto behaviorName = std::filesystem::path(behaviorPath).filename().string();
 
   auto res = Type::Unknown;

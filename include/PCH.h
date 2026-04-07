@@ -55,7 +55,9 @@ namespace logger = SKSE::log;
 class ScopeTimer
 {
 public:
-  ScopeTimer(std::string_view a_name) : name(a_name), start(std::chrono::high_resolution_clock::now()) {}
+  ScopeTimer(std::string_view a_name)
+      : name(a_name), start(std::chrono::high_resolution_clock::now())
+  {}
 
   ~ScopeTimer()
   {

@@ -23,124 +23,136 @@ using BP   = Define::BodyPart;
 //                （Belly 用于防止从身后触发 Naveljob）
 //   needHoriz  — 是否要求 Penis 接近水平（Naveljob 防止竖直插入误判）
 
-namespace
+struct Rule
 {
+  Interact::Type type = Interact::Type::None;
+  float radius        = 8.f;
+  float maxAngle      = 360.f;
+  bool needFront      = false;
+  bool needHoriz      = false;
+};
 
-  struct Rule
-  {
-    Interact::Type type = Interact::Type::None;
-    float radius        = 8.f;
-    float maxAngle      = 360.f;  // 度，绝对值，360 = 无约束
-    bool needFront      = false;
-    bool needHoriz      = false;
-  };
+std::uint16_t operator|(Define::BodyPart::Name a, Define::BodyPart::Name b)
+{
+  const auto va = static_cast<std::uint16_t>(a);
+  const auto vb = static_cast<std::uint16_t>(b);
+  // 按枚举值升序排列
+  if (va < vb)
+    return vb | (va << 8);
+  return va | (vb << 8);
+}
 
-  // 构造 map key：两个 Name 升序排列
-  struct NamePair
-  {
-    Name a, b;  // a <= b（枚举值）
-    bool operator==(const NamePair& o) const { return a == o.a && b == o.b; }
-  };
-  struct NamePairHash
-  {
-    std::size_t operator()(const NamePair& k) const
-    {
-      const auto va = static_cast<std::size_t>(k.a);
-      const auto vb = static_cast<std::size_t>(k.b);
-      return va ^ (vb << 8);
+// ── 规则表 ────────────────────────────────────────────────────────────────
+// radius 单位与骨骼世界坐标一致（Skyrim ≈ 1 unit = 1 cm 量级）。
+// maxAngle：
+//   Kiss       两 Mouth 方向需近似反向（面对面）→ angle 接近 180°，但这里存的是
+//              "与反向的允许偏差"，即我们检测 |angle| >= 180 - maxAngle。
+//              为了统一语义，Kiss 的 maxAngle 存 30.f，检测时用 IsAntiAligned。
+//   穿插类     penis 方向与 canal 方向需近似反向（penis 插入）→ IsAntiAligned + maxAngle。
+//   摩擦类     纯距离，360.f。
+
+static const std::unordered_map<std::uint16_t, Rule> rules{
+    // ── Mouth ───────────────────────────────────────────────────────────────
+    // Mouth(0) <-> Mouth(0)  →  Tribbing key {0,0}: Name::Mouth=0
+    {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Mouth,
+     {Interact::Type::Kiss, 6.f, 30.f, false, false}},
+    {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootLeft,
+     {Interact::Type::ToeSucking, 8.f, 40.f, false, false}},
+    {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootRight,
+     {Interact::Type::ToeSucking, 8.f, 40.f, false, false}},
+    {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Vagina,
+     {Interact::Type::Cunnilingus, 8.f, 50.f, false, false}},
+    {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Anus,
+     {Interact::Type::Anilingus, 8.f, 50.f, false, false}},
+    {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Penis,
+     {Interact::Type::Fellatio, 8.f, 45.f, false, false}},
+    // ── Breast ──────────────────────────────────────────────────────────────
+    {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::HandLeft,
+     {Interact::Type::GropeBreast, 7.f, 360.f, false, false}},
+    {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::Penis,
+     {Interact::Type::Titfuck, 8.f, 60.f, false, false}},
+    // ── Finger / Hand ───────────────────────────────────────────────────────
+    {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Vagina,
+     {Interact::Type::FingerVagina, 6.f, 50.f, false, false}},
+    {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Anus,
+     {Interact::Type::FingerAnus, 6.f, 50.f, false, false}},
+    {Define::BodyPart::Name::HandLeft | Define::BodyPart::Name::Penis,
+     {Interact::Type::Handjob, 7.f, 50.f, false, false}},
+    // ── Belly ───────────────────────────────────────────────────────────────
+    // needFront=true: penis tip must be in front of actor (IsInFront on Belly)
+    // needHoriz=true: penis must be roughly horizontal
+    {Define::BodyPart::Name::Belly | Define::BodyPart::Name::Penis,
+     {Interact::Type::Naveljob, 10.f, 60.f, true, true}},
+    // ── Thigh ───────────────────────────────────────────────────────────────
+    {Define::BodyPart::Name::ThighLeft | Define::BodyPart::Name::Penis,
+     {Interact::Type::Thighjob, 9.f, 50.f, false, false}},
+    // ── Butt ────────────────────────────────────────────────────────────────
+    {Define::BodyPart::Name::ButtLeft | Define::BodyPart::Name::Penis,
+     {Interact::Type::Frottage, 8.f, 360.f, false, false}},
+    // ── Foot ────────────────────────────────────────────────────────────────
+    {Define::BodyPart::Name::FootLeft | Define::BodyPart::Name::Penis,
+     {Interact::Type::Footjob, 8.f, 360.f, false, false}},
+    // ── Vagina ──────────────────────────────────────────────────────────────
+    {Define::BodyPart::Name::Vagina | Define::BodyPart::Name::Vagina,
+     {Interact::Type::Tribbing, 8.f, 30.f, false, false}},
+    // Vaginal: penis 方向与 vagina 方向近似反向（插入）
+    {Define::BodyPart::Name::Vagina | Define::BodyPart::Name::Penis,
+     {Interact::Type::Vaginal, 8.f, 35.f, false, false}},
+    // ── Anus ────────────────────────────────────────────────────────────────
+    {Define::BodyPart::Name::Anus | Define::BodyPart::Name::Penis,
+     {Interact::Type::Anal, 6.f, 35.f, false, false}},
+};
+
+const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)
+{
+  static Rule empty = {Interact::Type::None, 0.f, 360.f, false, false};
+
+  auto normalize = [](Define::BodyPart::Name name) {
+    switch (name) {
+    case Define::BodyPart::Name::BreastRight:
+      return Define::BodyPart::Name::BreastLeft;
+    case Define::BodyPart::Name::HandRight:
+      return Define::BodyPart::Name::HandLeft;
+    case Define::BodyPart::Name::FingerRight:
+      return Define::BodyPart::Name::FingerLeft;
+    case Define::BodyPart::Name::ThighRight:
+      return Define::BodyPart::Name::ThighLeft;
+    case Define::BodyPart::Name::ButtRight:
+      return Define::BodyPart::Name::ButtLeft;
+    case Define::BodyPart::Name::FootRight:
+      return Define::BodyPart::Name::FootLeft;
+    default:
+      return name;
     }
   };
+  auto na = normalize(a);
+  auto nb = normalize(b);
+  if (auto it = rules.find(na | nb); it != rules.end())
+    return it->second;
+  return empty;  // default rule
+}
 
-  NamePair MakeKey(Name x, Name y)
-  {
-    return (x <= y) ? NamePair{x, y} : NamePair{y, x};
-  }
+// ── 角度检测语义说明 ──────────────────────────────────────────────────────
+// 不同交互的 maxAngle 语义不同，由 CheckAngle() 根据类型选择：
+//
+//   Kiss / Tribbing          → IsAntiAligned（两方向夹角 >= 180 - maxAngle）
+//                              即两者面对面 / 方向相反
+//   Vaginal / Anal /         → IsAntiAligned（penis 方向与 canal 方向近似反向）
+//     Fellatio / Cunnilingus    penis.direction ≈ -canal.direction 时为插入
+//   Anilingus                → IsAntiAligned（同 Cunnilingus）
+//   ToeSucking               → IsAligned（mouth 朝向 toe 方向）
+//   GropeBreast / Footjob /  → 无角度约束（360.f）
+//     Frottage / Handjob
+//   Naveljob                 → IsAligned（penis 方向与 belly 朝外方向近似对齐，
+//                              即 penis 尖端朝向腹部）+ needFront + needHoriz
+//   Thighjob / Titfuck       → IsAligned（penis 大致平行于对应部位方向）
 
-  // ── 规则表 ────────────────────────────────────────────────────────────────
-  // radius 单位与骨骼世界坐标一致（Skyrim ≈ 1 unit = 1 cm 量级）。
-  // maxAngle：
-  //   Kiss       两 Mouth 方向需近似反向（面对面）→ angle 接近 180°，但这里存的是
-  //              "与反向的允许偏差"，即我们检测 |angle| >= 180 - maxAngle。
-  //              为了统一语义，Kiss 的 maxAngle 存 30.f，检测时用 IsAntiAligned。
-  //   穿插类     penis 方向与 canal 方向需近似反向（penis 插入）→ IsAntiAligned + maxAngle。
-  //   摩擦类     纯距离，360.f。
-
-  static const std::unordered_map<NamePair, Rule, NamePairHash> kRules{
-      // ── Mouth ───────────────────────────────────────────────────────────────
-      // Mouth(0) <-> Mouth(0)  →  Tribbing key {0,0}: Name::Mouth=0
-      {MakeKey(Name::Mouth, Name::Mouth), {Interact::Type::Kiss, 6.f, 30.f, false, false}},
-      {MakeKey(Name::Mouth, Name::FootLeft), {Interact::Type::ToeSucking, 8.f, 40.f, false, false}},
-      {MakeKey(Name::Mouth, Name::FootRight), {Interact::Type::ToeSucking, 8.f, 40.f, false, false}},
-      {MakeKey(Name::Mouth, Name::Vagina), {Interact::Type::Cunnilingus, 8.f, 50.f, false, false}},
-      {MakeKey(Name::Mouth, Name::Anus), {Interact::Type::Anilingus, 8.f, 50.f, false, false}},
-      {MakeKey(Name::Mouth, Name::Penis), {Interact::Type::Fellatio, 8.f, 45.f, false, false}},
-      // ── Breast ──────────────────────────────────────────────────────────────
-      {MakeKey(Name::BreastLeft, Name::HandLeft), {Interact::Type::GropeBreast, 7.f, 360.f, false, false}},
-      {MakeKey(Name::BreastLeft, Name::HandRight), {Interact::Type::GropeBreast, 7.f, 360.f, false, false}},
-      {MakeKey(Name::BreastRight, Name::HandLeft), {Interact::Type::GropeBreast, 7.f, 360.f, false, false}},
-      {MakeKey(Name::BreastRight, Name::HandRight), {Interact::Type::GropeBreast, 7.f, 360.f, false, false}},
-      {MakeKey(Name::BreastLeft, Name::Penis), {Interact::Type::Titfuck, 8.f, 60.f, false, false}},
-      {MakeKey(Name::BreastRight, Name::Penis), {Interact::Type::Titfuck, 8.f, 60.f, false, false}},
-      // ── Finger / Hand ───────────────────────────────────────────────────────
-      {MakeKey(Name::FingerLeft, Name::Vagina), {Interact::Type::FingerVagina, 6.f, 50.f, false, false}},
-      {MakeKey(Name::FingerRight, Name::Vagina), {Interact::Type::FingerVagina, 6.f, 50.f, false, false}},
-      {MakeKey(Name::FingerLeft, Name::Anus), {Interact::Type::FingerAnus, 6.f, 50.f, false, false}},
-      {MakeKey(Name::FingerRight, Name::Anus), {Interact::Type::FingerAnus, 6.f, 50.f, false, false}},
-      {MakeKey(Name::HandLeft, Name::Penis), {Interact::Type::Handjob, 7.f, 50.f, false, false}},
-      {MakeKey(Name::HandRight, Name::Penis), {Interact::Type::Handjob, 7.f, 50.f, false, false}},
-      // ── Belly ─────────────────────���──────────────────────────────────────────
-      // needFront=true: penis tip must be in front of actor (IsInFront on Belly)
-      // needHoriz=true: penis must be roughly horizontal
-      {MakeKey(Name::Belly, Name::Penis), {Interact::Type::Naveljob, 10.f, 60.f, true, true}},
-      // ── Thigh ───────────────────────────────────────────────────────────────
-      {MakeKey(Name::ThighLeft, Name::Penis), {Interact::Type::Thighjob, 9.f, 50.f, false, false}},
-      {MakeKey(Name::ThighRight, Name::Penis), {Interact::Type::Thighjob, 9.f, 50.f, false, false}},
-      // ── Butt ────────────────────────────────────────────────────────────────
-      {MakeKey(Name::ButtLeft, Name::Penis), {Interact::Type::Frottage, 8.f, 360.f, false, false}},
-      {MakeKey(Name::ButtRight, Name::Penis), {Interact::Type::Frottage, 8.f, 360.f, false, false}},
-      // ── Foot ────────────────────────────────────────────────────────────────
-      {MakeKey(Name::FootLeft, Name::Penis), {Interact::Type::Footjob, 8.f, 360.f, false, false}},
-      {MakeKey(Name::FootRight, Name::Penis), {Interact::Type::Footjob, 8.f, 360.f, false, false}},
-      // ── Vagina ──────────────────────────────────────────────────────────────
-      {MakeKey(Name::Vagina, Name::Vagina), {Interact::Type::Tribbing, 8.f, 30.f, false, false}},
-      // Vaginal: penis 方向与 vagina 方向近似反向（插入）
-      {MakeKey(Name::Vagina, Name::Penis), {Interact::Type::Vaginal, 8.f, 35.f, false, false}},
-      // ── Anus ────────────────────────────────────────────────────────────────
-      {MakeKey(Name::Anus, Name::Penis), {Interact::Type::Anal, 6.f, 35.f, false, false}},
-  };
-
-  // ── 角度检测语义说明 ──────────────────────────────────────────────────────
-  // 不同交互的 maxAngle 语义不同，由 CheckAngle() 根据类型选择：
-  //
-  //   Kiss / Tribbing          → IsAntiAligned（两方向夹角 >= 180 - maxAngle）
-  //                              即两者面对面 / 方向相反
-  //   Vaginal / Anal /         → IsAntiAligned（penis 方向与 canal 方向近似反向）
-  //     Fellatio / Cunnilingus    penis.direction ≈ -canal.direction 时为插入
-  //   Anilingus                → IsAntiAligned（同 Cunnilingus）
-  //   ToeSucking               → IsAligned（mouth 朝向 toe 方向）
-  //   GropeBreast / Footjob /  → 无角度约束（360.f）
-  //     Frottage / Handjob
-  //   Naveljob                 → IsAligned（penis 方向与 belly 朝外方向近似对齐，
-  //                              即 penis 尖端朝向腹部）+ needFront + needHoriz
-  //   Thighjob / Titfuck       → IsAligned（penis 大致平行于对应部位方向）
-
-  static const std::unordered_map<Interact::Type, bool> kUseAntiAligned{
-      {Interact::Type::Kiss, true},      {Interact::Type::Tribbing, true}, {Interact::Type::Cunnilingus, true},
-      {Interact::Type::Anilingus, true}, {Interact::Type::Fellatio, true}, {Interact::Type::DeepThroat, true},
-      {Interact::Type::Vaginal, true},   {Interact::Type::Anal, true},
-  };
-
-}  // anonymous namespace
-
-// ═══════════════════════════════════════════════════════════════════════════
-// §2  内部数据结构（完全隐藏于 .cpp）
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════════════
-// §3  距离缓存
-// ═══════════════════════════════════════════════════════════════════════════
-// 一次 Update 内，同一对 (actorA.partX, actorB.partY) 的距离只算一次。
-// key = 指针对，按地址升序排列保证唯一。
+static const std::unordered_map<Interact::Type, bool> kUseAntiAligned{
+    {Interact::Type::Kiss, true},        {Interact::Type::Tribbing, true},
+    {Interact::Type::Cunnilingus, true}, {Interact::Type::Anilingus, true},
+    {Interact::Type::Fellatio, true},    {Interact::Type::DeepThroat, true},
+    {Interact::Type::Vaginal, true},     {Interact::Type::Anal, true},
+};
 
 namespace
 {
@@ -254,8 +266,7 @@ Interact::Interact(std::vector<RE::Actor*> actors)
       const auto n = static_cast<Name>(i);
       if (!BP::HasBodyPart(data.gender, data.race, n))
         continue;
-      data.parts.emplace(n, BP{actor, data.race, n});
-      data.infos.emplace(n, Info{});
+      data.infos.emplace(n, Info{BP{actor, data.race, n}});
     }
     datas.emplace(actor, std::move(data));
   }
@@ -264,8 +275,8 @@ Interact::Interact(std::vector<RE::Actor*> actors)
 void Interact::FlashNodeData()
 {
   for (auto& [actor, data] : datas)
-    for (auto& [name, part] : data.parts)
-      part.UpdateNodes();
+    for (auto& [name, info] : data.infos)
+      info.bodypart.UpdateNodes();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -295,8 +306,8 @@ void Interact::Update()
 
   // ── Phase 1: 更新位置 ────────────────────────────────────────────────────
   for (auto& [actor, data] : datas)
-    for (auto& [name, part] : data.parts)
-      part.UpdatePosition();
+    for (auto& [name, info] : data.infos)
+      info.bodypart.UpdatePosition();
 
   // ── Phase 2: 遍历 actor 对，建立候选 ────────────────────────────────────
   // candidates[actor][partName] = 当前最优 Candidate
@@ -312,10 +323,8 @@ void Interact::Update()
 
   for (std::size_t i = 0; i < actorList.size(); ++i) {
     for (std::size_t j = i; j < actorList.size(); ++j) {
-      // 允许 i==j：自交（例如 Tribbing 同一 actor 不存在，但距离缓存无害）
-      // 实际上 Tribbing 只发生于不同 actor，i==j 时 Distance 结果为 0，
-      // 会满足 radius 但角度检测会过滤（同一向量夹角=0，不满足 antiAligned）。
-      // 为简洁起见保留，实际执行时 i==j 通常不会产生有效候选。
+      if (i == j)
+        continue;
 
       RE::Actor* actA = actorList[i];
       RE::Actor* actB = actorList[j];
@@ -323,13 +332,13 @@ void Interact::Update()
       ActorData& dB   = datas[actB];
 
       // 遍历 actA 的每个部位
-      for (auto& [nameA, partA] : dA.parts) {
-        if (!partA.IsValid())
+      for (auto& [nameA, infoA] : dA.infos) {
+        if (!infoA.bodypart.IsValid())
           continue;
 
         // 遍历 actB 的每个部位
-        for (auto& [nameB, partB] : dB.parts) {
-          if (!partB.IsValid())
+        for (auto& [nameB, infoB] : dB.infos) {
+          if (!infoB.bodypart.IsValid())
             continue;
 
           // 同一 actor 同一部位跳过
@@ -337,28 +346,28 @@ void Interact::Update()
             continue;
 
           // 查找规则（key 按枚举值升序）
-          const auto ruleKey = MakeKey(nameA, nameB);
-          const auto ruleIt  = kRules.find(ruleKey);
-          if (ruleIt == kRules.end())
-            continue;
-          const Rule& rule = ruleIt->second;
+          auto rule = GetRule(nameA, nameB);
 
           // 距离检测（缓存）
-          const float dist = CachedDistance(distCache, partA, partB);
+          const float dist = CachedDistance(distCache, infoA.bodypart, infoB.bodypart);
           if (dist > rule.radius)
             continue;
 
           // 角度检测
           const bool antiAligned = kUseAntiAligned.count(rule.type) > 0;
-          if (!CheckAngle(partA, partB, rule.maxAngle, antiAligned))
+          if (!CheckAngle(infoA.bodypart, infoB.bodypart, rule.maxAngle, antiAligned))
             continue;
 
           // 附加约束（Naveljob: front + horiz）
-          // needFront / needHoriz 总是针对 Belly（partA 或 partB 中哪个是 Belly）
+          // needFront / needHoriz 总是针对 Belly（infoA.bodypart 或 infoB.bodypart 中哪个是 Belly）
           // 和 Penis，确定好顺序后调用 CheckExtra
           {
-            const BP* bellyPart = (nameA == Name::Belly) ? &partA : (nameB == Name::Belly) ? &partB : nullptr;
-            const BP* penisPart = (nameA == Name::Penis) ? &partA : (nameB == Name::Penis) ? &partB : nullptr;
+            const BP* bellyPart = (nameA == Name::Belly)   ? &infoA.bodypart
+                                  : (nameB == Name::Belly) ? &infoB.bodypart
+                                                           : nullptr;
+            const BP* penisPart = (nameA == Name::Penis)   ? &infoA.bodypart
+                                  : (nameB == Name::Penis) ? &infoB.bodypart
+                                                           : nullptr;
             if ((rule.needFront || rule.needHoriz) && bellyPart && penisPart) {
               if (!CheckExtra(*bellyPart, *penisPart, rule.needFront, rule.needHoriz))
                 continue;
@@ -460,8 +469,8 @@ void Interact::Update()
       // DeepThroat 升级：Fellatio 满足且 penis.start 在 mouth 前方
       Interact::Type resolvedType = cand.type;
       if (cand.type == Interact::Type::Fellatio) {
-        const BP& mouth = data.parts.at(Name::Mouth);
-        const BP& penis = datas.at(cand.actor).parts.at(Name::Penis);
+        const BP& mouth = data.infos.at(Name::Mouth).bodypart;
+        const BP& penis = datas.at(cand.actor).infos.at(Name::Penis).bodypart;
         // penis の root (start) が mouth の前方にある = deep throat
         if (mouth.IsInFront(penis.GetStart()))
           resolvedType = Interact::Type::DeepThroat;
@@ -481,9 +490,14 @@ void Interact::Update()
       if (!info.actor || info.type == Interact::Type::None)
         continue;
 
-      spdlog::debug("Actor: {}, Part: {}, Info: {{ actor: {}, distance: {}, velocity: {}, type: {} }}",
-                    actor->GetName(), magic_enum::enum_name(partName), info.actor ? info.actor->GetName() : "None",
-                    info.distance, info.velocity, magic_enum::enum_name(info.type));
+      if (info.type == info.prevType && info.actor == info.prevActor)
+        continue;
+
+      logger::info(
+          "Actor: {}, Part: {}, Info: {{ actor: {}, distance: {}, velocity: {}, type: {} }}",
+          actor->GetName(), magic_enum::enum_name(partName),
+          info.actor ? info.actor->GetName() : "None", info.distance, info.velocity,
+          magic_enum::enum_name(info.type));
     }
   }
 }

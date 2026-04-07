@@ -22,14 +22,14 @@ public:
 
     SKEE::InterfaceExchangeMessage msg;
     const auto* const intfc{SKSE::GetMessagingInterface()};
-    intfc->Dispatch(SKEE::InterfaceExchangeMessage::kExchangeInterface, &msg, sizeof(SKEE::InterfaceExchangeMessage*),
-                    "skee");
+    intfc->Dispatch(SKEE::InterfaceExchangeMessage::kExchangeInterface, &msg,
+                    sizeof(SKEE::InterfaceExchangeMessage*), "skee");
     if (!msg.interfaceMap) {
       logger::critical("[SexLab NG] Scale : Couldn't get interface!");
       return;
     }
-    transformInterface =
-        reinterpret_cast<SKEE::INiTransformInterface*>(msg.interfaceMap->QueryInterface("NiTransform"));
+    transformInterface = reinterpret_cast<SKEE::INiTransformInterface*>(
+        msg.interfaceMap->QueryInterface("NiTransform"));
     if (!transformInterface) {
       logger::critical("[SexLab NG] Scale : Couldn't get NiTransformInterface!");
       return;
@@ -43,7 +43,8 @@ public:
       return 1.0f;
 
     auto node = actor->GetNodeByName(baseNode);
-    logger::info("[SexLab NG] Scale : Base scale for actor '{}' is {:.3f})", actor->GetDisplayFullName(),
+    logger::info("[SexLab NG] Scale : Base scale for actor '{}' is {:.3f})",
+                 actor->GetDisplayFullName(),
                  actor->GetScale() * (node ? node->local.scale : 1.0f));
     return actor->GetScale() * (node ? node->local.scale : 1.0f);
   }
@@ -59,10 +60,12 @@ public:
     auto basescale = CalculateScale(actor);
     auto isFemale  = actor->GetActorBase()->IsFemale();
     // multiply scale mode
-    transformInterface->AddNodeTransformScaleMode(actor, false, isFemale, baseNode.data(), "SexLabNG", 0);
+    transformInterface->AddNodeTransformScaleMode(actor, false, isFemale, baseNode.data(),
+                                                  "SexLabNG", 0);
 
     // remove existing scale and update base scale
-    if (transformInterface->RemoveNodeTransformScale(actor, false, isFemale, baseNode.data(), "SexLabNG")) {
+    if (transformInterface->RemoveNodeTransformScale(actor, false, isFemale, baseNode.data(),
+                                                     "SexLabNG")) {
       transformInterface->UpdateNodeTransforms(actor, false, isFemale, baseNode.data());
       basescale = CalculateScale(actor);
     }
@@ -70,12 +73,14 @@ public:
     if (std::abs(basescale - scale) < 0.03f)
       return;  // No significant change, skip to avoid unnecessary updates
 
-    logger::info("[SexLab NG] Scale : Applying scale {:.3f} to actor '{}'", scale, actor->GetDisplayFullName());
+    logger::info("[SexLab NG] Scale : Applying scale {:.3f} to actor '{}'", scale,
+                 actor->GetDisplayFullName());
 
     // calculate multiplicative scale factor and apply
     float k = scale / basescale;
 
-    transformInterface->AddNodeTransformScale(actor, false, isFemale, baseNode.data(), "SexLabNG", k);
+    transformInterface->AddNodeTransformScale(actor, false, isFemale, baseNode.data(), "SexLabNG",
+                                              k);
     transformInterface->UpdateNodeTransforms(actor, false, isFemale, baseNode.data());
   }
 
@@ -90,7 +95,8 @@ public:
     logger::info("[SexLab NG] Scale : Removing scale from actor '{}'", actor->GetDisplayFullName());
 
     auto isFemale = actor->GetActorBase()->IsFemale();
-    if (transformInterface->RemoveNodeTransformScale(actor, false, isFemale, baseNode.data(), "SexLabNG")) {
+    if (transformInterface->RemoveNodeTransformScale(actor, false, isFemale, baseNode.data(),
+                                                     "SexLabNG")) {
       transformInterface->UpdateNodeTransforms(actor, false, isFemale, baseNode.data());
     }
   }

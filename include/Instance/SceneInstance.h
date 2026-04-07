@@ -21,15 +21,17 @@ public:
   enum class InstanceState : std::uint8_t
   {
     CreateInstance = 0,
-    ActorApproach,  // Only used when enable Actor Walk to Center, otherwise will be skipped and directly set to Ready
+    ActorApproach,  // Only used when enable Actor Walk to Center, otherwise will be skipped and
+                    // directly set to Ready
     SceneReady,     // Include lock strip and ready
-    LeadIn,         // Only used when enable Lead-In, otherwise will be skipped and directly set to ScenePlay
+    LeadIn,         // Only used when enable Lead-In, otherwise will be skipped and directly set to
+                    // ScenePlay
     ScenePlay,
     DestroyInstance
   };
 
-  SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants, std::vector<Define::Scene*> scenes,
-                Define::Scene* leadIn = nullptr);
+  SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
+                std::vector<Define::Scene*> scenes, Define::Scene* leadIn = nullptr);
   ~SceneInstance();
 
   bool Update();

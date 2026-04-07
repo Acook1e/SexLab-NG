@@ -11,15 +11,18 @@ class Position
 public:
   using Offset = std::array<float, 4>;
 
-  Position(const Race& race, const Gender& gender, const float& scale, const std::vector<std::string>& events,
-           std::vector<Offset> offsets, std::vector<std::int8_t> schlongAngles, std::vector<StageStrip> strips)
-      : race(race), gender(gender), scale(scale), events(events), offsets(offsets), schlongAngles(schlongAngles),
-        strips(strips)
+  Position(const Race& race, const Gender& gender, const float& scale,
+           const std::vector<std::string>& events, std::vector<Offset> offsets,
+           std::vector<std::int8_t> schlongAngles, std::vector<StageStrip> strips)
+      : race(race), gender(gender), scale(scale), events(events), offsets(offsets),
+        schlongAngles(schlongAngles), strips(strips)
   {}
   Position(Race&& race, Gender&& gender, float&& scale, std::vector<std::string>&& events,
-           std::vector<Offset>&& offsets, std::vector<std::int8_t>&& schlongAngles, std::vector<StageStrip>&& strips)
-      : race(std::move(race)), gender(std::move(gender)), scale(std::move(scale)), events(std::move(events)),
-        offsets(std::move(offsets)), schlongAngles(std::move(schlongAngles)), strips(std::move(strips))
+           std::vector<Offset>&& offsets, std::vector<std::int8_t>&& schlongAngles,
+           std::vector<StageStrip>&& strips)
+      : race(std::move(race)), gender(std::move(gender)), scale(std::move(scale)),
+        events(std::move(events)), offsets(std::move(offsets)),
+        schlongAngles(std::move(schlongAngles)), strips(std::move(strips))
   {}
 
   [[nodiscard]] const Race& GetRace() const { return race; }

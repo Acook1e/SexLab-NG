@@ -34,7 +34,8 @@ bool LoadFromJson(const std::filesystem::path& path)
     std::uint32_t total_stages = scene_data.value("total_stages", 0);
     Define::Race races         = scene_data.value("races", Define::Race::Type::Unknown);
     if (total_actors == 0 || total_stages == 0) {
-      logger::warn("[SexLab NG] Scene {} has invalid total_actors or total_stages, skipping", scene_name);
+      logger::warn("[SexLab NG] Scene {} has invalid total_actors or total_stages, skipping",
+                   scene_name);
       continue;
     }
 
@@ -44,20 +45,23 @@ bool LoadFromJson(const std::filesystem::path& path)
     for (auto i = 1; i <= total_actors; ++i) {
       std::string actor_key = "actor" + std::to_string(i);
       if (!scene_data.contains("positions") || !scene_data["positions"].contains(actor_key)) {
-        logger::warn("[SexLab NG] Scene {} is missing data for {}, skipping", scene_name, actor_key);
+        logger::warn("[SexLab NG] Scene {} is missing data for {}, skipping", scene_name,
+                     actor_key);
         break;
       }
       const auto& actor_data = scene_data["positions"][actor_key];
       std::vector<std::string> events;
       // TODO: Load offsets and strips from json
-      std::vector<Define::Position::Offset> offsets(total_stages, Define::Position::Offset{0.0f, 0.0f, 0.0f, 0.0f});
+      std::vector<Define::Position::Offset> offsets(
+          total_stages, Define::Position::Offset{0.0f, 0.0f, 0.0f, 0.0f});
       std::vector<std::int8_t> schlongAngles(total_stages, 0);
       std::vector<Define::StageStrip> strips(total_stages, Define::StageStrip::Type::None);
 
       if (actor_data.contains("stage_params") && actor_data["stage_params"].is_object())
         for (auto i = 1; i <= total_stages; ++i) {
           std::string stage_key = std::to_string(i);
-          if (actor_data["stage_params"].contains(stage_key) && actor_data["stage_params"][stage_key].is_object()) {
+          if (actor_data["stage_params"].contains(stage_key) &&
+              actor_data["stage_params"][stage_key].is_object()) {
             const auto& stage_params = actor_data["stage_params"][stage_key];
             if (stage_params.contains("sos") && stage_params["sos"].is_number_integer())
               schlongAngles[i - 1] = stage_params["sos"].get<std::int8_t>();
@@ -70,8 +74,9 @@ bool LoadFromJson(const std::filesystem::path& path)
       }
       auto position =
           Define::Position(actor_data.value("race", Define::Race::Type::Unknown),
-                           actor_data.value("gender", Define::Gender::Type::Unknown), actor_data.value("scale", 1.0f),
-                           std::move(events), std::move(offsets), std::move(schlongAngles), std::move(strips));
+                           actor_data.value("gender", Define::Gender::Type::Unknown),
+                           actor_data.value("scale", 1.0f), std::move(events), std::move(offsets),
+                           std::move(schlongAngles), std::move(strips));
       positions.push_back(std::move(position));
     }
 
@@ -79,14 +84,16 @@ bool LoadFromJson(const std::filesystem::path& path)
       logger::warn("[SexLab NG] Scene {} has no valid actor positions, skipping", scene_name);
       continue;
     }
-    Define::Scene scene =
-        Define::Scene(std::move(scene_name), std::move(event_prefix), std::move(furniture), std::move(races),
-                      Define::Scene::Type::Normal, Define::InteractTags(0), std::move(positions));
+    Define::Scene scene = Define::Scene(
+        std::move(scene_name), std::move(event_prefix), std::move(furniture), std::move(races),
+        Define::Scene::Type::Normal, Define::InteractTags(0), std::move(positions));
     // logger::info("{}", scene.verbose());
     scenes.push_back(std::move(scene));
   }
-  logger::info("[SexLab NG] Loaded AnimPack {} with {} scenes", path.stem().string(), scenes.size());
-  Define::AnimPack pack(std::move(name), std::move(author), std::move(animPackTag), std::move(scenes));
+  logger::info("[SexLab NG] Loaded AnimPack {} with {} scenes", path.stem().string(),
+               scenes.size());
+  Define::AnimPack pack(std::move(name), std::move(author), std::move(animPackTag),
+                        std::move(scenes));
   Instance::SceneManager::GetSingleton().AddAnimPack(std::move(pack));
   return true;
 }
@@ -103,7 +110,8 @@ void LoadData()
         try {
           LoadFromJson(entry.path());
         } catch (const std::exception& e) {
-          logger::error("[SexLab NG] Failed to load scene from file: {}: {}", entry.path().string(), e.what());
+          logger::error("[SexLab NG] Failed to load scene from file: {}: {}", entry.path().string(),
+                        e.what());
         }
       }
   } else {

@@ -11,8 +11,10 @@ public:
            const std::vector<Scene>& scenes)
       : name(name), author(author), animPackTag(animPackTag), scenes(scenes)
   {}
-  AnimPack(std::string&& name, std::string&& author, std::string&& animPackTag, std::vector<Scene>&& scenes)
-      : name(std::move(name)), author(std::move(author)), animPackTag(std::move(animPackTag)), scenes(std::move(scenes))
+  AnimPack(std::string&& name, std::string&& author, std::string&& animPackTag,
+           std::vector<Scene>&& scenes)
+      : name(std::move(name)), author(std::move(author)), animPackTag(std::move(animPackTag)),
+        scenes(std::move(scenes))
   {}
   ~AnimPack() = default;
 

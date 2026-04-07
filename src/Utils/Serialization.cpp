@@ -23,7 +23,8 @@ void Initialize()
     std::uint32_t type, version, length;
     while (serial->GetNextRecordInfo(type, version, length)) {
       if (version != SerializationVersion) {
-        logger::error("[SexLab NG] Unsupported serialization version: {} for type: {}, expected: {}. Skipping {} bytes",
+        logger::error("[SexLab NG] Unsupported serialization version: {} for type: {}, expected: "
+                      "{}. Skipping {} bytes",
                       version, type, SerializationVersion, length);
         continue;
       }
@@ -32,7 +33,8 @@ void Initialize()
       if (it != loadCallbacks.end())
         it->second(serial);
       else
-        logger::warn("[SexLab NG] No load callback registered for type: {}, skipping {} bytes", type, length);
+        logger::warn("[SexLab NG] No load callback registered for type: {}, skipping {} bytes",
+                     type, length);
     }
   });
   serial->SetRevertCallback([](SKSE::SerializationInterface* serial) {

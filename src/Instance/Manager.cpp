@@ -2,7 +2,8 @@
 
 namespace Instance
 {
-std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors, Define::Scene::Type sceneType)
+std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors,
+                                                       Define::Scene::Type sceneType)
 {
   ScopeTimer timer("SceneManager::SearchScenes");
 
@@ -70,7 +71,8 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
   return res;
 }
 
-std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::vector<Define::Scene*> scenes)
+std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors,
+                                           std::vector<Define::Scene*> scenes)
 {
   std::lock_guard<std::mutex> lock(mapMutex);
   static std::mt19937_64 rng{std::random_device{}()};
@@ -78,7 +80,8 @@ std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, std::
   do
     id = rng();
   while (id == 0 || sceneInstances.contains(id));  // 0 is reserved for invalid ID
-  sceneInstances.try_emplace(id, actors.front(), std::vector<RE::Actor*>(actors.begin() + 1, actors.end()),
+  sceneInstances.try_emplace(id, actors.front(),
+                             std::vector<RE::Actor*>(actors.begin() + 1, actors.end()),
                              std::move(scenes));
   return id;
 }

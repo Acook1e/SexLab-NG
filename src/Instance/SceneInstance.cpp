@@ -60,9 +60,10 @@ bool SceneInstance::Update()
   constexpr std::uint64_t STAGE_LENGTH    = 10 * 1000;  // Update every 10 seconds
   constexpr std::uint64_t SOS_READY       = 1000;       // 1 second to prepare for SOSBend
 
-  const auto Now = static_cast<std::uint64_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
-          .count());
+  const auto Now =
+      static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::steady_clock::now().time_since_epoch())
+                                     .count());
 
   auto now = Now;
   if (now - lastUpdateTime < UPDATE_INTERVAL)
@@ -82,7 +83,8 @@ bool SceneInstance::Update()
 
     currentStage        = 1;
     lastStageUpdateTime = now - STAGE_LENGTH + SOS_READY;  // Schedule the first stage update
-    if (std::find(availableScenes.begin(), availableScenes.end(), currentScene) == availableScenes.end())
+    if (std::find(availableScenes.begin(), availableScenes.end(), currentScene) ==
+        availableScenes.end())
       state = InstanceState::LeadIn;
     else
       state = InstanceState::ScenePlay;

@@ -22,13 +22,15 @@ public:
 
   Enjoyment() : value(0.0f) {}
   Enjoyment(float a_value)
-      : value(std::clamp(a_value, static_cast<float>(Degree::MinValue), static_cast<float>(Degree::MaxValue)))
+      : value(std::clamp(a_value, static_cast<float>(Degree::MinValue),
+                         static_cast<float>(Degree::MaxValue)))
   {}
 
   const float& GetValue() const { return value; }
   Degree SetValue(float a_value)
   {
-    value = std::clamp(a_value, static_cast<float>(Degree::MinValue), static_cast<float>(Degree::MaxValue));
+    value = std::clamp(a_value, static_cast<float>(Degree::MinValue),
+                       static_cast<float>(Degree::MaxValue));
     return GetDegree();
   }
 

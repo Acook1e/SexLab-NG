@@ -46,8 +46,8 @@ void Button(std::uint32_t hash, std::function<void()> onClick = nullptr)
   if (ImGuiMCP::IsItemHovered() && !map.desc.empty())
     ImGuiMCP::SetTooltip(map.desc.data());
 }
-void DragInt(std::uint32_t hash, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d",
-             std::function<void()> onChange = nullptr)
+void DragInt(std::uint32_t hash, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0,
+             const char* format = "%d", std::function<void()> onChange = nullptr)
 {
   const Localization::Entry& map   = Localization::GetLocalization(hash);
   ImGuiMCP::ImGuiSliderFlags flags = ImGuiMCP::ImGuiSliderFlags_None;
@@ -57,8 +57,9 @@ void DragInt(std::uint32_t hash, int* v, float v_speed = 1.0f, int v_min = 0, in
   if (ImGuiMCP::IsItemHovered() && !map.desc.empty())
     ImGuiMCP::SetTooltip(map.desc.data());
 }
-void DragFloat(std::uint32_t hash, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f,
-               const char* format = "%.1f", std::function<void()> onChange = nullptr)
+void DragFloat(std::uint32_t hash, float* v, float v_speed = 1.0f, float v_min = 0.0f,
+               float v_max = 0.0f, const char* format = "%.1f",
+               std::function<void()> onChange = nullptr)
 {
   const Localization::Entry& map   = Localization::GetLocalization(hash);
   ImGuiMCP::ImGuiSliderFlags flags = ImGuiMCP::ImGuiSliderFlags_None;
@@ -69,8 +70,8 @@ void DragFloat(std::uint32_t hash, float* v, float v_speed = 1.0f, float v_min =
     ImGuiMCP::SetTooltip(map.desc.data());
 }
 template <typename T>
-void Combo(std::uint32_t hash, std::vector<std::reference_wrapper<Localization::Entry>> comboIt, T* current_item,
-           std::function<void()> onChange = nullptr)
+void Combo(std::uint32_t hash, std::vector<std::reference_wrapper<Localization::Entry>> comboIt,
+           T* current_item, std::function<void()> onChange = nullptr)
 {
   const Localization::Entry& map = Localization::GetLocalization(hash);
   if (ImGuiMCP::BeginCombo(map.label.data(), comboIt[*current_item].label.data())) {
@@ -171,7 +172,8 @@ Menu::Menu()
   };
   event = new SKSEMenuFramework::Model::Event(callback, static_cast<float>(MOD));
 
-  logger::info("[SexLab NG] Menu: SKSEMenuFramework v{} loaded.", SKSEMenuFramework::GetMenuFrameworkVersion());
+  logger::info("[SexLab NG] Menu: SKSEMenuFramework v{} loaded.",
+               SKSEMenuFramework::GetMenuFrameworkVersion());
 }
 
 Menu::~Menu()

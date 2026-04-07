@@ -44,10 +44,12 @@ void ActorStat::onSave(SKSE::SerializationInterface* serial)
   for (auto& [formID, stat] : actorStats) {
     serial->WriteRecordData(&formID, sizeof(formID));
     std::uint16_t data[12] = {
-        stat.SexualExperience,           stat.SexualExperienceOral,       stat.SexualExperienceVaginal,
-        stat.SexualExperienceAnal,       stat.SexualExperienceSolo,       stat.SexualExperienceGroup,
-        stat.SexualExperienceAggressive, stat.SexualExperienceSubmissive, stat.SexualExperienceFemale,
-        stat.SexualExperienceMale,       stat.SexualExperienceFuta,       stat.SexualExperienceCreature,
+        stat.SexualExperience,           stat.SexualExperienceOral,
+        stat.SexualExperienceVaginal,    stat.SexualExperienceAnal,
+        stat.SexualExperienceSolo,       stat.SexualExperienceGroup,
+        stat.SexualExperienceAggressive, stat.SexualExperienceSubmissive,
+        stat.SexualExperienceFemale,     stat.SexualExperienceMale,
+        stat.SexualExperienceFuta,       stat.SexualExperienceCreature,
     };
     serial->WriteRecordData(data, sizeof(data));
     auto partners = join(stat.recentPartners, ';');

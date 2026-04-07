@@ -76,7 +76,10 @@ public:
 
   [[nodiscard]] bool operator==(const Race& other) const { return type == other.type; }
   [[nodiscard]] bool operator!=(const Race& other) const { return type != other.type; }
-  [[nodiscard]] bool operator>=(const Race& other) const { return (type & other.type) == other.type; }
+  [[nodiscard]] bool operator>=(const Race& other) const
+  {
+    return (type & other.type) == other.type;
+  }
   [[nodiscard]] bool operator<=(const Race& other) const { return (other.type & type) == type; }
 
   [[nodiscard]] static Type GetRace(RE::Actor* actor);
