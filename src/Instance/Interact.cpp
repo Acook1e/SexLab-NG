@@ -367,7 +367,7 @@ void Interact::Update()
     const bool antiAligned = kUseAntiAligned.count(e.rule.type) > 0;
     const BP& bpA = datas[e.actorA].infos[e.nameA].bodypart;
     const BP& bpB = datas[e.actorB].infos[e.nameB].bodypart;
-    if (!CheckAngle(bpA, bpB, e.rule->maxAngle, antiAligned))
+    if (!CheckAngle(bpA, bpB, e.rule.maxAngle, antiAligned))
       continue;
 
     // 附加约束（Naveljob: front + horiz）
