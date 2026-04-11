@@ -15,35 +15,46 @@ public:
   {
     None = 0,
     // Mouth
-    Kiss,         // Mouth  <-> Mouth
-    ToeSucking,   // Mouth  ->  Foot
-    Cunnilingus,  // Mouth  ->  Vagina
-    Anilingus,    // Mouth  ->  Anus
-    Fellatio,     // Mouth  <-  Penis
-    DeepThroat,   // Mouth  <-  Penis  (deeper)
+    Kiss,           // Mouth <-> Mouth
+    BreastSucking,  // Mouth <-> Breast
+    ToeSucking,     // Mouth <-> Foot
+    Cunnilingus,    // Mouth <-> Vagina
+    Anilingus,      // Mouth <-> Anus
+    Fellatio,       // Mouth <-> Penis
+    DeepThroat,     // Mouth <-> Penis (deeper)
     MouthAnimObj,
     // Breast
     GropeBreast,  // Breast <-> Hand
     Titfuck,      // Breast <-> Penis
     // Hand / Finger
-    FingerVagina,  // Finger ->  Vagina
-    FingerAnus,    // Finger ->  Anus
-    Handjob,       // Hand   ->  Penis
+    FingerVagina,  // Finger <-> Vagina
+    FingerAnus,    // Finger <-> Anus
+    Handjob,       // Hand <-> Penis
+    Masturbation,  // FingerVagina/FingerAnus/Handjob But Self
+    HandAnimObj,
     // Belly
-    Naveljob,  // Belly  <-  Penis
+    Naveljob,  // Belly <-> Penis
     // Thigh
-    Thighjob,  // Thigh  <-  Penis
+    Thighjob,  // Thigh <-> Penis
     // Butt
-    Frottage,  // Butt   <-  Penis
+    Frottage,  // Butt <-> Penis
     // Foot
-    Footjob,  // Foot   <-  Penis
+    Footjob,  // Foot <-> Penis
     // Vagina
     Tribbing,  // Vagina <-> Vagina
-    Vaginal,   // Vagina <-  Penis
+    Vaginal,   // Vagina <-> Penis
+    VaginaAnimObj,
     // Anus
-    Anal,  // Anus   <-  Penis
+    Anal,  // Anus <-> Penis
+    AnalAnimObj,
     // Penis
     PenisAnimObj,
+
+    // Multi Interact
+    SixtyNine,  // Actor A Fellatio/DeepThroat with Actor B and Actor B Cunnilingus with Actor A
+    Spitroast,  // Actor has Fellatio/DeepThroat and Vaginal/Anal at same time
+    DoublePenetration,  // Actor has Vaginal and Anal at same time
+    TriplePenetration,  // Actor has Fellatio/DeepThroat and Vaginal and Anal at same time
 
     Total
   };
