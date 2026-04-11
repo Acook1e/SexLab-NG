@@ -37,7 +37,7 @@ public:
     // Thigh
     Thighjob,  // Thigh <-> Penis
     // Butt
-    Frottage,  // Butt <-> Penis
+    Frottage,  // GlutealCleft <-> Penis
     // Foot
     Footjob,  // Foot <-> Penis
     // Vagina

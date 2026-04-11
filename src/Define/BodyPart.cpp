@@ -80,6 +80,8 @@ static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
     // single node for butt
     {BodyPart::Name::ButtLeft, {"NPC L Butt"}},
     {BodyPart::Name::ButtRight, {"NPC R Butt"}},
+    // form mid of vagina and anus entry to mid of butt
+    {BodyPart::Name::GlutealCleft, {"VaginaB1", MidNodeName{"NPC L Butt", "NPC R Butt"}}},
     // entry midpoint -> deep
     // exclude pevis, cause vaginadeep1 maybe move above pevis when crouching, breaking the
     // direction assumption
@@ -105,6 +107,7 @@ static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
     {BodyPart::Name::ThighRight, BodyPart::Type::Vector},
     {BodyPart::Name::ButtLeft, BodyPart::Type::Point},
     {BodyPart::Name::ButtRight, BodyPart::Type::Point},
+    {BodyPart::Name::GlutealCleft, BodyPart::Type::Vector},
     {BodyPart::Name::FootLeft, BodyPart::Type::Vector},
     {BodyPart::Name::FootRight, BodyPart::Type::Vector},
     {BodyPart::Name::Vagina, BodyPart::Type::Vector},
@@ -156,6 +159,7 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
   case Name::ThighRight:
   case Name::ButtLeft:
   case Name::ButtRight:
+  case Name::GlutealCleft:
   case Name::Anus:
     return race.GetType() == Define::Race::Type::Human;
   case Name::Penis:
@@ -220,6 +224,7 @@ BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name)
   case Name::ThighRight:
   case Name::ButtLeft:
   case Name::ButtRight:
+  case Name::GlutealCleft:
   case Name::Vagina:
   case Name::Anus:
     if (auto it = humanMap.find(a_name); it != humanMap.end())

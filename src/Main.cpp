@@ -23,7 +23,7 @@ inline void onPostPostLoad()
 
 inline void onDataLoaded()
 {
-  UI::Initialize();
+  UI::GetSingleton();
   Menu::GetSingleton();
   Hooks::Install();
 }

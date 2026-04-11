@@ -2,30 +2,31 @@
 // SexLab NG HUD — Prisma UI JavaScript
 // ═══════════════════════════════════════════════════
 
-// ── 全局状态 ──────────────────────────────────────
 let hudContainer = null;
 let actorListEl = null;
 let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-// ── 初始化 ────────────────────────────────────────
+// ── DOM Ready ─────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   hudContainer = document.getElementById('hud-container');
   actorListEl = document.getElementById('actor-list');
   setupDrag();
 });
 
-// ── C++ InteropCall 入口 ──────────────────────────
+// ═══════════════════════════════════════════════════
+// C++ InteropCall 入口
+// ═══════════════════════════════════════════════════
 
 /**
- * C++ 调用: prisma->InteropCall(view, "initHud", jsonStr)
  * 初始化 HUD — 创建 actor fragments
+ * C++ 调用: prisma->InteropCall(view, "initHud", jsonStr)
  */
 function initHud(jsonStr) {
   const data = JSON.parse(jsonStr);
 
-  // 恢复位置
+  // 恢复保存的位置
   if (data.position && data.position.x >= 0) {
     hudContainer.style.left = data.position.x + 'px';
     hudContainer.style.top = data.position.y + 'px';
@@ -40,8 +41,8 @@ function initHud(jsonStr) {
 }
 
 /**
- * C++ 调用: prisma->InteropCall(view, "updateHud", jsonStr)
  * 每帧更新 enjoy + interactions
+ * C++ 调用: prisma->InteropCall(view, "updateHud", jsonStr)
  */
 function updateHud(jsonStr) {
   const data = JSON.parse(jsonStr);
@@ -50,12 +51,14 @@ function updateHud(jsonStr) {
   }
 }
 
-// ── Actor Fragment 创建 ──────────────────────────
+// ═══════════════════════════════════════════════════
+// Actor Fragment 创建
+// ═══════════════════════════════════════════════════
 
 function createActorFragment(actor) {
   const frag = document.createElement('div');
   frag.className = 'actor-fragment';
-  frag.id = `actor-${actor.index}`;
+  frag.id = 'actor-' + actor.index;
 
   // 名字
   const nameEl = document.createElement('div');
@@ -63,21 +66,21 @@ function createActorFragment(actor) {
   nameEl.textContent = actor.name;
   frag.appendChild(nameEl);
 
-  // Enjoy bar
+  // Enjoy bar 容器
   const barContainer = document.createElement('div');
   barContainer.className = 'enjoy-bar-container';
 
   const barNeg = document.createElement('div');
   barNeg.className = 'bar-negative';
-  barNeg.id = `bar-neg-${actor.index}`;
+  barNeg.id = 'bar-neg-' + actor.index;
 
   const barPos = document.createElement('div');
   barPos.className = 'bar-positive';
-  barPos.id = `bar-pos-${actor.index}`;
+  barPos.id = 'bar-pos-' + actor.index;
 
   const degreeLabel = document.createElement('div');
   degreeLabel.className = 'degree-label';
-  degreeLabel.id = `degree-${actor.index}`;
+  degreeLabel.id = 'degree-' + actor.index;
   degreeLabel.textContent = actor.degree;
 
   barContainer.appendChild(barNeg);
@@ -85,26 +88,39 @@ function createActorFragment(actor) {
   barContainer.appendChild(degreeLabel);
   frag.appendChild(barContainer);
 
-  // Interact list
+  // Interact 列表
   const interList = document.createElement('div');
   interList.className = 'interact-list';
-  interList.id = `interact-list-${actor.index}`;
+  interList.id = 'interact-list-' + actor.index;
   frag.appendChild(interList);
+
+  // 用初始数据刷新一次
+  updateEnjoyBar(actor.index, actor.enjoy, actor.degree);
+  // interactions 在 initHud 时可能为空，跳过
 
   return frag;
 }
 
-// ── Actor Fragment 更新 ──────────────────────────
+// ═══════════════════════════════════════════════════
+// Actor Fragment 更新
+// ═══════════════════════════════════════════════════
 
 function updateActorFragment(actor) {
-  const idx = actor.index;
+  updateEnjoyBar(actor.index, actor.enjoy, actor.degree);
+  updateInteractList(actor.index, actor.interactions);
+}
 
-  // ── Enjoy bar ──
-  const value = actor.enjoy;    // -100 ~ +100
-  const percent = Math.abs(value) / 100 * 50;  // 0 ~ 50%
+/**
+ * 更新双向进度条
+ * value: -100 ~ +100
+ * degree: "Neutral" / "Pain" / "Aroused" / ...
+ */
+function updateEnjoyBar(index, value, degree) {
+  // percent: 0 ~ 50 (占条的一半宽度)
+  const percent = Math.abs(value) / 100 * 50;
 
-  const barNeg = document.getElementById(`bar-neg-${idx}`);
-  const barPos = document.getElementById(`bar-pos-${idx}`);
+  const barNeg = document.getElementById('bar-neg-' + index);
+  const barPos = document.getElementById('bar-pos-' + index);
   if (barNeg && barPos) {
     if (value < 0) {
       barNeg.style.width = percent + '%';
@@ -115,20 +131,28 @@ function updateActorFragment(actor) {
     }
   }
 
-  // ── Degree label ──
-  const degreeEl = document.getElementById(`degree-${idx}`);
+  const degreeEl = document.getElementById('degree-' + index);
   if (degreeEl) {
-    degreeEl.textContent = `${actor.degree}  (${value > 0 ? '+' : ''}${Math.round(value)})`;
-    // 移除旧 degree 样式, 加新的
-    degreeEl.className = `degree-label degree-${actor.degree}`;
+    const sign = value > 0 ? '+' : '';
+    degreeEl.textContent = degree + '  (' + sign + Math.round(value) + ')';
+    // 切换颜色 class
+    degreeEl.className = 'degree-label degree-' + degree;
   }
+}
 
-  // ── Interact rows ──
-  const listEl = document.getElementById(`interact-list-${idx}`);
+/**
+ * 更新交互列表
+ * interactions: [{ type, partner, velocity }, ...]
+ */
+function updateInteractList(index, interactions) {
+  const listEl = document.getElementById('interact-list-' + index);
   if (!listEl) return;
+
   listEl.innerHTML = '';
 
-  for (const inter of actor.interactions) {
+  if (!interactions || interactions.length === 0) return;
+
+  for (const inter of interactions) {
     const row = document.createElement('div');
     row.className = 'interact-row';
 
@@ -162,21 +186,23 @@ function updateActorFragment(actor) {
   }
 }
 
-// ── 拖拽逻辑 ─────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// 拖拽逻辑
+// ═══════════════════════════════════════════════════
 
 function setupDrag() {
   const header = document.getElementById('hud-header');
   if (!header) return;
 
-  header.addEventListener('mousedown', (e) => {
+  header.addEventListener('mousedown', function (e) {
     isDragging = true;
     dragOffsetX = e.clientX - hudContainer.offsetLeft;
     dragOffsetY = e.clientY - hudContainer.offsetTop;
-    hudContainer.style.right = 'auto';  // 切换到 left 定位
+    hudContainer.style.right = 'auto';
     e.preventDefault();
   });
 
-  document.addEventListener('mousemove', (e) => {
+  document.addEventListener('mousemove', function (e) {
     if (!isDragging) return;
     const x = e.clientX - dragOffsetX;
     const y = e.clientY - dragOffsetY;
@@ -184,15 +210,14 @@ function setupDrag() {
     hudContainer.style.top = y + 'px';
   });
 
-  document.addEventListener('mouseup', () => {
+  document.addEventListener('mouseup', function () {
     if (!isDragging) return;
     isDragging = false;
-    // 回传位置给 C++
+    // 回传位置给 C++ 侧持久化
     const x = hudContainer.offsetLeft;
     const y = hudContainer.offsetTop;
-    if (typeof skyrimPlatform !== 'undefined') {
-      // Prisma JS Interop: 调用注册的 listener
-      window.onHudPositionChanged(`${x},${y}`);
+    if (window.onHudPositionChanged) {
+      window.onHudPositionChanged(x + ',' + y);
     }
   });
 }

@@ -25,23 +25,24 @@ class BodyPart
 public:
   enum class Name : std::uint8_t
   {
-    Mouth,        // All Creature
-    BreastLeft,   // Female or Futa
-    BreastRight,  // Female or Futa
-    HandLeft,     // All Creature
-    HandRight,    // All Creature
-    FingerLeft,   // Human only
-    FingerRight,  // Human only
-    Belly,        // Human only
-    ThighLeft,    // Human only
-    ThighRight,   // Human only
-    ButtLeft,     // Human only
-    ButtRight,    // Human only
-    FootLeft,     // All Creature
-    FootRight,    // All Creature
-    Vagina,       // Female or Futa
-    Anus,         // Human only
-    Penis,        // Male, Futa or CreatureMale
+    Mouth,         // All Creature
+    BreastLeft,    // Female or Futa
+    BreastRight,   // Female or Futa
+    HandLeft,      // All Creature
+    HandRight,     // All Creature
+    FingerLeft,    // Human only
+    FingerRight,   // Human only
+    Belly,         // Human only
+    ThighLeft,     // Human only
+    ThighRight,    // Human only
+    ButtLeft,      // Human only
+    ButtRight,     // Human only
+    GlutealCleft,  // Human only
+    FootLeft,      // All Creature
+    FootRight,     // All Creature
+    Vagina,        // Female or Futa
+    Anus,          // Human only
+    Penis,         // Male, Futa or CreatureMale
   };
 
   static bool HasBodyPart(Gender gender, Race race, Name name);

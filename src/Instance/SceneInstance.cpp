@@ -46,7 +46,7 @@ SceneInstance::~SceneInstance()
 {
   state = InstanceState::DestroyInstance;
 
-  UI::SceneHUD::GetSingleton().Hide(this);
+  UI::GetSingleton().Hide(this);
 
   ResetActors();
   DressActors();
@@ -88,7 +88,7 @@ bool SceneInstance::Update()
 
     for (auto* actor : actors)
       if (actor->IsPlayerRef()) {
-        UI::SceneHUD::GetSingleton().Show(this);
+        UI::GetSingleton().Show(this);
         break;
       }
 
@@ -106,7 +106,7 @@ bool SceneInstance::Update()
   lastUpdateTime = now;
 
   interact.Update();
-  UI::SceneHUD::GetSingleton().Update(this);
+  UI::GetSingleton().Update(this);
 
   if (now - lastStageUpdateTime > STAGE_LENGTH) {
     lastStageUpdateTime = now;

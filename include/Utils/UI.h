@@ -2,18 +2,17 @@
 
 #include "Instance/SceneInstance.h"
 
-namespace UI
-{
-void Initialize();
-
-class SceneHUD
+class UI
 {
 public:
-  static SceneHUD& GetSingleton()
+  static UI& GetSingleton()
   {
-    static SceneHUD singleton;
+    static UI singleton;
     return singleton;
   }
+
+  UI();
+  ~UI();
 
   // 场景生命周期回调
   void Show(Instance::SceneInstance* scene);
@@ -28,8 +27,6 @@ public:
   void OnPositionChanged(float x, float y);
 
 private:
-  SceneHUD() = default;
-
   bool isActive  = false;
   bool isFocused = false;
 
@@ -46,5 +43,3 @@ private:
   void SendInitData(Instance::SceneInstance* scene);
   void SendUpdateData(Instance::SceneInstance* scene);
 };
-
-}  // namespace UI

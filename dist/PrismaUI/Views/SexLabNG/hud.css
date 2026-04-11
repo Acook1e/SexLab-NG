@@ -16,7 +16,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
-   HUD 容器 — 可拖拽
+   HUD 容器
    ═══════════════════════════════════════════════════ */
 #hud-container {
     position: absolute;
@@ -102,7 +102,6 @@ body {
     top: 0;
     height: 100%;
     width: 0%;
-    /* JS 动态设置 */
     background: linear-gradient(to left, #e85d4a, #c0392b);
     border-radius: 4px 0 0 4px;
     transition: width 0.15s ease;
@@ -115,7 +114,6 @@ body {
     top: 0;
     height: 100%;
     width: 0%;
-    /* JS 动态设置 */
     background: linear-gradient(to right, #2ecc71, #3498db);
     border-radius: 0 4px 4px 0;
     transition: width 0.15s ease;
@@ -193,7 +191,7 @@ body {
     color: rgba(255, 255, 255, 0.6);
 }
 
-/* velocity 指示器: 小圆点颜色表示运动方向 */
+/* velocity 指示器 */
 .interact-velocity {
     width: 6px;
     height: 6px;
@@ -206,7 +204,6 @@ body {
     background: #2ecc71;
 }
 
-/* 负 velocity = 靠近 */
 .vel-static {
     background: #7f8c8d;
 }
@@ -214,5 +211,3 @@ body {
 .vel-retreating {
     background: #e74c3c;
 }
-
-/* 正 velocity = 远离 */
