@@ -86,6 +86,7 @@ public:
   void Update();
 
   // ── 查询 ────────────────────────────────────────────────────────────────
+  [[nodiscard]] const ActorData& GetData(RE::Actor* actor) const { return datas.at(actor); }
   [[nodiscard]] const Info& GetInfo(RE::Actor* actor, Define::BodyPart::Name part) const;
 
 private:

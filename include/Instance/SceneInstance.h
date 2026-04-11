@@ -44,10 +44,14 @@ public:
   void DressActors();
   void UnlockActors();
 
-  Define::Scene* GetCurrentScene() const;
   Define::Scene* RandomScene();
   void SetPositions();
   bool SetStage(std::uint32_t stage);
+
+  Define::Scene* GetCurrentScene() const { return currentScene; }
+  const std::vector<RE::Actor*>& GetActors() const { return actors; }
+  const SceneActorInfo& GetActorInfo(RE::Actor* actor) const { return actorInfoMap.at(actor); }
+  const Interact& GetInteract() const { return interact; }
 
 private:
   std::vector<Define::Scene*> availableScenes;

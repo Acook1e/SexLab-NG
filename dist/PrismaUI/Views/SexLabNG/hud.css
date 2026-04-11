@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════════
+   全局
+   ═══════════════════════════════════════════════════ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: transparent;
+    font-family: 'Segoe UI', 'Futura', sans-serif;
+    color: #e0e0e0;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════
+   HUD 容器 — 可拖拽
+   ═══════════════════════════════════════════════════ */
+#hud-container {
+    position: absolute;
+    top: 60px;
+    right: 40px;
+    width: 320px;
+    background: rgba(10, 10, 15, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+
+#hud-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: grab;
+}
+
+#hud-header:active {
+    cursor: grabbing;
+}
+
+.drag-handle {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════
+   Actor Fragment
+   ═══════════════════════════════════════════════════ */
+.actor-fragment {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.actor-fragment:last-child {
+    border-bottom: none;
+}
+
+.actor-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════
+   双向进度条 Enjoy Bar
+   -100 ──── 0 ──── +100
+   ═══════════════════════════════════════════════════ */
+.enjoy-bar-container {
+    position: relative;
+    width: 100%;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+/* 中线 (0 点) */
+.enjoy-bar-container::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    z-index: 2;
+}
+
+/* 负值条 (从中间向左填充) */
+.bar-negative {
+    position: absolute;
+    right: 50%;
+    top: 0;
+    height: 100%;
+    width: 0%;
+    /* JS 动态设置 */
+    background: linear-gradient(to left, #e85d4a, #c0392b);
+    border-radius: 4px 0 0 4px;
+    transition: width 0.15s ease;
+}
+
+/* 正值条 (从中间向右填充) */
+.bar-positive {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    height: 100%;
+    width: 0%;
+    /* JS 动态设置 */
+    background: linear-gradient(to right, #2ecc71, #3498db);
+    border-radius: 0 4px 4px 0;
+    transition: width 0.15s ease;
+}
+
+/* Degree 文字标签 */
+.degree-label {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    line-height: 18px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    z-index: 3;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Degree 颜色 */
+.degree-Agony {
+    color: #e74c3c;
+}
+
+.degree-Pain {
+    color: #e67e22;
+}
+
+.degree-Uncomfortable {
+    color: #f1c40f;
+}
+
+.degree-Neutral {
+    color: #bdc3c7;
+}
+
+.degree-Pleasure {
+    color: #2ecc71;
+}
+
+.degree-Aroused {
+    color: #3498db;
+}
+
+.degree-Climax {
+    color: #9b59b6;
+}
+
+/* ═══════════════════════════════════════════════════
+   交互列表
+   ═══════════════════════════════════════════════════ */
+.interact-list {
+    margin-top: 6px;
+}
+
+.interact-row {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    padding: 2px 0;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.interact-type {
+    font-weight: 600;
+    min-width: 90px;
+    color: #e0e0e0;
+}
+
+.interact-arrow {
+    margin: 0 6px;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.interact-partner {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* velocity 指示器: 小圆点颜色表示运动方向 */
+.interact-velocity {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-left: auto;
+    margin-right: 4px;
+}
+
+.vel-approaching {
+    background: #2ecc71;
+}
+
+/* 负 velocity = 靠近 */
+.vel-static {
+    background: #7f8c8d;
+}
+
+.vel-retreating {
+    background: #e74c3c;
+}
+
+/* 正 velocity = 远离 */

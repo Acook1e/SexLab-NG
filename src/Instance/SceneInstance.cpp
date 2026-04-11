@@ -2,6 +2,7 @@
 
 #include "Instance/Collision.h"
 #include "Instance/Scale.h"
+#include "Utils/UI.h"
 
 namespace Instance
 {
@@ -43,6 +44,10 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
 
 SceneInstance::~SceneInstance()
 {
+  state = InstanceState::DestroyInstance;
+
+  UI::SceneHUD::GetSingleton().Hide(this);
+
   ResetActors();
   DressActors();
   UnlockActors();
@@ -81,6 +86,12 @@ bool SceneInstance::Update()
     StripActors();
     ReadyActors();
 
+    for (auto* actor : actors)
+      if (actor->IsPlayerRef()) {
+        UI::SceneHUD::GetSingleton().Show(this);
+        break;
+      }
+
     currentStage        = 1;
     lastStageUpdateTime = now - STAGE_LENGTH + SOS_READY;  // Schedule the first stage update
     if (std::find(availableScenes.begin(), availableScenes.end(), currentScene) ==
@@ -95,6 +106,7 @@ bool SceneInstance::Update()
   lastUpdateTime = now;
 
   interact.Update();
+  UI::SceneHUD::GetSingleton().Update(this);
 
   if (now - lastStageUpdateTime > STAGE_LENGTH) {
     lastStageUpdateTime = now;
@@ -254,11 +266,6 @@ void SceneInstance::ResetActors()
     //  actor->NotifyAnimationGraph("ForceFurnExit");
     // actor->NotifyAnimationGraph("Reset");
   }
-}
-
-Define::Scene* SceneInstance::GetCurrentScene() const
-{
-  return currentScene;
 }
 
 Define::Scene* SceneInstance::RandomScene()
