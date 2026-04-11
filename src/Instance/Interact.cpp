@@ -53,9 +53,10 @@ std::uint16_t operator|(Define::BodyPart::Name a, Define::BodyPart::Name b)
 
 static const std::unordered_map<std::uint16_t, Rule> rules{
     // ── Mouth ───────────────────────────────────────────────────────────────
-    // Mouth(0) <-> Mouth(0)  →  Tribbing key {0,0}: Name::Mouth=0
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Mouth,
      {Interact::Type::Kiss, 6.f, 30.f, false, false}},
+    {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::BreastLeft,
+     {Interact::Type::BreastSucking, 8.f, 50.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootLeft,
      {Interact::Type::ToeSucking, 8.f, 40.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootRight,
@@ -72,12 +73,13 @@ static const std::unordered_map<std::uint16_t, Rule> rules{
     {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::Penis,
      {Interact::Type::Titfuck, 8.f, 60.f, false, false}},
     // ── Finger / Hand ───────────────────────────────────────────────────────
+    // FingerVagina/FingerAnus: 手指方向（根→尖）与管道朝外方向近似反向（插入）
     {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Vagina,
      {Interact::Type::FingerVagina, 6.f, 50.f, false, false}},
     {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Anus,
      {Interact::Type::FingerAnus, 6.f, 50.f, false, false}},
     {Define::BodyPart::Name::HandLeft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Handjob, 7.f, 50.f, false, false}},
+     {Interact::Type::Handjob, 7.f, 360.f, false, false}},
     // ── Belly ───────────────────────────────────────────────────────────────
     // needFront=true: penis tip must be in front of actor (IsInFront on Belly)
     // needHoriz=true: penis must be roughly horizontal
@@ -135,60 +137,32 @@ const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)
 // ── 角度检测语义说明 ──────────────────────────────────────────────────────
 // 不同交互的 maxAngle 语义不同，由 CheckAngle() 根据类型选择：
 //
-//   Kiss / Tribbing          → IsAntiAligned（两方向夹角 >= 180 - maxAngle）
-//                              即两者面对面 / 方向相反
-//   Vaginal / Anal /         → IsAntiAligned（penis 方向与 canal 方向近似反向）
-//     Fellatio / Cunnilingus    penis.direction ≈ -canal.direction 时为插入
-//   Anilingus                → IsAntiAligned（同 Cunnilingus）
-//   ToeSucking               → IsAligned（mouth 朝向 toe 方向）
-//   GropeBreast / Footjob /  → 无角度约束（360.f）
-//     Frottage / Handjob
-//   Naveljob                 → IsAligned（penis 方向与 belly 朝外方向近似对齐，
-//                              即 penis 尖端朝向腹部）+ needFront + needHoriz
-//   Thighjob / Titfuck       → IsAligned（penis 大致平行于对应部位方向）
+//   Kiss / Tribbing                      → IsAntiAligned（两方向夹角 >= 180 - maxAngle）
+//                                           即两者面对面 / 方向相反
+//   Vaginal / Anal / Fellatio            → IsAntiAligned（penis 方向与 canal 方向近似反向）
+//     Cunnilingus / Anilingus               penis.direction ≈ -canal.direction 时为插入
+//   BreastSucking                        → IsAntiAligned（mouth 朝向乳头方向 vs 乳房方向）
+//   FingerVagina / FingerAnus            → IsAntiAligned（手指方向与管道朝外方向近似反向）
+//   ToeSucking                           → IsAligned（mouth 朝向 toe 方向）
+//   GropeBreast / Footjob / Frottage /   → 无角度约束（360.f）
+//     Handjob
+//   Naveljob                             → IsAligned（penis 方向与 belly 朝外方向近似对齐）
+//                                           + needFront + needHoriz
+//   Thighjob / Titfuck                   → IsAligned（penis 大致平行于对应部位方向）
 
 static const std::unordered_map<Interact::Type, bool> kUseAntiAligned{
-    {Interact::Type::Kiss, true},        {Interact::Type::Tribbing, true},
-    {Interact::Type::Cunnilingus, true}, {Interact::Type::Anilingus, true},
-    {Interact::Type::Fellatio, true},    {Interact::Type::DeepThroat, true},
-    {Interact::Type::Vaginal, true},     {Interact::Type::Anal, true},
+    {Interact::Type::Kiss, true},
+    {Interact::Type::BreastSucking, true},
+    {Interact::Type::Tribbing, true},
+    {Interact::Type::Cunnilingus, true},
+    {Interact::Type::Anilingus, true},
+    {Interact::Type::Fellatio, true},
+    {Interact::Type::DeepThroat, true},
+    {Interact::Type::FingerVagina, true},
+    {Interact::Type::FingerAnus, true},
+    {Interact::Type::Vaginal, true},
+    {Interact::Type::Anal, true},
 };
-
-namespace
-{
-
-  struct BPPair
-  {
-    const BP* a;
-    const BP* b;
-    bool operator==(const BPPair& o) const { return a == o.a && b == o.b; }
-  };
-  struct BPPairHash
-  {
-    std::size_t operator()(const BPPair& k) const
-    {
-      return std::hash<const BP*>{}(k.a) ^ (std::hash<const BP*>{}(k.b) << 16);
-    }
-  };
-
-  using DistCache = std::unordered_map<BPPair, float, BPPairHash>;
-
-  BPPair MakeBPKey(const BP& x, const BP& y)
-  {
-    return (&x <= &y) ? BPPair{&x, &y} : BPPair{&y, &x};
-  }
-
-  float CachedDistance(DistCache& cache, const BP& a, const BP& b)
-  {
-    auto key = MakeBPKey(a, b);
-    if (auto it = cache.find(key); it != cache.end())
-      return it->second;
-    const float d = a.Distance(b);
-    cache[key]    = d;
-    return d;
-  }
-
-}  // anonymous namespace
 
 // ═══════════════════════════════════════════════════════════════════════════
 // §4  角度判断辅助
@@ -230,20 +204,21 @@ namespace
 }  // anonymous namespace
 
 // ═══════════════════════════════════════════════════════════════════════════
-// §5  候选结构（Update 内部临时数据）
+// §5  DistEntry（Phase 2 距离条目）
 // ═══════════════════════════════════════════════════════════════════════════
 
 namespace
 {
 
-  // 一个候选交互结果：某 actor 的某部位与另一 actor 的某部位
-  struct Candidate
+  // 跨 actor 部位对的距离记录，用于 Phase 2 排序后的贪心分配
+  struct DistEntry
   {
-    RE::Actor* actor    = nullptr;
-    Name partSelf       = Name::Mouth;  // 本 actor 的部位
-    Name partOther      = Name::Mouth;  // 对方部位
-    float distance      = 10000.0f;
-    Interact::Type type = Interact::Type::None;
+    RE::Actor* actorA;
+    Name nameA;
+    RE::Actor* actorB;
+    Name nameB;
+    float distance;
+    Rule rule;  // 规则副本
   };
 
 }  // anonymous namespace
@@ -281,14 +256,17 @@ void Interact::FlashNodeData()
 
 // ═══════════════════════════════════════════════════════════════════════════
 // §7  Update
-// ═════════════════════════════════���═════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
 //
 // Phase 0 — 滚动历史帧（prevType ← type，prevActor ← actor），重置当前帧
 // Phase 1 — 更新所有 BodyPart 位置（UpdatePosition）
-// Phase 2 — 遍历所有 actor 对，为每个有效 NamePair 查找 Rule，计算距离并缓存，
-//            建立 Candidate 列表（每个部位保留距离最近的候选）
-// Phase 3 — 抢占仲裁：若同一 partSelf 被多个 actor 同时满足，按距离 + 上帧结果决定归属
-// Phase 4 — 将候选写回 Info，计算 velocity
+// Phase 2 — 计算所有 actor 对（含自交互）的有规则部位对距离，构建 DistEntry 并按距离升序排序
+// Phase 3 — 贪心分配：从近到远遍历 DistEntry，对每个条目检查约束并分配；
+//            每个 (actor, part) 只参与一个交互；自交互升级为 Masturbation
+// Phase 4 — DeepThroat 升级：Fellatio 满足且 penis.start 在 mouth 前方
+// Phase 5 — 组合交互检测：SixtyNine / Spitroast / DoublePenetration / TriplePenetration
+// Phase 6 — 写回 Info，计算 velocity
+// Phase 7 — Debug 输出（含 combo types）
 
 void Interact::Update()
 {
@@ -309,13 +287,10 @@ void Interact::Update()
     for (auto& [name, info] : data.infos)
       info.bodypart.UpdatePosition();
 
-  // ── Phase 2: 遍历 actor 对，建立候选 ────────────────────────────────────
-  // candidates[actor][partName] = 当前最优 Candidate
-  std::unordered_map<RE::Actor*, std::unordered_map<Name, Candidate>> candidates;
+  // ── Phase 2: 计算所有跨 actor 距离，按距离排序 ───────────────────────────
+  // 包括自交互（同一 actor 的不同部位），用于检测 Masturbation。
+  std::vector<DistEntry> entries;
 
-  DistCache distCache;
-
-  // 收集所有 actor 指针（有序，避免 (A,B) 和 (B,A) 重复处理）
   std::vector<RE::Actor*> actorList;
   actorList.reserve(datas.size());
   for (auto& [a, _] : datas)
@@ -323,20 +298,15 @@ void Interact::Update()
 
   for (std::size_t i = 0; i < actorList.size(); ++i) {
     for (std::size_t j = i; j < actorList.size(); ++j) {
-      if (i == j)
-        continue;
-
       RE::Actor* actA = actorList[i];
       RE::Actor* actB = actorList[j];
       ActorData& dA   = datas[actA];
       ActorData& dB   = datas[actB];
 
-      // 遍历 actA 的每个部位
       for (auto& [nameA, infoA] : dA.infos) {
         if (!infoA.bodypart.IsValid())
           continue;
 
-        // 遍历 actB 的每个部位
         for (auto& [nameB, infoB] : dB.infos) {
           if (!infoB.bodypart.IsValid())
             continue;
@@ -345,108 +315,203 @@ void Interact::Update()
           if (actA == actB && nameA == nameB)
             continue;
 
-          // 查找规则（key 按枚举值升序）
-          auto rule = GetRule(nameA, nameB);
-
-          // 距离检测（缓存）
-          const float dist = CachedDistance(distCache, infoA.bodypart, infoB.bodypart);
-          if (dist > rule.radius)
+          // 预过滤：只处理有规则的部位对
+          const Rule& rule = GetRule(nameA, nameB);
+          if (rule.type == Interact::Type::None)
             continue;
 
-          // 角度检测
-          const bool antiAligned = kUseAntiAligned.count(rule.type) > 0;
-          if (!CheckAngle(infoA.bodypart, infoB.bodypart, rule.maxAngle, antiAligned))
-            continue;
-
-          // 附加约束（Naveljob: front + horiz）
-          // needFront / needHoriz 总是针对 Belly（infoA.bodypart 或 infoB.bodypart 中哪个是 Belly）
-          // 和 Penis，确定好顺序后调用 CheckExtra
-          {
-            const BP* bellyPart = (nameA == Name::Belly)   ? &infoA.bodypart
-                                  : (nameB == Name::Belly) ? &infoB.bodypart
-                                                           : nullptr;
-            const BP* penisPart = (nameA == Name::Penis)   ? &infoA.bodypart
-                                  : (nameB == Name::Penis) ? &infoB.bodypart
-                                                           : nullptr;
-            if ((rule.needFront || rule.needHoriz) && bellyPart && penisPart) {
-              if (!CheckExtra(*bellyPart, *penisPart, rule.needFront, rule.needHoriz))
-                continue;
-            }
-          }
-
-          // 更新 actA 侧的候选（若比当前更近）
-          auto& candA = candidates[actA][nameA];
-          if (dist < candA.distance)
-            candA = {actB, nameA, nameB, dist, rule.type};
-
-          // 更新 actB 侧的候选（若 actA != actB，对称写入）
-          if (actA != actB) {
-            auto& candB = candidates[actB][nameB];
-            if (dist < candB.distance)
-              candB = {actA, nameB, nameA, dist, rule.type};
-          }
+          const float dist = infoA.bodypart.Distance(infoB.bodypart);
+          entries.push_back({actA, nameA, actB, nameB, dist, rule});
         }
       }
     }
   }
 
-  // ── Phase 3: 抢占仲裁 ────────────────────────────────────────────────────
-  // 如果多个 actor 争夺同一目标部位，较远的一方需要重新寻找候选（跳过胜方）。
-  //
-  // 做法：
-  //   对每个 (actor, part)，检查对方 actor 是否也把 part 的对应部位候选指向了
-  //   不同的第三方。若存在竞争（两个 actorX 同时指向 actorY.partY），
-  //   则按距离选胜者，败者重新在候选列表中找次优（排除胜者），若无次优则置空。
-  //
-  // 注：当前场景一般 2~4 人，简单循环代价可接受。
-  //
-  // 竞争定义：两个不同的 actorX、actorZ 的 candidates 中，都以
-  //   actorY.nameY 作为目标（即 cand.actor == actorY && cand.partOther == nameY）
-  // 这种情况较少（需要两个 penis 争一个 vagina），暂时用简单的"保留距离最近者"策略。
+  // 按距离升序排序，保证贪心分配优先处理最近的配对
+  std::sort(entries.begin(), entries.end(),
+            [](const DistEntry& x, const DistEntry& y) { return x.distance < y.distance; });
 
-  // 构建反向索引：target(actor, partName) -> list of (sourceActor, sourcePartName, dist)
-  using TargetKey = std::pair<RE::Actor*, Name>;
-  struct TargetKeyHash
+  // ── Phase 3: 贪心分配（从近到远） ────────────────────────────────────────
+  // usedParts 记录已被分配的 (actor, partName) 对
+  using PartKey = std::pair<RE::Actor*, Name>;
+  struct PartKeyHash
   {
-    std::size_t operator()(const TargetKey& k) const
+    std::size_t operator()(const PartKey& k) const
     {
       return std::hash<RE::Actor*>{}(k.first) ^ (static_cast<std::size_t>(k.second) << 8);
     }
   };
-  struct ClaimEntry
+  std::unordered_set<PartKey, PartKeyHash> usedParts;
+
+  // 分配结果：actor -> partName -> {partner, partSelf, partPartner, distance, type}
+  struct AssignInfo
   {
-    RE::Actor* srcActor;
-    Name srcPart;
-    float dist;
+    RE::Actor* partner;
+    Name partSelf;
+    Name partPartner;
+    float distance;
+    Interact::Type type;
   };
-  std::unordered_map<TargetKey, std::vector<ClaimEntry>, TargetKeyHash> claims;
+  std::unordered_map<RE::Actor*, std::unordered_map<Name, AssignInfo>> assigns;
 
-  for (auto& [actor, partMap] : candidates) {
-    for (auto& [partName, cand] : partMap) {
-      if (!cand.actor)
-        continue;
-      claims[{cand.actor, cand.partOther}].push_back({actor, partName, cand.distance});
-    }
-  }
-
-  // 对每个被争夺的目标，只保留距离最近的��请者
-  for (auto& [target, claimList] : claims) {
-    if (claimList.size() <= 1)
+  for (const DistEntry& e : entries) {
+    // 距离超出规则半径则跳过（不能 break，因为不同规则半径不同）
+    if (e.distance > e.rule.radius)
       continue;
 
-    // 排序，最近的排前
-    std::sort(claimList.begin(), claimList.end(), [](const ClaimEntry& x, const ClaimEntry& y) {
-      return x.dist < y.dist;
-    });
+    // 任意一侧已被占用则跳过
+    if (usedParts.count({e.actorA, e.nameA}) || usedParts.count({e.actorB, e.nameB}))
+      continue;
 
-    // 胜者保留；败者将候选置空（暂不重新搜索，可扩展）
-    for (std::size_t k = 1; k < claimList.size(); ++k) {
-      auto& loser = candidates[claimList[k].srcActor][claimList[k].srcPart];
-      loser       = {};  // 置空
+    // 角度约束
+    const bool antiAligned = kUseAntiAligned.count(e.rule.type) > 0;
+    const BP& bpA = datas[e.actorA].infos[e.nameA].bodypart;
+    const BP& bpB = datas[e.actorB].infos[e.nameB].bodypart;
+    if (!CheckAngle(bpA, bpB, e.rule.maxAngle, antiAligned))
+      continue;
+
+    // 附加约束（Naveljob: front + horiz）
+    if (e.rule.needFront || e.rule.needHoriz) {
+      const BP* bellyPart = (e.nameA == Name::Belly) ? &bpA
+                            : (e.nameB == Name::Belly) ? &bpB
+                                                       : nullptr;
+      const BP* penisPart = (e.nameA == Name::Penis) ? &bpA
+                            : (e.nameB == Name::Penis) ? &bpB
+                                                       : nullptr;
+      if (bellyPart && penisPart) {
+        if (!CheckExtra(*bellyPart, *penisPart, e.rule.needFront, e.rule.needHoriz))
+          continue;
+      }
+    }
+
+    // 自交互升级为 Masturbation
+    Interact::Type resolvedType = e.rule.type;
+    if (e.actorA == e.actorB) {
+      if (resolvedType == Interact::Type::FingerVagina ||
+          resolvedType == Interact::Type::FingerAnus ||
+          resolvedType == Interact::Type::Handjob) {
+        resolvedType = Interact::Type::Masturbation;
+      }
+    }
+
+    // 分配双侧
+    assigns[e.actorA][e.nameA] = {e.actorB, e.nameA, e.nameB, e.distance, resolvedType};
+    usedParts.insert({e.actorA, e.nameA});
+
+    assigns[e.actorB][e.nameB] = {e.actorA, e.nameB, e.nameA, e.distance, resolvedType};
+    usedParts.insert({e.actorB, e.nameB});
+  }
+
+  // ── Phase 4: DeepThroat 升级 ─────────────────────────────────────────────
+  // Fellatio → DeepThroat：penis.start 在 mouth 的前方（penis 插入更深）
+  for (auto& [actor, partMap] : assigns) {
+    auto itMouth = partMap.find(Name::Mouth);
+    if (itMouth == partMap.end() || itMouth->second.type != Interact::Type::Fellatio)
+      continue;
+
+    AssignInfo& mouthAsn = itMouth->second;
+
+    auto itMouthBP = datas[actor].infos.find(Name::Mouth);
+    auto itPenisBP = datas[mouthAsn.partner].infos.find(Name::Penis);
+    if (itMouthBP == datas[actor].infos.end() || itPenisBP == datas[mouthAsn.partner].infos.end())
+      continue;
+
+    const BP& mouth = itMouthBP->second.bodypart;
+    const BP& penis = itPenisBP->second.bodypart;
+
+    if (mouth.IsInFront(penis.GetStart()))
+      mouthAsn.type = Interact::Type::DeepThroat;
+  }
+
+  // ── Phase 5: 组合交互检测 ────────────────────────────────────────────────
+  struct ActorInteractSummary
+  {
+    bool hasOral    = false;  // Mouth 接受 Fellatio/DeepThroat（被口交）
+    bool givesOral  = false;  // Mouth 给对方 Cunnilingus/Anilingus
+    bool hasVaginal = false;  // Vagina 参与 Vaginal
+    bool hasAnal    = false;  // Anus 参与 Anal
+    RE::Actor* oralPartner    = nullptr;
+    RE::Actor* vaginalPartner = nullptr;
+    RE::Actor* analPartner    = nullptr;
+    RE::Actor* givesOralTo    = nullptr;
+  };
+
+  std::unordered_map<RE::Actor*, ActorInteractSummary> summaries;
+
+  for (auto& [actor, partMap] : assigns) {
+    ActorInteractSummary& s = summaries[actor];
+    for (auto& [partName, asn] : partMap) {
+      switch (asn.type) {
+      case Interact::Type::Fellatio:
+      case Interact::Type::DeepThroat:
+        if (partName == Name::Mouth) {
+          s.hasOral     = true;
+          s.oralPartner = asn.partner;
+        }
+        break;
+      case Interact::Type::Cunnilingus:
+      case Interact::Type::Anilingus:
+        if (partName == Name::Mouth) {
+          s.givesOral   = true;
+          s.givesOralTo = asn.partner;
+        }
+        break;
+      case Interact::Type::Vaginal:
+        if (partName == Name::Vagina) {
+          s.hasVaginal     = true;
+          s.vaginalPartner = asn.partner;
+        }
+        break;
+      case Interact::Type::Anal:
+        if (partName == Name::Anus) {
+          s.hasAnal     = true;
+          s.analPartner = asn.partner;
+        }
+        break;
+      default:
+        break;
+      }
     }
   }
 
-  // ── Phase 4: 写回 Info，计算 velocity ───────────────────────────────────
+  // comboTypes 存储每个 actor 检测到的组合类型，用于 debug 输出
+  std::unordered_map<RE::Actor*, std::vector<Interact::Type>> comboTypes;
+
+  for (auto& [actor, s] : summaries) {
+    // SixtyNine：自己给对方口交，且对方也给自己口（Fellatio/DeepThroat 或 Cunnilingus/Anilingus）
+    if (s.givesOral && s.givesOralTo) {
+      auto it = summaries.find(s.givesOralTo);
+      if (it != summaries.end()) {
+        const ActorInteractSummary& ps = it->second;
+        if ((ps.givesOral && ps.givesOralTo == actor) ||
+            (ps.hasOral && ps.oralPartner == actor)) {
+          comboTypes[actor].push_back(Interact::Type::SixtyNine);
+        }
+      }
+    }
+
+    // DoublePenetration：同时有 Vaginal 和 Anal，来自不同 partner
+    if (s.hasVaginal && s.hasAnal && s.vaginalPartner != s.analPartner)
+      comboTypes[actor].push_back(Interact::Type::DoublePenetration);
+
+    // TriplePenetration：Oral（被插）+ Vaginal + Anal，三者 partner 各不同
+    if (s.hasOral && s.hasVaginal && s.hasAnal &&
+        s.oralPartner != s.vaginalPartner &&
+        s.oralPartner != s.analPartner &&
+        s.vaginalPartner != s.analPartner) {
+      comboTypes[actor].push_back(Interact::Type::TriplePenetration);
+    }
+
+    // Spitroast：被口交（Fellatio/DeepThroat）同时有 Vaginal 或 Anal，来自不同 partner
+    if (s.hasOral && (s.hasVaginal || s.hasAnal)) {
+      const bool diffVaginal = s.hasVaginal && s.oralPartner != s.vaginalPartner;
+      const bool diffAnal    = s.hasAnal && s.oralPartner != s.analPartner;
+      if (diffVaginal || diffAnal)
+        comboTypes[actor].push_back(Interact::Type::Spitroast);
+    }
+  }
+
+  // ── Phase 6: 写回 Info，计算 velocity ───────────────────────────────────
   const float nowMs = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(
                                              std::chrono::steady_clock::now().time_since_epoch())
                                              .count()) /
@@ -457,36 +522,24 @@ void Interact::Update()
     data.lastUpdateMs = nowMs;
 
     for (auto& [partName, info] : data.infos) {
-      auto it = candidates.find(actor);
-      if (it == candidates.end())
+      auto it = assigns.find(actor);
+      if (it == assigns.end())
         continue;
       auto it2 = it->second.find(partName);
-      if (it2 == it->second.end() || !it2->second.actor)
+      if (it2 == it->second.end())
         continue;
 
-      const Candidate& cand = it2->second;
-
-      // DeepThroat 升级：Fellatio 满足且 penis.start 在 mouth 前方
-      Interact::Type resolvedType = cand.type;
-      if (cand.type == Interact::Type::Fellatio) {
-        const BP& mouth = data.infos.at(Name::Mouth).bodypart;
-        const BP& penis = datas.at(cand.actor).infos.at(Name::Penis).bodypart;
-        // penis の root (start) が mouth の前方にある = deep throat
-        if (mouth.IsInFront(penis.GetStart()))
-          resolvedType = Interact::Type::DeepThroat;
-      }
-
-      info.actor    = cand.actor;
-      info.distance = cand.distance;
-      info.type     = resolvedType;
-      info.velocity = (dt > 1e-4f) ? (cand.distance - info.prevDistance) / dt : 0.f;
+      const AssignInfo& asn = it2->second;
+      info.actor    = asn.partner;
+      info.distance = asn.distance;
+      info.type     = asn.type;
+      info.velocity = (dt > 1e-4f) ? (asn.distance - info.prevDistance) / dt : 0.f;
     }
   }
 
-  // Debug 输出
+  // ── Phase 7: Debug 输出 ──────────────────────────────────────────────────
   for (auto& [actor, data] : datas) {
     for (auto& [partName, info] : data.infos) {
-      // 输出每个部位的交互信息
       if (!info.actor || info.type == Interact::Type::None)
         continue;
 
@@ -498,6 +551,13 @@ void Interact::Update()
           actor->GetName(), magic_enum::enum_name(partName),
           info.actor ? info.actor->GetName() : "None", info.distance, info.velocity,
           magic_enum::enum_name(info.type));
+    }
+
+    // Combo types
+    auto itCombo = comboTypes.find(actor);
+    if (itCombo != comboTypes.end()) {
+      for (const auto& combo : itCombo->second)
+        logger::info("Actor: {}, Combo: {}", actor->GetName(), magic_enum::enum_name(combo));
     }
   }
 }
