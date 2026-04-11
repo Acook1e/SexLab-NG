@@ -2,6 +2,7 @@
 
 #include "Instance/Collision.h"
 #include "Instance/Scale.h"
+#include "Registry/Stat.h"
 #include "Utils/UI.h"
 
 namespace Instance
@@ -47,6 +48,18 @@ SceneInstance::~SceneInstance()
   state = InstanceState::DestroyInstance;
 
   UI::GetSingleton().Hide(this);
+
+  // ── 场景结束: 收集 enjoyment 记录并更新 stat ──────────────
+  if (currentScene && !actorInfoMap.empty()) {
+    std::unordered_map<RE::Actor*, Registry::ActorStat::EndSceneRecord> records;
+    records.reserve(actorInfoMap.size());
+    for (const auto& [actor, info] : actorInfoMap) {
+      const bool isAggressor = (actor == actors.front() &&
+                                currentScene->GetTags().Has(Define::SceneTags::Type::Aggressive));
+      records[actor]         = {info.enjoy.GetValue(), isAggressor};
+    }
+    Registry::ActorStat::GetSingleton().UpdateOnSceneEnd(actors, currentScene, records);
+  }
 
   ResetActors();
   DressActors();
@@ -278,26 +291,113 @@ Define::Scene* SceneInstance::RandomScene()
   return availableScenes.at(dist(rng));
 }
 
+// ════════════════════════════════════════════════════════════
+// O(N³) 匈牙利算法: 最小代价完美匹配
+// cost[i][j] = 将第 i 行分配给第 j 列的代价 (N×N 方阵)
+// 返回 assignment[i] = j (0-indexed)
+// ════════════════════════════════════════════════════════════
+static std::vector<int> HungarianAssign(const std::vector<std::vector<float>>& cost)
+{
+  const int n           = static_cast<int>(cost.size());
+  constexpr float kHInf = 2e9f;
+
+  std::vector<float> u(n + 1, 0.f), v(n + 1, 0.f);
+  std::vector<int> p(n + 1, 0), way(n + 1, 0);
+
+  for (int i = 1; i <= n; ++i) {
+    p[0]   = i;
+    int j0 = 0;
+    std::vector<float> minv(n + 1, kHInf);
+    std::vector<bool> used(n + 1, false);
+    do {
+      used[j0]     = true;
+      const int i0 = p[j0];
+      float delta  = kHInf;
+      int j1       = -1;
+      for (int j = 1; j <= n; ++j) {
+        if (!used[j]) {
+          const float cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+          if (cur < minv[j]) {
+            minv[j] = cur;
+            way[j]  = j0;
+          }
+          if (minv[j] < delta) {
+            delta = minv[j];
+            j1    = j;
+          }
+        }
+      }
+      for (int j = 0; j <= n; ++j) {
+        if (used[j]) {
+          u[p[j]] += delta;
+          v[j] -= delta;
+        } else {
+          minv[j] -= delta;
+        }
+      }
+      j0 = j1;
+    } while (p[j0] != 0);
+    do {
+      const int j1 = way[j0];
+      p[j0]        = p[j1];
+      j0           = j1;
+    } while (j0 != 0);
+  }
+
+  std::vector<int> assignment(n, -1);
+  for (int j = 1; j <= n; ++j)
+    if (p[j] != 0)
+      assignment[p[j] - 1] = j - 1;
+  return assignment;
+}
+
 void SceneInstance::SetPositions()
 {
-  auto& positions = currentScene->GetPositions();
-  std::vector<bool> actorAssigned(actors.size(), false);
-  for (auto& position : positions) {
-    for (std::size_t j = 0; j < actors.size(); ++j) {
-      auto* actor = actors[j];
-      if (!actor || actorAssigned[j])
-        continue;
+  auto& positions      = currentScene->GetPositions();
+  const int n          = static_cast<int>(actors.size());
+  constexpr float kInf = 1e9f;
 
-      if (position.GetRace() == Define::Race::GetRace(actor) &&
-          position.GetGender() == Define::Gender::GetGender(actor)) {
-        actorAssigned[j] = true;
-        if (auto it = actorInfoMap.find(actor); it != actorInfoMap.end())
-          it->second.position = &position;
-        else
-          actorInfoMap.emplace(actor, SceneActorInfo(&position));
-        break;
-      }
+  // 构建代价矩阵: race/gender 不匹配 → kInf, 否则 |scaleDiff|
+  std::vector<std::vector<float>> cost(n, std::vector<float>(n, kInf));
+  for (int a = 0; a < n; ++a) {
+    auto* actor = actors[a];
+    if (!actor)
+      continue;
+    const auto race   = Define::Race::GetRace(actor);
+    const auto gender = Define::Gender::GetGender(actor);
+    const float scale = Scale::CalculateScale(actor);
+    for (int p = 0; p < n; ++p) {
+      if (positions[p].GetRace() == race && positions[p].GetGender() == gender)
+        cost[a][p] = std::abs(scale - positions[p].GetScale());
     }
+  }
+
+  const auto assignment = HungarianAssign(cost);
+
+  for (int a = 0; a < n; ++a) {
+    const int pa = assignment[a];
+    if (pa < 0 || cost[a][pa] >= kInf * 0.5f)
+      continue;
+    auto* actor = actors[a];
+    if (!actor)
+      continue;
+    if (auto it = actorInfoMap.find(actor); it != actorInfoMap.end())
+      it->second.position = &positions[pa];
+    else
+      actorInfoMap.emplace(actor, SceneActorInfo(&positions[pa]));
+  }
+
+  // ── 根据 stat 初始化每位 actor 的 enjoyment ──────────────
+  auto& statMgr = Registry::ActorStat::GetSingleton();
+  for (auto& [actor, info] : actorInfoMap) {
+    std::vector<RE::Actor*> others;
+    others.reserve(actors.size() - 1);
+    for (auto* other : actors)
+      if (other && other != actor)
+        others.push_back(other);
+    const float init =
+        statMgr.GetInitialEnjoyment(actor, currentScene->GetTags(), *info.position, others);
+    info.enjoy = Define::Enjoyment(init);
   }
 }
 

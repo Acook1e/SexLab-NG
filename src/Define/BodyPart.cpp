@@ -153,13 +153,13 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
   case Name::BreastLeft:
   case Name::BreastRight:
   case Name::Vagina:
+  case Name::GlutealCleft:
     return isFemaleOrFuta;
   case Name::Belly:
   case Name::ThighLeft:
   case Name::ThighRight:
   case Name::ButtLeft:
   case Name::ButtRight:
-  case Name::GlutealCleft:
   case Name::Anus:
     return race.GetType() == Define::Race::Type::Human;
   case Name::Penis:

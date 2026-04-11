@@ -37,7 +37,7 @@ public:
     ThighRight,    // Human only
     ButtLeft,      // Human only
     ButtRight,     // Human only
-    GlutealCleft,  // Human only
+    GlutealCleft,  // Female or Futa
     FootLeft,      // All Creature
     FootRight,     // All Creature
     Vagina,        // Female or Futa

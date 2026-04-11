@@ -69,6 +69,9 @@ class ApplyMovement
 public:
   static void Install()
   {
+#if defined(SKYRIMVR)
+    return;  // TODO: Find VR address
+#endif
     auto& trampoline = SKSE::GetTrampoline();
     SKSE::AllocTrampoline(14);
 
@@ -83,14 +86,31 @@ private:
   static inline REL::Relocation<decltype(ApplyMovementDelta)> _ApplyMovementDelta;
 };
 
+class InputEvent
+{
+public:
+  static void Install()
+  {
+    const REL::Relocation<uintptr_t> addr{REL::VariantID(67315, 68617, 0xC519E0)};
+    auto& trampoline = SKSE::GetTrampoline();
+    SKSE::AllocTrampoline(14);
+    _ProcessEvent = trampoline.write_call<5>(
+        addr.address() + REL::VariantOffset(0x7B, 0x7B, 0x81).offset(), ProcessEvent);
+  }
+
+private:
+  static void ProcessEvent(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher,
+                           RE::InputEvent* const* a_events);
+  static inline REL::Relocation<decltype(ProcessEvent)> _ProcessEvent;
+};
+
 inline void Install()
 {
   MainUpdate::Install();
   PlayerUpdate::Install();
   NPCUpdate::Install();
   CollisionEnable::Install();
-#if !defined(SKYRIMVR)
   ApplyMovement::Install();
-#endif
+  InputEvent::Install();
 }
 }  // namespace Hooks

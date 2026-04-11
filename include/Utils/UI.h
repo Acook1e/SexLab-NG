@@ -14,6 +14,8 @@ public:
   UI();
   ~UI();
 
+  bool IsVisible() const { return isActive; }
+
   // 场景生命周期回调
   void Show(Instance::SceneInstance* scene);
   void Update(Instance::SceneInstance* scene);

@@ -69,7 +69,7 @@ static const std::unordered_map<std::uint16_t, Rule> rules{
      {Interact::Type::Fellatio, 8.f, 360.f, false, false}},
     // ── Breast ──────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::HandLeft,
-     {Interact::Type::GropeBreast, 7.f, 360.f, false, false}},
+     {Interact::Type::GropeBreast, 4.f, 360.f, false, false}},
     {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::Penis,
      {Interact::Type::Titfuck, 8.f, 60.f, false, false}},
     // ── Finger / Hand ───────────────────────────────────────────────────────
@@ -99,10 +99,10 @@ static const std::unordered_map<std::uint16_t, Rule> rules{
      {Interact::Type::Tribbing, 8.f, 30.f, false, false}},
     // Vaginal: penis 方向与 vagina 方向近似反向（插入）
     {Define::BodyPart::Name::Vagina | Define::BodyPart::Name::Penis,
-     {Interact::Type::Vaginal, 8.f, 35.f, false, false}},
+     {Interact::Type::Vaginal, 5.f, 35.f, false, false}},
     // ── Anus ────────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::Anus | Define::BodyPart::Name::Penis,
-     {Interact::Type::Anal, 7.f, 35.f, false, false}},
+     {Interact::Type::Anal, 4.f, 35.f, false, false}},
 };
 
 const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)
@@ -528,28 +528,28 @@ void Interact::Update()
   }
 
   // ── Phase 7: Debug 输出 ──────────────────────────────────────────────────
-  for (auto& [actor, data] : datas) {
-    for (auto& [partName, info] : data.infos) {
-      if (!info.actor || info.type == Interact::Type::None)
-        continue;
+  // for (auto& [actor, data] : datas) {
+  //   for (auto& [partName, info] : data.infos) {
+  //     if (!info.actor || info.type == Interact::Type::None)
+  //       continue;
 
-      if (info.type == info.prevType && info.actor == info.prevActor)
-        continue;
+  //     if (info.type == info.prevType && info.actor == info.prevActor)
+  //       continue;
 
-      logger::info(
-          "Actor: {}, Part: {}, Info: {{ actor: {}, distance: {}, velocity: {}, type: {} }}",
-          actor->GetName(), magic_enum::enum_name(partName),
-          info.actor ? info.actor->GetName() : "None", info.distance, info.velocity,
-          magic_enum::enum_name(info.type));
-    }
+  //     logger::info(
+  //         "Actor: {}, Part: {}, Info: {{ actor: {}, distance: {}, velocity: {}, type: {} }}",
+  //         actor->GetName(), magic_enum::enum_name(partName),
+  //         info.actor ? info.actor->GetName() : "None", info.distance, info.velocity,
+  //         magic_enum::enum_name(info.type));
+  //   }
 
-    // Combo types
-    auto itCombo = comboTypes.find(actor);
-    if (itCombo != comboTypes.end()) {
-      for (const auto& combo : itCombo->second)
-        logger::info("Actor: {}, Combo: {}", actor->GetName(), magic_enum::enum_name(combo));
-    }
-  }
+  //   // Combo types
+  //   auto itCombo = comboTypes.find(actor);
+  //   if (itCombo != comboTypes.end()) {
+  //     for (const auto& combo : itCombo->second)
+  //       logger::info("Actor: {}, Combo: {}", actor->GetName(), magic_enum::enum_name(combo));
+  //   }
+  // }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

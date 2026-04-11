@@ -16,60 +16,96 @@ struct ActorInfo
 };
 
 // ════════════════════════════════════════════════════════════
-// Stage 0: Race + Gender 贪心匹配
-//
-// 在匹配的同时计算总 scale 偏差, 供后续 Stage 4 使用。
-// 贪心策略: 按 scaleDev 升序分配, 使总偏差最小化。
-// 返回: {是否全部匹配成功, 总 scale 偏差}
+// O(N³) 匈牙利算法: 最小代价完美匹配
+// cost[i][j] = 将第 i 行分配给第 j 列的代价 (N×N 方阵)
+// 返回 assignment[i] = j (0-indexed)
 // ════════════════════════════════════════════════════════════
-struct MatchResult
+static std::vector<int> HungarianAssign(const std::vector<std::vector<float>>& cost)
 {
-  bool matched        = false;
-  float totalScaleDev = 0.f;
-};
+  const int n           = static_cast<int>(cost.size());
+  constexpr float kHInf = 2e9f;
 
-static MatchResult MatchActorsToPositions(const std::vector<RE::Actor*>& actors,
-                                          const std::unordered_map<RE::Actor*, ActorInfo>& infos,
-                                          std::vector<Define::Position>& positions)
+  std::vector<float> u(n + 1, 0.f), v(n + 1, 0.f);
+  std::vector<int> p(n + 1, 0), way(n + 1, 0);
+
+  for (int i = 1; i <= n; ++i) {
+    p[0]   = i;
+    int j0 = 0;
+    std::vector<float> minv(n + 1, kHInf);
+    std::vector<bool> used(n + 1, false);
+    do {
+      used[j0]     = true;
+      const int i0 = p[j0];
+      float delta  = kHInf;
+      int j1       = -1;
+      for (int j = 1; j <= n; ++j) {
+        if (!used[j]) {
+          const float cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+          if (cur < minv[j]) {
+            minv[j] = cur;
+            way[j]  = j0;
+          }
+          if (minv[j] < delta) {
+            delta = minv[j];
+            j1    = j;
+          }
+        }
+      }
+      for (int j = 0; j <= n; ++j) {
+        if (used[j]) {
+          u[p[j]] += delta;
+          v[j] -= delta;
+        } else {
+          minv[j] -= delta;
+        }
+      }
+      j0 = j1;
+    } while (p[j0] != 0);
+    do {
+      const int j1 = way[j0];
+      p[j0]        = p[j1];
+      j0           = j1;
+    } while (j0 != 0);
+  }
+
+  std::vector<int> assignment(n, -1);
+  for (int j = 1; j <= n; ++j)
+    if (p[j] != 0)
+      assignment[p[j] - 1] = j - 1;
+  return assignment;
+}
+
+// ════════════════════════════════════════════════════════════
+// Stage 0: Race + Gender 完全匹配 + 最优 scale 分配 (匈牙利)
+// 返回最小总 scaleDev; 若无法完全匹配则返回 1e9f
+// ════════════════════════════════════════════════════════════
+static float MatchActorsToPositions(const std::vector<RE::Actor*>& actors,
+                                    const std::unordered_map<RE::Actor*, ActorInfo>& infos,
+                                    std::vector<Define::Position>& positions)
 {
-  struct Candidate
-  {
-    std::size_t actorIdx;
-    std::size_t posIdx;
-    float scaleDev;
-  };
+  constexpr float kInf = 1e9f;
+  const int n          = static_cast<int>(actors.size());
 
-  std::vector<Candidate> candidates;
-  candidates.reserve(actors.size() * positions.size());
-
-  for (std::size_t a = 0; a < actors.size(); ++a) {
+  // 构建代价矩阵: race/gender 不匹配 → kInf, 否则 |scaleDiff|
+  std::vector<std::vector<float>> cost(n, std::vector<float>(n, kInf));
+  for (int a = 0; a < n; ++a) {
     const auto& info = infos.at(actors[a]);
-    for (std::size_t p = 0; p < positions.size(); ++p) {
+    for (int p = 0; p < n; ++p) {
       if (positions[p].GetRace() == info.race && positions[p].GetGender() == info.gender)
-        candidates.push_back({a, p, std::abs(info.scale - positions[p].GetScale())});
+        cost[a][p] = std::abs(info.scale - positions[p].GetScale());
     }
   }
 
-  std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) {
-    return a.scaleDev < b.scaleDev;
-  });
+  const auto assignment = HungarianAssign(cost);
 
-  std::vector<bool> actorUsed(actors.size(), false);
-  std::vector<bool> posUsed(positions.size(), false);
-  float totalDev    = 0.f;
-  std::size_t count = 0;
-
-  for (const auto& c : candidates) {
-    if (actorUsed[c.actorIdx] || posUsed[c.posIdx])
-      continue;
-    actorUsed[c.actorIdx] = true;
-    posUsed[c.posIdx]     = true;
-    totalDev += c.scaleDev;
-    if (++count == actors.size())
-      break;
+  float total = 0.f;
+  for (int a = 0; a < n; ++a) {
+    const int pa = assignment[a];
+    if (pa < 0 || cost[a][pa] >= kInf * 0.5f)
+      return kInf;
+    total += cost[a][pa];
   }
-
-  return {count == actors.size(), totalDev};
+  return total;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -184,12 +220,12 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
       if (positions.size() != actors.size())
         continue;
 
-      // Race + Gender 一一对应 (贪心匹配, 同时算出 scaleDev)
-      auto match = MatchActorsToPositions(actors, infos, positions);
-      if (!match.matched)
+      // Race + Gender 一一对应 (匈牙利最优匹配, 同时算出最小 scaleDev)
+      const float scaleDev = MatchActorsToPositions(actors, infos, positions);
+      if (scaleDev >= 1e9f)
         continue;
 
-      basePool.push_back({&scene, match.totalScaleDev});
+      basePool.push_back({&scene, scaleDev});
     }
   }
 

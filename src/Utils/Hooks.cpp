@@ -2,6 +2,7 @@
 
 #include "Instance/Collision.h"
 #include "Instance/Manager.h"
+#include "Utils/UI.h"
 
 namespace Hooks
 {
@@ -88,5 +89,26 @@ void ApplyMovement::ApplyMovementDelta(RE::Actor* a_actor, float a_delta)
     }
 
   _ApplyMovementDelta(a_actor, a_delta);
+}
+
+void InputEvent::ProcessEvent(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher,
+                              RE::InputEvent* const* a_events)
+{
+  if (a_events && *a_events && UI::GetSingleton().IsVisible()) {
+    auto event = *a_events;
+    if (event->eventType == RE::INPUT_EVENT_TYPE::kButton) {
+      auto buttonEvent = event->AsButtonEvent();
+      // Left Alt key code
+      if (buttonEvent && buttonEvent->GetIDCode() == 56) {
+        if (buttonEvent->IsDown())
+          UI::GetSingleton().SetFocus(true);
+        else if (buttonEvent->IsUp())
+          UI::GetSingleton().SetFocus(false);
+      }
+    }
+    // constexpr RE::InputEvent* const dummy[] = {nullptr};
+    // return _ProcessEvent(a_dispatcher, dummy);
+  }
+  _ProcessEvent(a_dispatcher, a_events);
 }
 }  // namespace Hooks
