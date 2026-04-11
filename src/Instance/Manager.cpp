@@ -1,9 +1,11 @@
 #include "Instance/Manager.h"
 
+#include "Instance/Scale.h"
+
 namespace Instance
 {
 std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors,
-                                                       Define::Scene::Type sceneType)
+                                                       SearchOptions options)
 {
   ScopeTimer timer("SceneManager::SearchScenes");
 
@@ -13,22 +15,25 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
 
   std::vector<Define::Scene*> res;
 
-  std::unordered_map<RE::Actor*, Define::Gender> genderMap;
-  std::unordered_map<RE::Actor*, Define::Race> raceMap;
+  struct ActorInfo
+  {
+    Define::Race race;
+    float scale;
+    Define::Gender gender;
+  };
+
+  std::unordered_map<RE::Actor*, ActorInfo> infos;
   for (auto* actor : actors) {
-    genderMap.emplace(actor, Define::Gender::GetGender(actor));
-    raceMap.emplace(actor, Define::Race::GetRace(actor));
+    infos.emplace(actor, ActorInfo{Define::Race::GetRace(actor), Scale::CalculateScale(actor),
+                                   Define::Gender::GetGender(actor)});
   }
 
   std::uint64_t racesMask = 0;
-  for (auto& [_, race] : raceMap)
-    racesMask |= race.Get();
+  for (auto& [_, info] : infos)
+    racesMask |= info.race.Get();
 
   for (auto& animPack : animPacks) {
     for (auto& scene : animPack.GetScenes()) {
-      if (scene.GetType() != sceneType)
-        continue;
-
       if (!(scene.GetRaces() >= Define::Race(racesMask)))
         continue;
 
@@ -39,8 +44,9 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
       std::vector<bool> positionAssigned(positions.size(), false);
       bool allActorsMatched = true;
       for (auto* actor : actors) {
-        const auto& actorRace   = raceMap.at(actor);
-        const auto& actorGender = genderMap.at(actor);
+        const auto& actorInfo   = infos.at(actor);
+        const auto& actorRace   = actorInfo.race;
+        const auto& actorGender = actorInfo.gender;
 
         bool matched = false;
         for (std::size_t i = 0; i < positions.size(); ++i) {

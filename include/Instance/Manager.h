@@ -1,10 +1,20 @@
 #pragma once
 
 #include "Define/AnimPack.h"
+#include "Define/Tag.h"
 #include "Instance/SceneInstance.h"
 
 namespace Instance
 {
+struct SearchOptions
+{
+  Define::SceneTags sceneTags = 0;
+  std::unordered_map<RE::Actor*, Define::InteractTags> actorInteractTags{};
+  bool useLeadIn               = false;
+  bool strictMatchSceneTags    = false;
+  bool strictMatchInteractTags = false;
+};
+
 class SceneManager
 {
 public:
@@ -14,9 +24,8 @@ public:
     return singleton;
   }
 
-  std::vector<Define::Scene*>
-  SearchScenes(std::vector<RE::Actor*> actors,
-               Define::Scene::Type sceneType = Define::Scene::Type::Normal);
+  std::vector<Define::Scene*> SearchScenes(std::vector<RE::Actor*> actors,
+                                           SearchOptions options = {});
   static std::uint64_t CreateInstance(std::vector<RE::Actor*> actors,
                                       std::vector<Define::Scene*> scenes);
   static void DestroyInstance(std::uint64_t id);

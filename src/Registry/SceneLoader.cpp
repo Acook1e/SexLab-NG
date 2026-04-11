@@ -76,7 +76,7 @@ bool LoadFromJson(const std::filesystem::path& path)
           Define::Position(actor_data.value("race", Define::Race::Type::Unknown),
                            actor_data.value("gender", Define::Gender::Type::Unknown),
                            actor_data.value("scale", 1.0f), std::move(events), std::move(offsets),
-                           std::move(schlongAngles), std::move(strips));
+                           std::move(schlongAngles), std::move(strips), Define::InteractTags(0));
       positions.push_back(std::move(position));
     }
 
@@ -84,9 +84,9 @@ bool LoadFromJson(const std::filesystem::path& path)
       logger::warn("[SexLab NG] Scene {} has no valid actor positions, skipping", scene_name);
       continue;
     }
-    Define::Scene scene = Define::Scene(
-        std::move(scene_name), std::move(event_prefix), std::move(furniture), std::move(races),
-        Define::Scene::Type::Normal, Define::InteractTags(0), std::move(positions));
+    Define::Scene scene =
+        Define::Scene(std::move(scene_name), std::move(event_prefix), std::move(furniture),
+                      std::move(races), Define::SceneTags(0), std::move(positions));
     // logger::info("{}", scene.verbose());
     scenes.push_back(std::move(scene));
   }

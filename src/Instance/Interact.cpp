@@ -54,19 +54,19 @@ std::uint16_t operator|(Define::BodyPart::Name a, Define::BodyPart::Name b)
 static const std::unordered_map<std::uint16_t, Rule> rules{
     // ── Mouth ───────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Mouth,
-     {Interact::Type::Kiss, 6.f, 30.f, false, false}},
+     {Interact::Type::Kiss, 6.f, 360.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::BreastLeft,
-     {Interact::Type::BreastSucking, 8.f, 50.f, false, false}},
+     {Interact::Type::BreastSucking, 8.f, 360.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootLeft,
-     {Interact::Type::ToeSucking, 8.f, 40.f, false, false}},
+     {Interact::Type::ToeSucking, 8.f, 360.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootRight,
-     {Interact::Type::ToeSucking, 8.f, 40.f, false, false}},
+     {Interact::Type::ToeSucking, 8.f, 360.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Vagina,
-     {Interact::Type::Cunnilingus, 8.f, 50.f, false, false}},
+     {Interact::Type::Cunnilingus, 8.f, 360.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Anus,
-     {Interact::Type::Anilingus, 8.f, 50.f, false, false}},
+     {Interact::Type::Anilingus, 8.f, 360.f, false, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Penis,
-     {Interact::Type::Fellatio, 8.f, 45.f, false, false}},
+     {Interact::Type::Fellatio, 8.f, 360.f, false, false}},
     // ── Breast ──────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::HandLeft,
      {Interact::Type::GropeBreast, 7.f, 360.f, false, false}},
@@ -87,10 +87,10 @@ static const std::unordered_map<std::uint16_t, Rule> rules{
      {Interact::Type::Naveljob, 10.f, 60.f, true, true}},
     // ── Thigh ───────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::ThighLeft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Thighjob, 9.f, 50.f, false, false}},
+     {Interact::Type::Thighjob, 4.f, 50.f, false, false}},
     // ── Butt ────────────────────────────────────────────────────────────────
-    {Define::BodyPart::Name::ButtLeft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Frottage, 8.f, 360.f, false, false}},
+    {Define::BodyPart::Name::GlutealCleft | Define::BodyPart::Name::Penis,
+     {Interact::Type::Frottage, 4.f, 45.f, false, false}},
     // ── Foot ────────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::FootLeft | Define::BodyPart::Name::Penis,
      {Interact::Type::Footjob, 8.f, 360.f, false, false}},
@@ -151,12 +151,10 @@ const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)
 //   Thighjob / Titfuck                   → IsAligned（penis 大致平行于对应部位方向）
 
 static const std::unordered_map<Interact::Type, bool> kUseAntiAligned{
-    {Interact::Type::Kiss, true},       {Interact::Type::BreastSucking, true},
-    {Interact::Type::Tribbing, true},   {Interact::Type::Cunnilingus, true},
-    {Interact::Type::Anilingus, true},  {Interact::Type::Fellatio, true},
-    {Interact::Type::DeepThroat, true}, {Interact::Type::FingerVagina, true},
-    {Interact::Type::FingerAnus, true}, {Interact::Type::Vaginal, true},
-    {Interact::Type::Anal, true},
+    {Interact::Type::FingerVagina, true},
+    {Interact::Type::FingerAnus, true},
+    {Interact::Type::Frottage, true},
+    {Interact::Type::Tribbing, true},
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

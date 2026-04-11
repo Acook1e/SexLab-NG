@@ -3,6 +3,7 @@
 #include "Define/Gender.h"
 #include "Define/Race.h"
 #include "Define/Strip.h"
+#include "Define/Tag.h"
 
 namespace Define
 {
@@ -13,16 +14,17 @@ public:
 
   Position(const Race& race, const Gender& gender, const float& scale,
            const std::vector<std::string>& events, std::vector<Offset> offsets,
-           std::vector<std::int8_t> schlongAngles, std::vector<StageStrip> strips)
+           std::vector<std::int8_t> schlongAngles, std::vector<StageStrip> strips,
+           const InteractTags& tags)
       : race(race), gender(gender), scale(scale), events(events), offsets(offsets),
-        schlongAngles(schlongAngles), strips(strips)
+        schlongAngles(schlongAngles), strips(strips), tags(tags)
   {}
   Position(Race&& race, Gender&& gender, float&& scale, std::vector<std::string>&& events,
            std::vector<Offset>&& offsets, std::vector<std::int8_t>&& schlongAngles,
-           std::vector<StageStrip>&& strips)
+           std::vector<StageStrip>&& strips, InteractTags&& tags)
       : race(std::move(race)), gender(std::move(gender)), scale(std::move(scale)),
         events(std::move(events)), offsets(std::move(offsets)),
-        schlongAngles(std::move(schlongAngles)), strips(std::move(strips))
+        schlongAngles(std::move(schlongAngles)), strips(std::move(strips)), tags(std::move(tags))
   {}
 
   [[nodiscard]] const Race& GetRace() const { return race; }
@@ -32,7 +34,7 @@ public:
   [[nodiscard]] std::vector<Offset>& GetOffsets() { return offsets; }
   [[nodiscard]] std::vector<std::int8_t>& GetSchlongAngles() { return schlongAngles; }
   [[nodiscard]] std::vector<StageStrip>& GetStrips() { return strips; }
-
+  [[nodiscard]] const InteractTags& GetTags() const { return tags; }
   void SetOffset(Offset offset, std::size_t idx) { offsets[idx] = offset; }
   void SetSchlongAngle(std::int8_t angle, std::size_t idx) { schlongAngles[idx] = angle; }
   void SetStrip(StageStrip strip, std::size_t idx) { strips[idx] = strip; }
@@ -49,6 +51,7 @@ private:
   Race race;
   Gender gender;
   float scale;
+  InteractTags tags;
   std::vector<std::string> events;
   std::vector<Offset> offsets;
   std::vector<std::int8_t> schlongAngles;
