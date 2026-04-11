@@ -143,4 +143,20 @@ private:
   std::bitset<64> tags;
 };
 
+class CustomTags
+{
+public:
+  CustomTags() : tags(0) {}
+  CustomTags(const std::vector<std::string>& tags) : tags(tags) {}
+  CustomTags(std::vector<std::string>&& tags) : tags(std::move(tags)) {}
+
+  bool Has(const std::string& tag) const
+  {
+    return std::find(tags.begin(), tags.end(), tag) != tags.end();
+  }
+
+private:
+  std::vector<std::string> tags;
+};
+
 }  // namespace Define

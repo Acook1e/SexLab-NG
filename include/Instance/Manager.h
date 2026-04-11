@@ -3,6 +3,7 @@
 #include "Define/AnimPack.h"
 #include "Define/Tag.h"
 #include "Instance/SceneInstance.h"
+#include "Utils/Settings.h"
 
 namespace Instance
 {
@@ -10,9 +11,9 @@ struct SearchOptions
 {
   Define::SceneTags sceneTags = 0;
   std::unordered_map<RE::Actor*, Define::InteractTags> actorInteractTags{};
-  bool useLeadIn               = false;
-  bool strictMatchSceneTags    = false;
-  bool strictMatchInteractTags = false;
+  bool useLeadIn               = Settings::bUseLeadIn;
+  bool strictMatchSceneTags    = Settings::bStrictSceneTags;
+  bool strictMatchInteractTags = Settings::bStrictInteractTags;
 };
 
 class SceneManager

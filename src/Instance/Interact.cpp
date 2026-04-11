@@ -102,7 +102,7 @@ static const std::unordered_map<std::uint16_t, Rule> rules{
      {Interact::Type::Vaginal, 8.f, 35.f, false, false}},
     // ── Anus ────────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::Anus | Define::BodyPart::Name::Penis,
-     {Interact::Type::Anal, 6.f, 35.f, false, false}},
+     {Interact::Type::Anal, 7.f, 35.f, false, false}},
 };
 
 const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)
