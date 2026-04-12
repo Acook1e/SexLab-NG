@@ -127,7 +127,7 @@ static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
 Point3f operator~(const Point& point)
 {
   if (std::holds_alternative<Node>(point)) {
-    auto* node     = std::get<Node>(point);
+    auto node      = std::get<Node>(point);
     const auto pos = node->world.translate;
     return {pos.x, pos.y, pos.z};
   } else if (std::holds_alternative<MidNode>(point)) {
@@ -291,32 +291,35 @@ void BodyPart::UpdateNodes()
       const auto& boneName = std::get<NodeName>(*variant);
       // Empty bone name is a deliberate placeholder (e.g. StormAtronach schlong root/tip)
       if (boneName.empty()) {
-        nodes.push_back(static_cast<RE::NiNode*>(nullptr));
+        nodes.push_back(static_cast<RE::NiPointer<RE::NiNode>>(nullptr));
         continue;
       }
       auto* obj = actor->GetNodeByName(boneName);
       if (!obj)
         logger::warn("Node not found: {}", boneName);
-      nodes.push_back(obj ? obj->AsNode() : nullptr);
+      auto ptr = obj ? obj->AsNode() : nullptr;
+      nodes.push_back(RE::NiPointer<RE::NiNode>(ptr));
 
     } else if (std::holds_alternative<MidNodeName>(*variant)) {
       const auto& midName = std::get<MidNodeName>(*variant);
-      std::array<RE::NiNode*, 2> midNodes{};
+      std::array<RE::NiPointer<RE::NiNode>, 2> midNodes{};
       for (std::size_t i = 0; i < 2; ++i) {
         auto* obj = actor->GetNodeByName(midName[i]);
         if (!obj)
           logger::warn("Mid-node not found: {}", midName[i]);
-        midNodes[i] = obj ? obj->AsNode() : nullptr;
+        auto ptr    = obj ? obj->AsNode() : nullptr;
+        midNodes[i] = RE::NiPointer<RE::NiNode>(ptr);
       }
       nodes.push_back(midNodes);
     } else if (std::holds_alternative<CentralNodeName>(*variant)) {
       const auto& centralName = std::get<CentralNodeName>(*variant);
-      std::array<RE::NiNode*, 3> centralNodes{};
+      std::array<RE::NiPointer<RE::NiNode>, 3> centralNodes{};
       for (std::size_t i = 0; i < 3; ++i) {
         auto* obj = actor->GetNodeByName(centralName[i]);
         if (!obj)
           logger::warn("Central node not found: {}", centralName[i]);
-        centralNodes[i] = obj ? obj->AsNode() : nullptr;
+        auto ptr        = obj ? obj->AsNode() : nullptr;
+        centralNodes[i] = RE::NiPointer<RE::NiNode>(ptr);
       }
       nodes.push_back(centralNodes);
     } else if (std::holds_alternative<OffsetNodeName>(*variant)) {
@@ -328,8 +331,8 @@ void BodyPart::UpdateNodes()
                            Eigen::AngleAxisf(offsetNode.eulerRot.y(), Vector3f::UnitY()) *
                            Eigen::AngleAxisf(offsetNode.eulerRot.z(), Vector3f::UnitZ()))
                               .toRotationMatrix();
-      nodes.push_back(
-          OffsetNode{baseObj ? baseObj->AsNode() : nullptr, localRot, offsetNode.localTrans});
+      auto ptr          = baseObj ? baseObj->AsNode() : nullptr;
+      nodes.push_back(OffsetNode{RE::NiPointer<RE::NiNode>(ptr), localRot, offsetNode.localTrans});
     }
   }
 }

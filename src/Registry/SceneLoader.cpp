@@ -30,9 +30,10 @@ bool LoadFromJson(const std::filesystem::path& path)
     std::string event_prefix = scene_data.value("event_prefix", "");
     // TODO: impl
     Define::Furniture furniture(Define::Furniture::Type::BedDouble);
-    std::uint32_t total_actors = scene_data.value("total_actors", 0);
-    std::uint32_t total_stages = scene_data.value("total_stages", 0);
-    Define::Race races         = scene_data.value("races", Define::Race::Type::Unknown);
+    std::uint32_t total_actors  = scene_data.value("total_actors", 0);
+    std::uint32_t total_stages  = scene_data.value("total_stages", 0);
+    Define::Race races          = scene_data.value("races", Define::Race::Type::Unknown);
+    Define::SceneTags sceneTags = scene_data.value("scene_tags", std::uint64_t{0});
     if (total_actors == 0 || total_stages == 0) {
       logger::warn("[SexLab NG] Scene {} has invalid total_actors or total_stages, skipping",
                    scene_name);
@@ -72,11 +73,12 @@ bool LoadFromJson(const std::filesystem::path& path)
       for (auto j = 1; j <= total_stages; ++j) {
         events.push_back(event_prefix + "_A" + std::to_string(i) + "_S" + std::to_string(j));
       }
+      Define::InteractTags interactTags = actor_data.value("interact_tags", std::uint32_t{0});
       auto position =
           Define::Position(actor_data.value("race", Define::Race::Type::Unknown),
                            actor_data.value("gender", Define::Gender::Type::Unknown),
                            actor_data.value("scale", 1.0f), std::move(events), std::move(offsets),
-                           std::move(schlongAngles), std::move(strips), Define::InteractTags(0));
+                           std::move(schlongAngles), std::move(strips), std::move(interactTags));
       positions.push_back(std::move(position));
     }
 
@@ -86,7 +88,7 @@ bool LoadFromJson(const std::filesystem::path& path)
     }
     Define::Scene scene =
         Define::Scene(std::move(scene_name), std::move(event_prefix), std::move(furniture),
-                      std::move(races), Define::SceneTags(0), std::move(positions));
+                      std::move(races), std::move(sceneTags), std::move(positions));
     // logger::info("{}", scene.verbose());
     scenes.push_back(std::move(scene));
   }

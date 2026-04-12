@@ -24,13 +24,13 @@ struct OffsetNodeName
 
 using PointName = std::variant<NodeName, MidNodeName, CentralNodeName, OffsetNodeName>;
 
-using Node        = RE::NiNode*;
-using MidNode     = std::array<RE::NiNode*, 2>;
-using CentralNode = std::array<RE::NiNode*, 3>;
+using Node        = RE::NiPointer<RE::NiNode>;
+using MidNode     = std::array<RE::NiPointer<RE::NiNode>, 2>;
+using CentralNode = std::array<RE::NiPointer<RE::NiNode>, 3>;
 
 struct OffsetNode
 {
-  RE::NiNode* baseNode;
+  RE::NiPointer<RE::NiNode> baseNode;
   Matrix3f localRot;
   Vector3f localTrans;
 };

@@ -1,7 +1,7 @@
 import ast
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
 from enum import Enum, Flag
 
 from .logger import Logger
@@ -28,9 +28,12 @@ def convert_node(node: ast.AST) -> Any:
     elif isinstance(node, ast.Tuple):
         return [convert_node(elt) for elt in node.elts]
     elif isinstance(node, ast.Dict):
-        keys = [convert_node(k) for k in node.keys]
-        values = [convert_node(v) for v in node.values]
-        return dict(zip(keys, values))
+        result = {}
+        for key_node, value_node in zip(node.keys, node.values):
+            if key_node is None:
+                continue
+            result[convert_node(key_node)] = convert_node(value_node)
+        return result
     elif isinstance(node, ast.Call):
         func_name = convert_node(node.func)
         args = [convert_node(arg) for arg in node.args]
@@ -78,7 +81,7 @@ def parse_animation_file(content: str) -> dict:
     '''
     tree = ast.parse(content)
 
-    config = {
+    config: Dict[str, Any] = {
         'anim_dir': None,
         'id_prefix': None,
         'name_prefix': None,
@@ -169,7 +172,7 @@ def parse_animation_file(content: str) -> dict:
             else:
                 gender = 'female'
 
-            actor_out = {'gender': gender}
+            actor_out: Dict[str, Any] = {'gender': gender}
             # 复制角色调用的其他属性（如 strap_on, add_cum 等）
             for attr, value in actor_data.items():
                 if attr != '__type__':
@@ -225,6 +228,437 @@ def parse_animation_file(content: str) -> dict:
 
 
 unknown = {}
+
+
+INTERACT_TAG_BITS = {
+    "Kiss": 1 << 0,
+    "BreastSucking": 1 << 1,
+    "ToeSucking": 1 << 2,
+    "Cunnilingus": 1 << 3,
+    "Anilingus": 1 << 4,
+    "Fellatio": 1 << 5,
+    "DeepThroat": 1 << 6,
+    "MouthAnimObj": 1 << 7,
+    "GropeBreast": 1 << 8,
+    "Titfuck": 1 << 9,
+    "GropeThigh": 1 << 10,
+    "GropeButt": 1 << 11,
+    "GropeFoot": 1 << 12,
+    "FingerVagina": 1 << 13,
+    "FingerAnus": 1 << 14,
+    "Handjob": 1 << 15,
+    "Masturbation": 1 << 16,
+    "HandAnimObj": 1 << 17,
+    "Naveljob": 1 << 18,
+    "Thighjob": 1 << 19,
+    "Frottage": 1 << 20,
+    "Footjob": 1 << 21,
+    "Tribbing": 1 << 22,
+    "Vaginal": 1 << 23,
+    "VaginaAnimObj": 1 << 24,
+    "Anal": 1 << 25,
+    "AnalAnimObj": 1 << 26,
+    "PenisAnimObj": 1 << 27,
+    "SixtyNine": 1 << 28,
+    "Spitroast": 1 << 29,
+    "DoublePenetration": 1 << 30,
+    "TriplePenetration": 1 << 31,
+}
+
+
+SCENE_TAG_BITS = {
+    "LeadIn": 1 << 0,
+    "Aggressive": 1 << 1,
+    "Forced": 1 << 2,
+    "Dominant": 1 << 3,
+    "Humiliation": 1 << 4,
+    "Loving": 1 << 5,
+    "Teasing": 1 << 6,
+    "Cowgirl": 1 << 7,
+    "ReverseCowgirl": 1 << 8,
+    "Missionary": 1 << 9,
+    "Doggy": 1 << 10,
+    "ProneBone": 1 << 11,
+    "LotusPosition": 1 << 12,
+    "Spooning": 1 << 13,
+    "FaceSitting": 1 << 14,
+    "Standing": 1 << 15,
+    "Kneeling": 1 << 16,
+    "Lying": 1 << 17,
+    "Sitting": 1 << 18,
+    "Behind": 1 << 19,
+    "Facing": 1 << 20,
+    "Holding": 1 << 21,
+    "Hugging": 1 << 22,
+    "Fisting": 1 << 23,
+    "Spanking": 1 << 24,
+    "Toys": 1 << 25,
+    "Magic": 1 << 26,
+    "Facial": 1 << 27,
+    "Ryona": 1 << 28,
+    "Gore": 1 << 29,
+    "Oviposition": 1 << 30,
+    "Oral": 1 << 31,
+    "Vaginal": 1 << 32,
+    "Anal": 1 << 33,
+    "Feet": 1 << 34,
+}
+
+
+POSITION_TAGS = {
+    "2futa", "3 girls", "cccf", "ccccf", "cccsf", "ccf", "ccsf", "cf", "cff", "csf", "csfsf", "f",
+    "fcccc", "fcc", "ffffm", "fffm", "ffm", "ffmm", "fm", "fmc", "fmmm", "m", "mfc", "mff",
+    "mmf", "mmmf", "mmmmsf", "mmmsf", "mmsf", "msf", "msfc", "sfsfc", "sfsfm", "sfsfmm",
+    "sfsfsfm", "sfsfsfsfm", "ff", "fff", "fffc", "ffc", "ccm", "mf"
+}
+
+RACE_TAGS = {
+    "atronach", "bear", "boar", "cat", "chaurus", "chicken", "cow", "crab", "deer", "dog", "dragon",
+    "dragonpriest", "draugr", "falmer", "flameatronach", "fox", "frostatronach", "gargoyle", "giant",
+    "giantspider", "goat", "hag", "hagraven", "horse", "horker", "husky", "icewraith", "lurker",
+    "mammoth", "netch", "rabbit", "reaper", "riekling", "sabrecat", "seeker", "skeever",
+    "slaughterfish", "spider", "spriggan", "stormatronach", "troll", "unicorn", "vampire",
+    "vampirelord", "werewolf", "wispmother", "wolf", "femwerewolf", "chaurushunter", "chaurusreapers",
+    "largespider", "benthiclurker", "ashhopper", "futa", "male", "female", "canine"
+}
+
+SCALE_TAGS = {"petite", "bigguy", "loli", "shota"}
+SCENE_TYPE_TAGS = {"aggressive", "rape", "leadin", "aggressivedefault"}
+SKIP_TAGS = {"test"}
+
+INTERACT_TAG_ALIASES = {
+    "kiss": {"Kiss"},
+    "kissing": {"Kiss"},
+    "blowjob": {"Fellatio"},
+    "fellatio": {"Fellatio"},
+    "blowbang": {"Fellatio"},
+    "facefuck": {"Fellatio"},
+    "deepthroat": {"DeepThroat"},
+    "cunnilingus": {"Cunnilingus"},
+    "anilingus": {"Anilingus"},
+    "analinggus": {"Anilingus"},
+    "rimjob": {"Anilingus"},
+    "handjob": {"Handjob"},
+    "balljob": {"Handjob"},
+    "masturbation": {"Masturbation"},
+    "boobsuck": {"BreastSucking"},
+    "boobjob": {"Titfuck"},
+    "titfuck": {"Titfuck"},
+    "thighjob": {"Thighjob"},
+    "frottage": {"Frottage"},
+    "frotting": {"Frottage"},
+    "bodyjob": {"Frottage"},
+    "footjob": {"Footjob"},
+    "toesucking": {"ToeSucking"},
+    "tribbing": {"Tribbing"},
+    "scissoring": {"Tribbing"},
+    "vaginal": {"Vaginal"},
+    "doublevag": {"Vaginal"},
+    "pussy": {"Vaginal"},
+    "anal": {"Anal"},
+    "anus": {"Anal"},
+    "analcreampie": {"Anal"},
+    "69": {"SixtyNine"},
+    "spitroast": {"Spitroast"},
+    "doublepen": {"DoublePenetration"},
+    "dp": {"DoublePenetration"},
+    "triplepen": {"TriplePenetration"},
+    "tripplepen": {"TriplePenetration"},
+    "naveljob": {"Naveljob"},
+}
+
+SCENE_TAG_ALIASES = {
+    "leadin": {"LeadIn"},
+    "aggressive": {"Aggressive"},
+    "aggressivedefault": {"Aggressive"},
+    "rape": {"Aggressive", "Forced"},
+    "rough": {"Aggressive"},
+    "forced": {"Forced"},
+    "bound": {"Forced"},
+    "cuffs": {"Forced"},
+    "cuffed": {"Forced"},
+    "binding": {"Forced"},
+    "armbinder": {"Forced"},
+    "yoke": {"Forced"},
+    "dd": {"Forced"},
+    "deviousdevice": {"Forced"},
+    "defeated": {"Forced"},
+    "pillory": {"Forced"},
+    "pillorylow": {"Forced"},
+    "wheel": {"Forced"},
+    "tiltedwheel": {"Forced"},
+    "femdom": {"Dominant"},
+    "domsub": {"Dominant"},
+    "service": {"Dominant"},
+    "conquering": {"Dominant"},
+    "loving": {"Loving"},
+    "love": {"Loving"},
+    "cute": {"Loving"},
+    "teasing": {"Teasing"},
+    "cowgirl": {"Cowgirl"},
+    "reversecowgirl": {"ReverseCowgirl"},
+    "matingpress": {"Missionary", "Lying", "Facing"},
+    "missionary": {"Missionary", "Facing"},
+    "doggy": {"Doggy", "Behind"},
+    "doggystyle": {"Doggy", "Behind"},
+    "pronebone": {"ProneBone"},
+    "lotus": {"LotusPosition"},
+    "spooning": {"Spooning", "Lying"},
+    "facesit": {"FaceSitting", "Oral"},
+    "facesitting": {"FaceSitting", "Oral"},
+    "standing": {"Standing"},
+    "kneeling": {"Kneeling"},
+    "laying": {"Lying"},
+    "lying": {"Lying"},
+    "onback": {"Lying"},
+    "sitting": {"Sitting"},
+    "behind": {"Behind"},
+    "facing": {"Facing"},
+    "holding": {"Holding"},
+    "hugging": {"Hugging"},
+    "fisting": {"Fisting"},
+    "spanking": {"Spanking"},
+    "object": {"Toys"},
+    "animobject": {"Toys"},
+    "dildo": {"Toys"},
+    "sextoy": {"Toys"},
+    "staff": {"Toys"},
+    "magic": {"Magic"},
+    "mage": {"Magic"},
+    "facial": {"Facial"},
+    "oviposition": {"Oviposition"},
+    "eggs": {"Oviposition"},
+    "ryona": {"Ryona"},
+    "gore": {"Gore"},
+    "oral": {"Oral"},
+    "licking": {"Oral"},
+    "sucking": {"Oral"},
+    "blowjob": {"Oral"},
+    "blowbang": {"Oral"},
+    "facefuck": {"Oral"},
+    "cunnilingus": {"Oral"},
+    "anilingus": {"Oral"},
+    "analinggus": {"Oral"},
+    "vaginal": {"Vaginal"},
+    "doublevag": {"Vaginal"},
+    "anal": {"Anal"},
+    "anus": {"Anal"},
+    "footjob": {"Feet"},
+    "feetcum": {"Feet"},
+}
+
+KNOWN_META_TAGS = {
+    "sex", "dirty", "straight", "bestiality", "creature", "solo", "threesome", "group", "gangbang",
+    "orgy", "lesbian", "movingdick", "abc", "creampie", "analcreampie", "cuminmouth", "chestcum",
+    "cumonbody", "aircum", "cuminside", "mouth", "penis", "object", "animobject", "furniture", "knotted",
+    "pose", "powerbomb", "piledriver", "hanging", "gallows", "rider", "sideways", "floating", "threeway",
+    "bukkake", "doublebed", "throne", "nelson", "obedient", "hands", "sexdoll", "frozen", "choke",
+    "panicforever", "earlyclimax", "multiclimax", "dayelyte", "xandero", "llabsky", "movingdick", "groping",
+    "foreplay", "fingering", "leito",
+}
+
+OBJECT_TAG_HINTS = {"object", "animobject", "dildo", "sextoy", "staff"}
+ORAL_TAG_HINTS = {"oral", "blowjob", "facefuck", "blowbang",
+                  "cunnilingus", "anilingus", "analinggus", "licking", "sucking"}
+VAGINAL_TAG_HINTS = {"vaginal", "doublevag", "pussy"}
+ANAL_TAG_HINTS = {"anal", "anus", "analcreampie"}
+FEET_TAG_HINTS = {"footjob", "feetcum", "toesucking"}
+
+
+def normalize_tag(tag: str) -> str:
+    return ''.join(ch for ch in tag.strip().lower() if ch.isalnum())
+
+
+def build_mask(bit_map: Dict[str, int], names: Set[str]) -> int:
+    mask = 0
+    for name in names:
+        mask |= bit_map.get(name, 0)
+    return mask
+
+
+def collect_alias_mappings(normalized_tags: Set[str], alias_map: Dict[str, Set[str]]) -> Set[str]:
+    mapped: Set[str] = set()
+    for tag in normalized_tags:
+        mapped.update(alias_map.get(tag, set()))
+    return mapped
+
+
+def actor_supports_vagina(position: dict) -> bool:
+    return position.get("gender", GenderType.Unknown.value) in {
+        GenderType.Female.value,
+        GenderType.Futa.value,
+        GenderType.CreatureFemale.value,
+    }
+
+
+def actor_supports_penis(position: dict) -> bool:
+    return position.get("gender", GenderType.Unknown.value) in {
+        GenderType.Male.value,
+        GenderType.Futa.value,
+        GenderType.CreatureMale.value,
+    }
+
+
+def filter_position_interact_names(names: Set[str], position: dict) -> Set[str]:
+    filtered = set(names)
+    if "VaginaAnimObj" in filtered and not actor_supports_vagina(position):
+        filtered.remove("VaginaAnimObj")
+    if "PenisAnimObj" in filtered and not actor_supports_penis(position):
+        filtered.remove("PenisAnimObj")
+    return filtered
+
+
+def resolve_interact_tag_names(raw_tags: List[str]) -> Set[str]:
+    normalized_tags = {normalize_tag(tag) for tag in raw_tags if tag}
+    names = collect_alias_mappings(normalized_tags, INTERACT_TAG_ALIASES)
+
+    if "fingering" in normalized_tags:
+        if normalized_tags & ANAL_TAG_HINTS:
+            names.add("FingerAnus")
+        if normalized_tags & VAGINAL_TAG_HINTS or not (normalized_tags & ANAL_TAG_HINTS):
+            names.add("FingerVagina")
+
+    if normalized_tags & OBJECT_TAG_HINTS:
+        if normalized_tags & ORAL_TAG_HINTS:
+            names.add("MouthAnimObj")
+        if "handjob" in normalized_tags or "balljob" in normalized_tags or "masturbation" in normalized_tags:
+            names.add("HandAnimObj")
+        if normalized_tags & VAGINAL_TAG_HINTS:
+            names.add("VaginaAnimObj")
+        if normalized_tags & ANAL_TAG_HINTS:
+            names.add("AnalAnimObj")
+        if "penis" in normalized_tags:
+            names.add("PenisAnimObj")
+
+    return names
+
+
+def resolve_scene_tag_names(raw_tags: List[str], interact_names: Set[str]) -> Set[str]:
+    normalized_tags = {normalize_tag(tag) for tag in raw_tags if tag}
+    names = collect_alias_mappings(normalized_tags, SCENE_TAG_ALIASES)
+
+    if "reverse" in normalized_tags and "cowgirl" in normalized_tags:
+        names.add("ReverseCowgirl")
+    if "matingpress" in normalized_tags:
+        names.update({"Missionary", "Lying", "Facing"})
+    if "sideways" in normalized_tags:
+        names.update({"Spooning", "Lying"})
+    if "hanging" in normalized_tags:
+        names.add("Standing")
+
+    if interact_names & {"Fellatio", "DeepThroat", "Cunnilingus", "Anilingus", "BreastSucking", "ToeSucking", "SixtyNine"}:
+        names.add("Oral")
+    if interact_names & {"Vaginal", "FingerVagina", "Tribbing", "VaginaAnimObj", "DoublePenetration", "TriplePenetration"}:
+        names.add("Vaginal")
+    if interact_names & {"Anal", "FingerAnus", "AnalAnimObj", "DoublePenetration", "TriplePenetration"}:
+        names.add("Anal")
+    if interact_names & {"Footjob", "ToeSucking", "GropeFoot"}:
+        names.add("Feet")
+
+    return names
+
+
+def resolve_known_tags(raw_tags: List[str], extra_known_tags: Optional[Set[str]] = None) -> Set[str]:
+    known = {normalize_tag(tag) for tag in POSITION_TAGS |
+             RACE_TAGS | SCALE_TAGS | SCENE_TYPE_TAGS | SKIP_TAGS}
+    known.update(INTERACT_TAG_ALIASES.keys())
+    known.update(SCENE_TAG_ALIASES.keys())
+    known.update(KNOWN_META_TAGS)
+    if extra_known_tags:
+        known.update(extra_known_tags)
+    return known
+
+
+def resolve_undefined_tags(raw_tags: List[str], extra_known_tags: Optional[Set[str]] = None) -> List[str]:
+    known = resolve_known_tags(raw_tags, extra_known_tags)
+    undefined = []
+    for tag in raw_tags:
+        lowered = tag.strip().lower()
+        normalized = normalize_tag(lowered)
+        if not normalized or normalized in known:
+            continue
+        undefined.append(lowered)
+    return sorted(set(undefined))
+
+
+def tags_process(raw_tags: List[str], extra_known_tags: Optional[Set[str]] = None):
+    position = []
+    race = []
+    scene = []
+    scale = []
+
+    for tag in raw_tags:
+        tag_lower = tag.lower().strip()
+        if tag_lower in POSITION_TAGS:
+            position.append(tag_lower)
+        elif tag_lower in RACE_TAGS:
+            race.append(tag_lower)
+        elif tag_lower in SCENE_TYPE_TAGS:
+            scene.append(tag_lower)
+        elif tag_lower in SCALE_TAGS:
+            scale.append(tag_lower)
+
+    return {
+        "position": position,
+        "race": race,
+        "scene": scene,
+        "scale": scale,
+        "undefined": resolve_undefined_tags(raw_tags, extra_known_tags),
+    }
+
+
+def resolve_slate_targets(scene_name: str, event_prefix: str, positions: Dict[str, dict]):
+    action_keys = []
+    for value in [event_prefix, scene_name]:
+        key = normalize_tag(value)
+        if key and key not in action_keys:
+            action_keys.append(key)
+
+    scene_tags: List[str] = []
+    position_tags: Dict[str, List[str]] = {
+        actor_key: [] for actor_key in positions.keys()}
+    unmatched_tags: List[str] = []
+
+    if not slate_tags:
+        return scene_tags, position_tags, unmatched_tags
+
+    actor_aliases: Dict[str, Set[str]] = {}
+    for actor_key, position in positions.items():
+        actor_index = actor_key.replace("actor", "")
+        aliases = {
+            normalize_tag(actor_key),
+            normalize_tag(f"a{actor_index}"),
+            normalize_tag(actor_index),
+        }
+        gender = position.get("gender", GenderType.Unknown.value)
+        if gender == GenderType.Female.value:
+            aliases.add("female")
+        elif gender == GenderType.Male.value:
+            aliases.add("male")
+        elif gender == GenderType.Futa.value:
+            aliases.update({"futa", "female", "male"})
+        elif gender == GenderType.CreatureMale.value:
+            aliases.update({"creaturemale", "male"})
+        elif gender == GenderType.CreatureFemale.value:
+            aliases.update({"creaturefemale", "female"})
+        actor_aliases[actor_key] = aliases
+
+    for action_key in action_keys:
+        target_map = slate_tags.get(action_key, {})
+        for target_key, tags in target_map.items():
+            if target_key in {"", "all", "global", "scene", "actors", "*"}:
+                scene_tags.extend(tags)
+                continue
+
+            matched = False
+            for actor_key, aliases in actor_aliases.items():
+                if target_key in aliases:
+                    position_tags[actor_key].extend(tags)
+                    matched = True
+            if not matched:
+                unmatched_tags.extend(tags)
+
+    return scene_tags, position_tags, unmatched_tags
 
 
 class Race(Flag):
@@ -475,50 +909,23 @@ def prase_raw_data(raw_data: dict) -> dict:
 slate_tags = {}
 
 
-def tags_process(raw_tags: List[str]):
-    Position = ["2futa", "3 girls", "cccf", "cccsf", "ccf", "ccsf", "cf", "cff", "csf", "csfsf", "f", "fcccc", "fcc", "ffffm", "fffm", "ffm", "ffmm", "fm", "fmc",
-                "fmmm", "m", "mfc", "mff", "mmf", "mmmf", "mmmmsf", "mmmsf", "mmsf", "msf", "msfc", "sfsfc", "sfsfm", "sfsfmm", "sfsfsfm", "sfsfsfsfm", "ff", "fff", "fffc", "ffc", "ccm", "mf", "ff"]
-
-    Races = ["atronach", "bear", "boar", "cat", "chaurus", "chicken", "cow", "crab", "deer", "dog", "dragon", "dragonpriest", "draugr", "falmer", "flameatronach", "fox", "frostatronach", "gargoyle", "giant", "giantspider", "goat", "hag", "hagraven", "horse", "horker", "husky", "icewraith", "lurker", "mammoth", "netch",
-             "rabbit", "reaper", "riekling", "sabrecat", "seeker", "skeever", "slaughterfish", "spider", "spriggan", "stormatronach", "troll", "unicorn", "vampire", "vampirelord", "werewolf", "wispmother", "wolf", "femwerewolf", "chaurushunter", "chaurusreapers", "largespider", "benthiclurker", "ashhopper", "futa", "male", "female"]
-
-    SceneType = ["aggressive", "rape", "leadin", "aggressivedefault"]
-
-    Scale = ["petite", "bigguy", "loli", "shota"]
-
-    Skip = ["test", "leito"]
-
-    position = []
-    race = []
-    scene = []
-    scale = []
-    unknown = []
-    for tag in raw_tags:
-        tag_lower = tag.lower()
-        if tag_lower in Position:
-            position.append(tag_lower)
-        elif tag_lower in Races:
-            race.append(tag_lower)
-        elif tag_lower in SceneType:
-            scene.append(tag_lower)
-        elif tag_lower in Scale:
-            scale.append(tag_lower)
-        elif tag_lower in Skip:
-            continue
-        else:
-            unknown.append(tag_lower)
-    if unknown:
-        logger.warn(f"Unknown tag: {', '.join(unknown)}")
-    return {"position": position, "race": race, "scene": scene, "scale": scale}
-
-
 def preprocess_data(data: dict):
     '''
     对解析后的数据预处理，如标签分类、位置统计等
     '''
+    extra_known_tags = {
+        normalize_tag(data.get("pack_tag", "")),
+        normalize_tag(data.get("anim_dir", "")),
+        normalize_tag(data.get("author", "")),
+    }
+    extra_known_tags.discard("")
+
     for scene_name, scene_data in data["scenes"].items():
-        tags = scene_data.get("tags", [])
-        tag_info = tags_process(tags)
+        tags = [tag.lower().strip()
+                for tag in scene_data.get("tags", []) if isinstance(tag, str)]
+        scene_data["tags"] = tags
+
+        tag_info = tags_process(tags, extra_known_tags)
         if tag_info["scale"]:
             if tag_info["position"]:
                 position_tag = tag_info["position"][0]
@@ -544,6 +951,56 @@ def preprocess_data(data: dict):
                 else:
                     logger.warn(
                         f"Scene '{scene_name}' has scale tag but position tag does not match, skipping scale")
+
+        scene_slate_tags, position_slate_tags, unmatched_slate_tags = resolve_slate_targets(
+            scene_name,
+            scene_data.get("event_prefix", ""),
+            scene_data["positions"],
+        )
+
+        shared_interact_names = resolve_interact_tag_names(tags)
+        scene_tag_names = resolve_scene_tag_names(tags, shared_interact_names)
+
+        slate_scene_interact_names = resolve_interact_tag_names(
+            scene_slate_tags)
+        shared_interact_names.update(slate_scene_interact_names)
+        scene_tag_names.update(resolve_scene_tag_names(
+            scene_slate_tags, slate_scene_interact_names))
+
+        scene_unknown_tags = set(tag_info["undefined"])
+        scene_unknown_tags.update(resolve_undefined_tags(
+            scene_slate_tags, extra_known_tags))
+        scene_unknown_tags.update(resolve_undefined_tags(
+            unmatched_slate_tags, extra_known_tags))
+
+        all_interact_names = set(shared_interact_names)
+        for actor_key, actor_data in scene_data["positions"].items():
+            actor_slate_tags = position_slate_tags.get(actor_key, [])
+            actor_interact_names = set(shared_interact_names)
+            actor_interact_names.update(
+                resolve_interact_tag_names(actor_slate_tags))
+            actor_interact_names = filter_position_interact_names(
+                actor_interact_names, actor_data)
+
+            actor_undefined_tags = resolve_undefined_tags(
+                actor_slate_tags, extra_known_tags)
+            actor_data["interact_tags"] = build_mask(
+                INTERACT_TAG_BITS, actor_interact_names)
+            actor_data["interact_tag_names"] = sorted(actor_interact_names)
+            actor_data["undefined_tags"] = actor_undefined_tags
+            if actor_slate_tags:
+                actor_data["slate_tags"] = sorted(set(actor_slate_tags))
+
+            all_interact_names.update(actor_interact_names)
+            scene_unknown_tags.update(actor_undefined_tags)
+
+        scene_tag_names.update(resolve_scene_tag_names(
+            tags + scene_slate_tags, all_interact_names))
+        scene_data["scene_tags"] = build_mask(SCENE_TAG_BITS, scene_tag_names)
+        scene_data["scene_tag_names"] = sorted(scene_tag_names)
+        scene_data["undefined_tags"] = sorted(scene_unknown_tags)
+        if scene_slate_tags:
+            scene_data["slate_tags"] = sorted(set(scene_slate_tags))
     return data
 
 
@@ -558,8 +1015,8 @@ def preprocess_slal_source(file_path: str):
                         data = json.load(f)
                         for slate in data["stringList"]["slate.actionlog"]:
                             action, target, tag = slate.split(',', 2)
-                            action = action.strip()
-                            target = target.strip()
+                            action = normalize_tag(action)
+                            target = normalize_tag(target)
                             tag = tag.strip().lower()
                             slate_tags.setdefault(action, {}).setdefault(
                                 target, []).append(tag)
