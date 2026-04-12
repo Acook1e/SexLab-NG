@@ -351,13 +351,23 @@ void SceneManager::DestroyInstance(std::uint64_t id)
   sceneInstances.erase(id);
 }
 
+bool SceneManager::IsActorInScene(RE::Actor* actor)
+{
+  for (const auto& [id, instance] : sceneInstances) {
+    auto actors = instance.GetActors();
+    if (std::find(actors.begin(), actors.end(), actor) != actors.end())
+      return true;
+  }
+  return false;
+}
+
 void SceneManager::UpdateScenes()
 {
   std::lock_guard<std::mutex> lock(mapMutex);
   for (auto it = sceneInstances.begin(); it != sceneInstances.end();) {
-    if (!it->second.Update())
+    if (!it->second.Update()) {
       it = sceneInstances.erase(it);
-    else
+    } else
       ++it;
   }
 }

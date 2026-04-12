@@ -13,7 +13,8 @@ public:
   {
     Define::Position* position;
     std::vector<RE::TESBoundObject*> strippedItems{};
-    Define::Enjoyment enjoy{};
+    // 记录发生过的交互类型，用于修正position的tag
+    Define::InteractTags interactTags{};
     std::uint8_t climaxCount = 0;
 
     SceneActorInfo(Define::Position* position) : position(position) {}

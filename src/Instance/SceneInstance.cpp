@@ -50,16 +50,7 @@ SceneInstance::~SceneInstance()
   UI::GetSingleton().Hide(this);
 
   // ── 场景结束: 收集 enjoyment 记录并更新 stat ──────────────
-  if (currentScene && !actorInfoMap.empty()) {
-    std::unordered_map<RE::Actor*, Registry::ActorStat::EndSceneRecord> records;
-    records.reserve(actorInfoMap.size());
-    for (const auto& [actor, info] : actorInfoMap) {
-      const bool isAggressor = (actor == actors.front() &&
-                                currentScene->GetTags().Has(Define::SceneTags::Type::Aggressive));
-      records[actor]         = {info.enjoy.GetValue(), isAggressor};
-    }
-    Registry::ActorStat::GetSingleton().UpdateOnSceneEnd(actors, currentScene, records);
-  }
+  Registry::ActorStat::GetSingleton().UpdateStat(actorInfoMap, currentScene);
 
   ResetActors();
   DressActors();
@@ -119,6 +110,11 @@ bool SceneInstance::Update()
   lastUpdateTime = now;
 
   interact.Update();
+  for (auto& [actor, info] : actorInfoMap)
+    Registry::ActorStat::GetSingleton().UpdateEnjoyment(actor, currentScene, *info.position,
+                                                        interact.GetData(actor));
+
+  // 总是最后更新 UI，确保数据同步
   UI::GetSingleton().Update(this);
 
   if (now - lastStageUpdateTime > STAGE_LENGTH) {
@@ -385,19 +381,6 @@ void SceneInstance::SetPositions()
       it->second.position = &positions[pa];
     else
       actorInfoMap.emplace(actor, SceneActorInfo(&positions[pa]));
-  }
-
-  // ── 根据 stat 初始化每位 actor 的 enjoyment ──────────────
-  auto& statMgr = Registry::ActorStat::GetSingleton();
-  for (auto& [actor, info] : actorInfoMap) {
-    std::vector<RE::Actor*> others;
-    others.reserve(actors.size() - 1);
-    for (auto* other : actors)
-      if (other && other != actor)
-        others.push_back(other);
-    const float init =
-        statMgr.GetInitialEnjoyment(actor, currentScene->GetTags(), *info.position, others);
-    info.enjoy = Define::Enjoyment(init);
   }
 }
 

@@ -3,6 +3,7 @@
 #include "Define/Enjoyment.h"
 #include "Instance/Interact.h"
 #include "Instance/SceneInstance.h"
+#include "Registry/Stat.h"
 
 #include "API/PrismaUI_API.h"
 
@@ -149,12 +150,13 @@ void UI::SendInitData(Instance::SceneInstance* scene)
       continue;
 
     const auto& info = scene->GetActorInfo(actor);
+    const auto& stat = Registry::ActorStat::GetSingleton().GetStat(actor);
 
     nlohmann::json aj;
     aj["index"]  = i;
     aj["name"]   = actor->GetDisplayFullName();
-    aj["enjoy"]  = info.enjoy.GetValue();
-    aj["degree"] = std::string(magic_enum::enum_name(info.enjoy.GetDegree()));
+    aj["enjoy"]  = stat.enjoy.GetValue();
+    aj["degree"] = std::string(magic_enum::enum_name(stat.enjoy.GetDegree()));
 
     // 初始交互列表（可能全为空）
     aj["interactions"]    = nlohmann::json::array();
@@ -194,11 +196,12 @@ void UI::SendUpdateData(Instance::SceneInstance* scene)
       continue;
 
     const auto& info = scene->GetActorInfo(actor);
+    const auto& stat = Registry::ActorStat::GetSingleton().GetStat(actor);
 
     nlohmann::json aj;
     aj["index"]  = i;
-    aj["enjoy"]  = info.enjoy.GetValue();
-    aj["degree"] = std::string(magic_enum::enum_name(info.enjoy.GetDegree()));
+    aj["enjoy"]  = stat.enjoy.GetValue();
+    aj["degree"] = std::string(magic_enum::enum_name(stat.enjoy.GetDegree()));
 
     aj["interactions"]    = nlohmann::json::array();
     const auto& actorData = interact.GetData(actor);

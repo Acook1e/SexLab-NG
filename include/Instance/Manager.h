@@ -30,6 +30,7 @@ public:
   static std::uint64_t CreateInstance(std::vector<RE::Actor*> actors,
                                       std::vector<Define::Scene*> scenes);
   static void DestroyInstance(std::uint64_t id);
+  static bool IsActorInScene(RE::Actor* actor);
 
   void UpdateScenes();
 

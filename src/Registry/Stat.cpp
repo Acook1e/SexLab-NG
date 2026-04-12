@@ -81,174 +81,54 @@ void ActorStat::AddXP(RE::Actor* actor, ExperienceType type, float amount)
 }
 
 // ════════════════════════════════════════════════════════════
-// GetInitialEnjoyment
+// UpdateEnjoyment
 //
-// 根据 actor 积累的 stat 计算场景开始时的 enjoy 初始值。
-//
-// 贡献来源 (均 clamp 后叠加):
-//   A. 性欲残留:    arouse * 0.3          (上限 +30)
-//   B. 综合经验:    Main level * 0.05      (上限 +15)
-//   C. 专项经验:    每个匹配类型 * 0.02    (各上限 +5)
-//   D. 性别倾向:    历史同性/异性比率 bias  (±10)
-//   E. 种族倾向:    历史同族/异族比率 bias  (±5)
+// 场景更新时根据 actor 当前 stat 计算 enjoyment 值，供场景分配/动画调整等使用。
+// 计算时考虑以下因素：
+//   A. 性欲残留（arouse）
+//   B. 综合经验等级（Main）
+//   C. 专项经验等级（Oral/Vagina/Anus）
+//   D. 当前的交互类型
 // ════════════════════════════════════════════════════════════
-float ActorStat::GetInitialEnjoyment(RE::Actor* actor, const Define::SceneTags& sceneTags,
-                                     const Define::Position& /*position*/,
-                                     const std::vector<RE::Actor*>& others)
+void ActorStat::UpdateEnjoyment(RE::Actor* actor, const Define::Scene* scene,
+                                const Define::Position& position,
+                                const Instance::Interact::ActorData& interactData)
 {
   if (!actor)
-    return 0.f;
+    return;
 
-  auto& stat  = GetStat(actor);
-  float enjoy = 0.f;
+  auto& stat       = GetStat(actor);
+  const auto& tags = scene->GetTags();
 
-  // A. 性欲残留
-  enjoy += (std::min)(stat.arouse * 0.3f, 30.f);
-
-  // B. 综合经验
-  {
-    auto it = stat.experienceLevels.find(ExperienceType::Main);
-    if (it != stat.experienceLevels.end())
-      enjoy += (std::min)(static_cast<float>(it->second.level) * 0.05f, 15.f);
-  }
-
-  // C. 专项经验
-  auto addSpecialty = [&](ExperienceType type) {
-    auto it = stat.experienceLevels.find(type);
-    if (it != stat.experienceLevels.end())
-      enjoy += (std::min)(static_cast<float>(it->second.level) * 0.02f, 5.f);
-  };
-  if (sceneTags.Has(Define::SceneTags::Type::Oral))
-    addSpecialty(ExperienceType::Oral);
-  if (sceneTags.Has(Define::SceneTags::Type::Vaginal))
-    addSpecialty(ExperienceType::Vagina);
-  if (sceneTags.Has(Define::SceneTags::Type::Anal))
-    addSpecialty(ExperienceType::Anus);
-
-  // D/E. 倾向 bonus（基于历史比率与当前场景实际匹配度）
-  if (!others.empty()) {
-    const Define::Gender::Type actorGender = Define::Gender::GetGender(actor);
-    const Define::Race actorRace(actor);
-
-    float sexBias  = 0.f;
-    float raceBias = 0.f;
-
-    for (auto* other : others) {
-      if (!other)
-        continue;
-
-      // 性别倾向
-      const std::uint32_t sexTotal = stat.TimesSameSex + stat.TimesDiffSex;
-      if (sexTotal > 0) {
-        const bool sameSex   = (Define::Gender::GetGender(other) == actorGender);
-        const float prefSame = static_cast<float>(stat.TimesSameSex) / sexTotal;
-        const float match    = sameSex ? prefSame : (1.f - prefSame);
-        sexBias += (match - 0.5f) * 20.f;  // [-10, +10] per partner
-      }
-
-      // 种族倾向
-      const std::uint32_t raceTotal = stat.TimesSameRace + stat.TimesDiffRace;
-      if (raceTotal > 0) {
-        const bool sameRace      = (Define::Race(other) == actorRace);
-        const float prefSameRace = static_cast<float>(stat.TimesSameRace) / raceTotal;
-        const float raceMatch    = sameRace ? prefSameRace : (1.f - prefSameRace);
-        raceBias += (raceMatch - 0.5f) * 10.f;  // [-5, +5] per partner
-      }
-    }
-
-    enjoy += std::clamp(sexBias, -10.f, 10.f);
-    enjoy += std::clamp(raceBias, -5.f, 5.f);
-  }
-
-  return std::clamp(enjoy, -100.f, 100.f);
+  // TODO
 }
 
 // ════════════════════════════════════════════════════════════
-// UpdateOnSceneEnd
+// UpdateStat
 //
 // 仅在场景销毁时调用一次。
 // 根据场景标签和最终 enjoyment 更新:
-//   - 各经验类型 XP (enjoyment 越高, 收益越多)
+//   - 各经验类型 XP (enjoyment 越高, climax 次数越多 ,收益越多)
 //   - recentPartners 列表 (上限 20)
 //   - 性别 / 种族倾向计数
-//   - arouse 重置
+//   - arouse 更新
 // ════════════════════════════════════════════════════════════
-void ActorStat::UpdateOnSceneEnd(const std::vector<RE::Actor*>& actors, const Define::Scene* scene,
-                                 const std::unordered_map<RE::Actor*, EndSceneRecord>& records)
+void ActorStat::UpdateStat(
+    std::unordered_map<RE::Actor*, Instance::SceneInstance::SceneActorInfo> actorInfoMap,
+    const Define::Scene* scene)
 {
-  if (!scene || actors.empty())
+  if (!scene || actorInfoMap.empty())
     return;
 
   const auto& tags        = scene->GetTags();
-  const bool isSolo       = actors.size() == 1;
-  const bool isGroup      = actors.size() > 2;
+  const bool isSolo       = actorInfoMap.size() == 1;
+  const bool isGroup      = actorInfoMap.size() > 2;
   const bool isAggressive = tags.Has(Define::SceneTags::Type::Aggressive);
   const bool isOral       = tags.Has(Define::SceneTags::Type::Oral);
   const bool isVaginal    = tags.Has(Define::SceneTags::Type::Vaginal);
   const bool isAnal       = tags.Has(Define::SceneTags::Type::Anal);
 
-  for (auto* actor : actors) {
-    if (!actor)
-      continue;
-
-    const auto recIt       = records.find(actor);
-    const float enjoy      = recIt != records.end() ? recIt->second.enjoyment : 0.f;
-    const bool isAggressor = recIt != records.end() ? recIt->second.isAggressor : false;
-
-    // XP 乘数: enjoy=-100 → ×0.5, enjoy=0 → ×1.0, enjoy=+100 → ×1.5
-    const float xpMult = 1.f + enjoy / 200.f;
-
-    AddXP(actor, ExperienceType::Main, 1.f * xpMult);
-    if (isSolo)
-      AddXP(actor, ExperienceType::Solo, 1.f * xpMult);
-    if (isGroup)
-      AddXP(actor, ExperienceType::Group, 1.f * xpMult);
-    if (isOral)
-      AddXP(actor, ExperienceType::Oral, 1.f * xpMult);
-    if (isVaginal)
-      AddXP(actor, ExperienceType::Vagina, 1.f * xpMult);
-    if (isAnal)
-      AddXP(actor, ExperienceType::Anus, 1.f * xpMult);
-    if (isAggressive) {
-      if (isAggressor)
-        AddXP(actor, ExperienceType::Aggressive, 1.f * xpMult);
-      else
-        AddXP(actor, ExperienceType::Submissive, 1.f * xpMult);
-    }
-
-    // 更新 partner 记录 + 倾向计数
-    auto& stat = GetStat(actor);
-
-    for (auto* other : actors) {
-      if (!other || other == actor)
-        continue;
-
-      // recentPartners (上限 20)
-      if (auto* base = other->GetActorBase()) {
-        std::string name(base->GetName());
-        if (name.empty())
-          name = "Unknown";
-        if (stat.recentPartners.size() >= 20)
-          stat.recentPartners.erase(stat.recentPartners.begin());
-        stat.recentPartners.push_back(std::move(name));
-      }
-
-      // 性别倾向
-      if (Define::Gender::GetGender(other) == Define::Gender::GetGender(actor))
-        ++stat.TimesSameSex;
-      else
-        ++stat.TimesDiffSex;
-
-      // 种族倾向
-      if (Define::Race(other) == Define::Race(actor))
-        ++stat.TimesSameRace;
-      else
-        ++stat.TimesDiffRace;
-    }
-
-    // 场景结束，清零性欲残留
-    stat.arouse = 0.f;
-  }
+  // TODO
 }
 
 // ════════════════════════════════════════════════════════════

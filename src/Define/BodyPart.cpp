@@ -74,8 +74,7 @@ static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
     {BodyPart::Name::BreastRight, {"R Breast02", "R Breast03"}},
     // normal vector of cleavage plane, facing outward
     {BodyPart::Name::Cleavage,
-     {MidNodeName{"NPC L Breast02", "NPC R Breast02"},
-      MidNodeName{"NPC L Breast03", "NPC R Breast03"}}},
+     {MidNodeName{"L Breast02", "R Breast02"}, MidNodeName{"L Breast03", "R Breast03"}}},
     // from root of middle finger to its tip
     {BodyPart::Name::FingerLeft, {"NPC L Finger20 [LF20]", "NPC L Finger22 [LF22]"}},
     {BodyPart::Name::FingerRight, {"NPC R Finger20 [RF20]", "NPC R Finger22 [RF22]"}},

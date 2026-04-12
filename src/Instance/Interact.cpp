@@ -86,11 +86,11 @@ static const std::unordered_map<std::uint16_t, Rule> rules{
     {Define::BodyPart::Name::Cleavage | Define::BodyPart::Name::Penis,
      {Interact::Type::Titfuck, 8.f, 70.f, 110.f, false}},
     // ── Finger / Hand ───────────────────────────────────────────────────────
-    // FingerVagina/FingerAnus: 手指 root→tip 与管道方向反向（插入）→ [130,180]
+    // FingerVagina/FingerAnus: 手指方向变动可能性太高，不考虑角度限制
     {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Vagina,
-     {Interact::Type::FingerVagina, 6.f, 130.f, 180.f, false}},
+     {Interact::Type::FingerVagina, 6.f, 0.f, 180.f, false}},
     {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Anus,
-     {Interact::Type::FingerAnus, 6.f, 130.f, 180.f, false}},
+     {Interact::Type::FingerAnus, 6.f, 0.f, 180.f, false}},
     {Define::BodyPart::Name::HandLeft | Define::BodyPart::Name::Penis,
      {Interact::Type::Handjob, 7.f, 0.f, 180.f, false}},
     // ── Belly ───────────────────────────────────────────────────────────────
@@ -114,10 +114,10 @@ static const std::unordered_map<std::uint16_t, Rule> rules{
      {Interact::Type::Tribbing, 8.f, 150.f, 180.f, false}},
     // Vaginal: penis root→tip 与 vagina 入口→深处同向 → 对齐 [0,35]
     {Define::BodyPart::Name::Vagina | Define::BodyPart::Name::Penis,
-     {Interact::Type::Vaginal, 5.f, 0.f, 35.f, false}},
+     {Interact::Type::Vaginal, 8.f, 0.f, 35.f, false}},
     // ── Anus ────────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::Anus | Define::BodyPart::Name::Penis,
-     {Interact::Type::Anal, 4.f, 0.f, 35.f, false}},
+     {Interact::Type::Anal, 8.f, 0.f, 35.f, false}},
 };
 
 const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)

@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Define/Enjoyment.h"
 #include "Define/Scene.h"
+#include "Instance/Interact.h"
+#include "Instance/SceneInstance.h"
 
 namespace Registry
 {
@@ -41,6 +44,9 @@ public:
     std::uint16_t TimesSameRace = 0;
     std::uint16_t TimesDiffRace = 0;
 
+    // 记录全局享受值，随游戏更新/场景更新变化
+    Define::Enjoyment enjoy{};
+
     // 性欲值 [0, 100]
     float arouse = 0.0f;
   };
@@ -63,17 +69,21 @@ public:
   // 向指定经验类型添加 XP，自动升级（上限 999）
   void AddXP(RE::Actor* actor, ExperienceType type, float amount);
 
+  // 全局游戏更新且不在场景的时候，性欲/享受等随时间变化的值
+  void Update();
+
   // 根据 actor 当前 stat 计算初始 enjoyment 值 [-100, 100]
-  // sceneTags: 当前场景标签
+  // scene: 当前场景
   // position:  该 actor 分配到的 position
-  // others:    场景中其余 actor 列表（用于倾向计算）
-  float GetInitialEnjoyment(RE::Actor* actor, const Define::SceneTags& sceneTags,
-                            const Define::Position& position,
-                            const std::vector<RE::Actor*>& others);
+  // interactData: 该 actor 的交互信息
+  void UpdateEnjoyment(RE::Actor* actor, const Define::Scene* scene,
+                       const Define::Position& position,
+                       const Instance::Interact::ActorData& interactData);
 
   // 场景结束时统一更新所有 actor 的 stat
-  void UpdateOnSceneEnd(const std::vector<RE::Actor*>& actors, const Define::Scene* scene,
-                        const std::unordered_map<RE::Actor*, EndSceneRecord>& records);
+  void
+  UpdateStat(std::unordered_map<RE::Actor*, Instance::SceneInstance::SceneActorInfo> actorInfoMap,
+             const Define::Scene* scene);
 
   static void onSave(SKSE::SerializationInterface* serial);
   static void onLoad(SKSE::SerializationInterface* serial);
