@@ -10,8 +10,8 @@ class ActorStat
 public:
   struct Level
   {
-    // level from 0 to 999
-    std::uint16_t level = 0;
+    // level from 1 to 999
+    std::uint16_t level = 1;
     float XP            = 0.0f;
   };
 

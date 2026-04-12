@@ -27,9 +27,11 @@ struct Rule
 {
   Interact::Type type = Interact::Type::None;
   float radius        = 8.f;
-  float maxAngle      = 360.f;
-  bool needFront      = false;
-  bool needHoriz      = false;
+  float minAngle      = 0.f;    // 角度区间下限 [0, 180]
+  float maxAngle      = 180.f;  // 角度区间上限 [0, 180]
+                                // minAngle <= maxAngle: 角度必须在 [min, max] 内
+  // minAngle >  maxAngle: 卷绕区间 [0, max]∪[min, 180]（不区分同向/反向）
+  bool needFront = false;  // See Belly/Naveljob
 };
 
 std::uint16_t operator|(Define::BodyPart::Name a, Define::BodyPart::Name b)
@@ -43,71 +45,84 @@ std::uint16_t operator|(Define::BodyPart::Name a, Define::BodyPart::Name b)
 }
 
 // ── 规则表 ────────────────────────────────────────────────────────────────
-// radius 单位与骨骼世界坐标一致（Skyrim ≈ 1 unit = 1 cm 量级）。
-// maxAngle：
-//   Kiss       两 Mouth 方向需近似反向（面对面）→ angle 接近 180°，但这里存的是
-//              "与反向的允许偏差"，即我们检测 |angle| >= 180 - maxAngle。
-//              为了统一语义，Kiss 的 maxAngle 存 30.f，检测时用 IsAntiAligned。
-//   穿插类     penis 方向与 canal 方向需近似反向（penis 插入）→ IsAntiAligned + maxAngle。
-//   摩擦类     纯距离，360.f。
+// {type, radius, minAngle, maxAngle, needFront}
+// 角度约定（绝对值 [0,180]）：
+//   [0,  x]      — 近似同向（对齐），x 越小越严格
+//   [x, 180]     — 近似反向（面对面/插入方向相反），x 越大越严格
+//   [a,  b]      — 近似垂直（±偏差），如 [70,110] = 垂直 ±20°
+//   [b,  a](b>a) — 换绕区间 [0,a]∪[b,180]，同/反向均可，排除近垂直
+//                  如 [130,50] = ≤50° 或 ≥130°
+//   [0, 180]     — 无约束
 
 static const std::unordered_map<std::uint16_t, Rule> rules{
     // ── Mouth ───────────────────────────────────────────────────────────────
+    // Kiss: Mouth00→Head 双方面对面 → 反向 [140,180]
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Mouth,
-     {Interact::Type::Kiss, 6.f, 360.f, false, false}},
+     {Interact::Type::Kiss, 6.f, 140.f, 180.f, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::BreastLeft,
-     {Interact::Type::BreastSucking, 8.f, 360.f, false, false}},
+     {Interact::Type::BreastSucking, 8.f, 0.f, 180.f, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootLeft,
-     {Interact::Type::ToeSucking, 8.f, 360.f, false, false}},
+     {Interact::Type::ToeSucking, 8.f, 0.f, 180.f, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::FootRight,
-     {Interact::Type::ToeSucking, 8.f, 360.f, false, false}},
+     {Interact::Type::ToeSucking, 8.f, 0.f, 180.f, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Vagina,
-     {Interact::Type::Cunnilingus, 8.f, 360.f, false, false}},
+     {Interact::Type::Cunnilingus, 8.f, 0.f, 180.f, false}},
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Anus,
-     {Interact::Type::Anilingus, 8.f, 360.f, false, false}},
+     {Interact::Type::Anilingus, 8.f, 0.f, 180.f, false}},
+    // Fellatio: Mouth00→Head 与 Penis root→tip 同向 → 对齐 [0,50]
     {Define::BodyPart::Name::Mouth | Define::BodyPart::Name::Penis,
-     {Interact::Type::Fellatio, 8.f, 360.f, false, false}},
+     {Interact::Type::Fellatio, 8.f, 0.f, 50.f, false}},
+    // ── Throat ──────────────────────────────────────────────────────────────
+    // DeepThroat: Head→Neck 与 Penis 同向 → 对齐 [0,40]
+    {Define::BodyPart::Name::Throat | Define::BodyPart::Name::Penis,
+     {Interact::Type::DeepThroat, 7.f, 0.f, 40.f, false}},
     // ── Breast ──────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::HandLeft,
-     {Interact::Type::GropeBreast, 4.f, 360.f, false, false}},
+     {Interact::Type::GropeBreast, 4.f, 0.f, 180.f, false}},
+    // Titfuck via BreastLeft: penis 平行于乳房轴向 → 对齐 [0,60]
     {Define::BodyPart::Name::BreastLeft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Titfuck, 8.f, 60.f, false, false}},
+     {Interact::Type::Titfuck, 8.f, 0.f, 60.f, false}},
+    // Titfuck via Cleavage: Cleavage 朝外法向 vs penis 垂直滑入 → 垂直 [70,110]
+    {Define::BodyPart::Name::Cleavage | Define::BodyPart::Name::Penis,
+     {Interact::Type::Titfuck, 8.f, 70.f, 110.f, false}},
     // ── Finger / Hand ───────────────────────────────────────────────────────
-    // FingerVagina/FingerAnus: 手指方向（根→尖）与管道朝外方向近似反向（插入）
+    // FingerVagina/FingerAnus: 手指 root→tip 与管道方向反向（插入）→ [130,180]
     {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Vagina,
-     {Interact::Type::FingerVagina, 6.f, 50.f, false, false}},
+     {Interact::Type::FingerVagina, 6.f, 130.f, 180.f, false}},
     {Define::BodyPart::Name::FingerLeft | Define::BodyPart::Name::Anus,
-     {Interact::Type::FingerAnus, 6.f, 50.f, false, false}},
+     {Interact::Type::FingerAnus, 6.f, 130.f, 180.f, false}},
     {Define::BodyPart::Name::HandLeft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Handjob, 7.f, 360.f, false, false}},
+     {Interact::Type::Handjob, 7.f, 0.f, 180.f, false}},
     // ── Belly ───────────────────────────────────────────────────────────────
-    // needFront=true: penis tip must be in front of actor (IsInFront on Belly)
-    // needHoriz=true: penis must be roughly horizontal
+    // Naveljob: penis 大致对齐 Belly 前向（水平）→ [0,60] + needFront
+    // needHoriz 已由角度约束隐式覆盖：垂直 penis 与 Belly 法向约呈 90°，超出 60° 截止
     {Define::BodyPart::Name::Belly | Define::BodyPart::Name::Penis,
-     {Interact::Type::Naveljob, 10.f, 60.f, true, true}},
+     {Interact::Type::Naveljob, 10.f, 0.f, 60.f, true}},
     // ── Thigh ───────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::ThighLeft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Thighjob, 4.f, 50.f, false, false}},
+     {Interact::Type::Thighjob, 4.f, 0.f, 50.f, false}},
     // ── Butt ────────────────────────────────────────────────────────────────
+    // Frottage: GlutealCleft 朝内，Penis 朝外 → 反向 [135,180]
     {Define::BodyPart::Name::GlutealCleft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Frottage, 4.f, 45.f, false, false}},
+     {Interact::Type::Frottage, 4.f, 135.f, 180.f, false}},
     // ── Foot ────────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::FootLeft | Define::BodyPart::Name::Penis,
-     {Interact::Type::Footjob, 8.f, 360.f, false, false}},
+     {Interact::Type::Footjob, 8.f, 0.f, 180.f, false}},
     // ── Vagina ──────────────────────────────────────────────────────────────
+    // Tribbing: 两 Vagina 开口相对 → 反向 [150,180]
     {Define::BodyPart::Name::Vagina | Define::BodyPart::Name::Vagina,
-     {Interact::Type::Tribbing, 8.f, 30.f, false, false}},
-    // Vaginal: penis 方向与 vagina 方向近似反向（插入）
+     {Interact::Type::Tribbing, 8.f, 150.f, 180.f, false}},
+    // Vaginal: penis root→tip 与 vagina 入口→深处同向 → 对齐 [0,35]
     {Define::BodyPart::Name::Vagina | Define::BodyPart::Name::Penis,
-     {Interact::Type::Vaginal, 5.f, 35.f, false, false}},
+     {Interact::Type::Vaginal, 5.f, 0.f, 35.f, false}},
     // ── Anus ────────────────────────────────────────────────────────────────
     {Define::BodyPart::Name::Anus | Define::BodyPart::Name::Penis,
-     {Interact::Type::Anal, 4.f, 35.f, false, false}},
+     {Interact::Type::Anal, 4.f, 0.f, 35.f, false}},
 };
 
 const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)
 {
-  static Rule empty = {Interact::Type::None, 0.f, 360.f, false, false};
+  static Rule empty = {Interact::Type::None, 0.f, 0.f, 180.f, false};
 
   auto normalize = [](Define::BodyPart::Name name) {
     switch (name) {
@@ -135,26 +150,21 @@ const Rule& GetRule(Define::BodyPart::Name a, Define::BodyPart::Name b)
 }
 
 // ── 角度检测语义说明 ──────────────────────────────────────────────────────
-// 不同交互的 maxAngle 语义不同，由 CheckAngle() 根据类型选择：
+// Rule.minAngle / Rule.maxAngle 统一使用绝对角度 [0, 180]，Angle() 已返回绝对值。
 //
-//   Kiss / Tribbing                      → IsAntiAligned（两方向夹角 >= 180 - maxAngle）
-//                                           即两者面对面 / 方向相反
-//   Vaginal / Anal / Fellatio            → IsAntiAligned（penis 方向与 canal 方向近似反向）
-//     Cunnilingus / Anilingus               penis.direction ≈ -canal.direction 时为插入
-//   BreastSucking                        → IsAntiAligned（mouth 朝向乳头方向 vs 乳房方向）
-//   FingerVagina / FingerAnus            → IsAntiAligned（手指方向与管道朝外方向近似反向）
-//   ToeSucking                           → IsAligned（mouth 朝向 toe 方向）
-//   GropeBreast / Footjob / Frottage /   → 无角度约束（360.f）
-//     Handjob
-//   Naveljob                             → IsAligned（penis 方向与 belly 朝外方向近似对齐）
-//                                           + needFront + needHoriz
-//   Thighjob / Titfuck                   → IsAligned（penis 大致平行于对应部位方向）
-
-static const std::unordered_map<Interact::Type, bool> kUseAntiAligned{
-    {Interact::Type::FingerVagina, true},
-    {Interact::Type::FingerAnus, true},
-    {Interact::Type::Frottage, true},
-    {Interact::Type::Tribbing, true},
+// 区间语义（minAngle <= maxAngle：正常区间；minAngle > maxAngle：换绕区间）：
+//   [0,   x]       — 近似同向（对齐），x 越小越严格
+//   [x,  180]      — 近似反向（面对面），x 越大越严格
+//   [a,   b]       — 近似垂直，如 [70,110] = 垂直 ±20°
+//   [b,   a](b>a)  — 换绕 [0,a]∪[b,180]，同/反向均可，如 [130,50]
+//   [0,  180]      — 无约束
+//
+// kHighAnglePriority: 骨骼密集/方向敏感的交互，角度权重更高（w=0.45 vs 0.20）
+static const std::unordered_set<Interact::Type> kHighAnglePriority{
+    Interact::Type::Vaginal,    Interact::Type::Anal,         Interact::Type::Fellatio,
+    Interact::Type::DeepThroat, Interact::Type::FingerVagina, Interact::Type::FingerAnus,
+    Interact::Type::Titfuck,    Interact::Type::Thighjob,     Interact::Type::Tribbing,
+    Interact::Type::Kiss,       Interact::Type::Frottage,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -164,34 +174,50 @@ static const std::unordered_map<Interact::Type, bool> kUseAntiAligned{
 namespace
 {
 
-  // 判断两个 BodyPart 的方向是否满足规则的角度约束。
-  // antiAligned=true : 两方向夹角绝对值 >= (180 - maxAngle)（近似反向）
-  // antiAligned=false: 两方向夹角绝对值 <=  maxAngle          （近似对齐）
-  // maxAngle=360 : 始终返回 true（无约束）。
-  bool CheckAngle(const BP& a, const BP& b, float maxAngle, bool antiAligned)
+  // 判断绝对角度是否落在规则区间内。
+  // minAngle <= maxAngle: 正常区间 [min, max]
+  // minAngle >  maxAngle: 换绕区间 [0, max] ∪ [min, 180]
+  // [0, 180]: 始终通过（无约束）
+  bool CheckAngle(float absAngle, float minAngle, float maxAngle)
   {
-    if (maxAngle >= 359.f)
+    if (minAngle <= 0.f && maxAngle >= 179.9f)
       return true;
-
-    // Angle() 返回有符号值 (-180, 180]，取绝对值得到 [0, 180]
-    const float absAngle = std::abs(a.Angle(b));
-
-    if (antiAligned)
-      return absAngle >= (180.f - maxAngle);
-    else
-      return absAngle <= maxAngle;
+    if (minAngle <= maxAngle)
+      return absAngle >= minAngle && absAngle <= maxAngle;
+    else  // wrap: [0, maxAngle] ∪ [minAngle, 180]
+      return absAngle <= maxAngle || absAngle >= minAngle;
   }
 
-  // 附加几何约束：needFront 和 needHoriz（仅 Naveljob 用）
-  // partA = Belly（提供 IsInFront 语义）
-  // partB = Penis（提供 IsHorizontal 语义）
-  bool CheckExtra(const BP& partA, const BP& partB, bool needFront, bool needHoriz)
+  // 角度偏差归一化 [0, ∞)：0 = 恰在区间中心，1 = 恰在区间边界，>1 = 在区间外。
+  // 用于 Phase 2 评分，与距离归一化加权合并。
+  float AngleDeviation(float absAngle, float minAngle, float maxAngle)
   {
-    if (needFront && !partA.IsInFront(partB.GetEnd()))
-      return false;
-    if (needHoriz && !partB.IsHorizontal(30.f))
-      return false;
-    return true;
+    if (minAngle <= 0.f && maxAngle >= 179.9f)
+      return 0.f;  // 无约束，不贡献角度评分
+
+    const bool wrap = (minAngle > maxAngle);
+    if (!wrap) {
+      // 正常区间：以中心为基准归一化
+      const float half = (maxAngle - minAngle) * 0.5f;
+      const float mid  = (minAngle + maxAngle) * 0.5f;
+      return (half > 1e-4f) ? std::abs(absAngle - mid) / half : 0.f;
+    } else {
+      // 换绕区间 [0, maxAngle] ∪ [minAngle, 180]
+      // 分别计算到两段中心的偏差，取较小值
+      const float midLow   = maxAngle * 0.5f;
+      const float midHigh  = (minAngle + 180.f) * 0.5f;
+      const float halfLow  = (maxAngle > 1e-4f) ? maxAngle * 0.5f : 1e-4f;
+      const float halfHigh = ((180.f - minAngle) > 1e-4f) ? (180.f - minAngle) * 0.5f : 1e-4f;
+      const float devLow   = std::abs(absAngle - midLow) / halfLow;
+      const float devHigh  = std::abs(absAngle - midHigh) / halfHigh;
+      return devLow < devHigh ? devLow : devHigh;
+    }
+  }
+
+  // 附加几何约束：Belly 的 IsInFront（仅 Naveljob 用）
+  bool CheckExtra(const BP& bellyPart, const BP& penisPart)
+  {
+    return bellyPart.IsInFront(penisPart.GetEnd());
   }
 
 }  // anonymous namespace
@@ -203,15 +229,19 @@ namespace
 namespace
 {
 
-  // 跨 actor 部位对的距离记录，用于 Phase 2 排序后的贪心分配
+  // 跨 actor 部位对的距离/角度记录，用于 Phase 2 排序后的贪心分配
+  // score = dist_norm*(1-w) + angle_norm*w
+  //   穿插类（kHighAnglePriority）w=0.45，其余有约束类 w=0.20，无约束类 w=0
   struct DistEntry
   {
     RE::Actor* actorA;
     Name nameA;
     RE::Actor* actorB;
     Name nameB;
-    float distance;
-    Rule rule;  // 规则副本
+    float distance;  // world units
+    float absAngle;  // [0, 180] 度，两部位方向夹角绝对值
+    float score;     // 综合评分（越低越优先）
+    Rule rule;       // 规则副本
   };
 
 }  // anonymous namespace
@@ -253,11 +283,12 @@ void Interact::FlashNodeData()
 //
 // Phase 0 — 滚动历史帧（prevType ← type，prevActor ← actor），重置当前帧
 // Phase 1 — 更新所有 BodyPart 位置（UpdatePosition）
-// Phase 2 — 计算所有 actor 对（含自交互）的有规则部位对距离，构建 DistEntry 并按距离升序排序
-// Phase 3 — 贪心分配：从近到远遍历 DistEntry，对每个条目检查约束并分配；
-//            每个 (actor, part) 只参与一个交互；自交互升级为 Masturbation
-// Phase 4 — DeepThroat 升级：Fellatio 满足且 penis.start 在 mouth 前方
-// Phase 5 — 组合交互检测：SixtyNine / Spitroast / DoublePenetration / TriplePenetration
+// Phase 2 — 计算所有 actor 对的有规则部位对距离+角度，构建 DistEntry 并按综合评分升序排序
+//            评分 = dist_norm*(1-w) + angle_norm*w，穿插类 w=0.45，其余有约束 w=0.20，无约束 w=0
+// Phase 3 — 贪心分配：遍历 DistEntry，检查约束后分配；每个 (actor, part) 只参与一个交互
+//            DeepThroat 由 Throat<->Penis 规则直接检测（无需 Phase 4 升级）
+// Phase 4 — 组合交互检测：SixtyNine / Spitroast / DoublePenetration / TriplePenetration
+// Phase 5 — 组合类型覆写：将组合类型写回参与部位的 type（优先级 TP > DP/SR > SN）
 // Phase 6 — 写回 Info，计算 velocity
 // Phase 7 — Debug 输出（含 combo types）
 
@@ -313,16 +344,33 @@ void Interact::Update()
           if (rule.type == Interact::Type::None)
             continue;
 
-          const float dist = infoA.bodypart.Distance(infoB.bodypart);
-          entries.push_back({actA, nameA, actB, nameB, dist, rule});
+          const float dist     = infoA.bodypart.Distance(infoB.bodypart);
+          const float absAngle = infoA.bodypart.Angle(infoB.bodypart);
+
+          // 归一化距离 [0,1]：0=紧贴, 1=恰好在 radius 边界
+          const float distNorm = (rule.radius > 1e-4f) ? dist / rule.radius : 0.f;
+
+          // 归一化角度偏差 [0,∞)：0=恰在区间中心，1=区间边界
+          const float angleNorm = AngleDeviation(absAngle, rule.minAngle, rule.maxAngle);
+
+          // 有约束的交互按重要性区分权重；无约束（{0,180}）纯靠距离排序
+          const bool hasConstraint = !(rule.minAngle <= 0.f && rule.maxAngle >= 179.9f);
+          constexpr float kHighW   = 0.45f;
+          constexpr float kLowW    = 0.20f;
+          const float angleWeight  = !hasConstraint                        ? 0.f
+                                     : kHighAnglePriority.count(rule.type) ? kHighW
+                                                                           : kLowW;
+          const float score        = distNorm * (1.f - angleWeight) + angleNorm * angleWeight;
+
+          entries.push_back({actA, nameA, actB, nameB, dist, absAngle, score, rule});
         }
       }
     }
   }
 
-  // 按距离升序排序，保证贪心分配优先处理最近的配对
+  // 按综合评分升序排序：距离+角度契合度加权，骨骼密集区角度优先
   std::sort(entries.begin(), entries.end(), [](const DistEntry& x, const DistEntry& y) {
-    return x.distance < y.distance;
+    return x.score < y.score;
   });
 
   // ── Phase 3: 贪心分配（从近到远） ────────────────────────────────────────
@@ -357,25 +405,22 @@ void Interact::Update()
     if (usedParts.count({e.actorA, e.nameA}) || usedParts.count({e.actorB, e.nameB}))
       continue;
 
-    // 角度约束
-    const bool antiAligned = kUseAntiAligned.count(e.rule.type) > 0;
-    const BP& bpA          = datas[e.actorA].infos[e.nameA].bodypart;
-    const BP& bpB          = datas[e.actorB].infos[e.nameB].bodypart;
-    if (!CheckAngle(bpA, bpB, e.rule.maxAngle, antiAligned))
+    // 角度约束（使用 Phase 2 中已缓存的 absAngle）
+    if (!CheckAngle(e.absAngle, e.rule.minAngle, e.rule.maxAngle))
       continue;
 
-    // 附加约束（Naveljob: front + horiz）
-    if (e.rule.needFront || e.rule.needHoriz) {
+    // 附加约束（Naveljob: Belly.IsInFront(penis.end)）
+    if (e.rule.needFront) {
+      const BP& bpA       = datas[e.actorA].infos[e.nameA].bodypart;
+      const BP& bpB       = datas[e.actorB].infos[e.nameB].bodypart;
       const BP* bellyPart = (e.nameA == Name::Belly)   ? &bpA
                             : (e.nameB == Name::Belly) ? &bpB
                                                        : nullptr;
       const BP* penisPart = (e.nameA == Name::Penis)   ? &bpA
                             : (e.nameB == Name::Penis) ? &bpB
                                                        : nullptr;
-      if (bellyPart && penisPart) {
-        if (!CheckExtra(*bellyPart, *penisPart, e.rule.needFront, e.rule.needHoriz))
-          continue;
-      }
+      if (bellyPart && penisPart && !CheckExtra(*bellyPart, *penisPart))
+        continue;
     }
 
     // 自交互升级为 Masturbation
@@ -395,31 +440,10 @@ void Interact::Update()
     usedParts.insert({e.actorB, e.nameB});
   }
 
-  // ── Phase 4: DeepThroat 升级 ─────────────────────────────────────────────
-  // Fellatio → DeepThroat：penis.start 在 mouth 的前方（penis 插入更深）
-  for (auto& [actor, partMap] : assigns) {
-    auto itMouth = partMap.find(Name::Mouth);
-    if (itMouth == partMap.end() || itMouth->second.type != Interact::Type::Fellatio)
-      continue;
-
-    AssignInfo& mouthAsn = itMouth->second;
-
-    auto itMouthBP = datas[actor].infos.find(Name::Mouth);
-    auto itPenisBP = datas[mouthAsn.partner].infos.find(Name::Penis);
-    if (itMouthBP == datas[actor].infos.end() || itPenisBP == datas[mouthAsn.partner].infos.end())
-      continue;
-
-    const BP& mouth = itMouthBP->second.bodypart;
-    const BP& penis = itPenisBP->second.bodypart;
-
-    if (mouth.IsInFront(penis.GetStart()))
-      mouthAsn.type = Interact::Type::DeepThroat;
-  }
-
-  // ── Phase 5: 组合交互检测 ────────────────────────────────────────────────
+  // ── Phase 4: 组合交互检测 ────────────────────────────────────────────────
   struct ActorInteractSummary
   {
-    bool hasOral              = false;  // Mouth 接受 Fellatio/DeepThroat（被口交）
+    bool hasOral              = false;  // Mouth(Fellatio) 或 Throat(DeepThroat)：被口交/深喉
     bool givesOral            = false;  // Mouth 给对方 Cunnilingus/Anilingus
     bool hasVaginal           = false;  // Vagina 参与 Vaginal
     bool hasAnal              = false;  // Anus 参与 Anal
@@ -436,8 +460,15 @@ void Interact::Update()
     for (auto& [partName, asn] : partMap) {
       switch (asn.type) {
       case Interact::Type::Fellatio:
-      case Interact::Type::DeepThroat:
+        // Fellatio 由 Mouth 触发
         if (partName == Name::Mouth) {
+          s.hasOral     = true;
+          s.oralPartner = asn.partner;
+        }
+        break;
+      case Interact::Type::DeepThroat:
+        // DeepThroat 由 Throat 触发（Phase 2 规则直接匹配）
+        if (partName == Name::Throat) {
           s.hasOral     = true;
           s.oralPartner = asn.partner;
         }
@@ -499,6 +530,64 @@ void Interact::Update()
       if (diffVaginal || diffAnal)
         comboTypes[actor].push_back(Interact::Type::Spitroast);
     }
+  }
+
+  // ── Phase 5: 组合类型覆写 ────────────────────────────────────────────────
+  // 将组合类型写回参与部位的 assigns type，以便 Phase 6 写入 Info.type 后
+  // 外部只需读 Info.type 即可感知全部交互状态，无需额外查询 combo 集合。
+  // 优先级（高→低）：TriplePenetration > DoublePenetration / Spitroast > SixtyNine。
+  // SixtyNine 与 Spitroast 因 usedParts 限制天然互斥（同一 Mouth 不能同时收/发）。
+  for (auto& [actor, combos] : comboTypes) {
+    auto itAssign = assigns.find(actor);
+    if (itAssign == assigns.end())
+      continue;
+    auto& partMap = itAssign->second;
+    const auto& s = summaries[actor];
+
+    auto has = [&](Interact::Type t) {
+      return std::find(combos.begin(), combos.end(), t) != combos.end();
+    };
+    auto set = [&](Name part, Interact::Type t) {
+      auto it = partMap.find(part);
+      if (it != partMap.end())
+        it->second.type = t;
+    };
+
+    const bool hasTP = has(Interact::Type::TriplePenetration);
+    const bool hasDP = has(Interact::Type::DoublePenetration);
+    const bool hasSR = has(Interact::Type::Spitroast);
+    const bool hasSN = has(Interact::Type::SixtyNine);
+
+    // TriplePenetration：覆写全部参与部位，跳过低优先级
+    if (hasTP) {
+      set(Name::Mouth, Interact::Type::TriplePenetration);
+      set(Name::Throat, Interact::Type::TriplePenetration);
+      set(Name::Vagina, Interact::Type::TriplePenetration);
+      set(Name::Anus, Interact::Type::TriplePenetration);
+      continue;
+    }
+
+    // DoublePenetration：覆写 Vagina + Anus
+    if (hasDP) {
+      set(Name::Vagina, Interact::Type::DoublePenetration);
+      set(Name::Anus, Interact::Type::DoublePenetration);
+    }
+
+    // Spitroast：覆写口腔部位 + 未被 DP 覆写的穿插部位
+    if (hasSR) {
+      set(Name::Throat, Interact::Type::Spitroast);
+      set(Name::Mouth, Interact::Type::Spitroast);
+      if (!hasDP) {
+        if (s.hasVaginal)
+          set(Name::Vagina, Interact::Type::Spitroast);
+        if (s.hasAnal)
+          set(Name::Anus, Interact::Type::Spitroast);
+      }
+    }
+
+    // SixtyNine：覆写发起方的 Mouth（与 Spitroast 天然互斥）
+    if (hasSN)
+      set(Name::Mouth, Interact::Type::SixtyNine);
   }
 
   // ── Phase 6: 写回 Info，计算 velocity ───────────────────────────────────

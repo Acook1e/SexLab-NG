@@ -12,8 +12,9 @@ public:
   struct SceneActorInfo
   {
     Define::Position* position;
-    Define::Enjoyment enjoy{};
     std::vector<RE::TESBoundObject*> strippedItems{};
+    Define::Enjoyment enjoy{};
+    std::uint8_t climaxCount = 0;
 
     SceneActorInfo(Define::Position* position) : position(position) {}
   };

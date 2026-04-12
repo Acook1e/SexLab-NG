@@ -26,8 +26,10 @@ public:
   enum class Name : std::uint8_t
   {
     Mouth,         // All Creature
+    Throat,        // Human only
     BreastLeft,    // Female or Futa
     BreastRight,   // Female or Futa
+    Cleavage,      // Female or Futa
     HandLeft,      // All Creature
     HandRight,     // All Creature
     FingerLeft,    // Human only
@@ -71,9 +73,8 @@ public:
   void UpdateNodes();
   void UpdatePosition();
 
-  // Returns the signed angle (degrees, -180..180] from this direction to other's,
-  // positive = CCW when viewed from +Z (world up).
-  // Returns 0 if either part is Point type.
+  // Returns the absolute angle (degrees, [0, 180]) between this direction and other's.
+  // Returns 0 if either part is Point type or has zero-length direction.
   [[nodiscard]] float Angle(const BodyPart& other) const;
 
   // Minimum distance between the two body parts (point/segment as appropriate).

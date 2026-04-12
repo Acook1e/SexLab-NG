@@ -4,8 +4,9 @@
 
 namespace Define
 {
-static std::unordered_map<Race::Type, PointName> mouthMap{
-    {Define::Race::Type::Human, "NPC Head [Head]"},
+static std::unordered_map<Race::Type, std::array<PointName, 2>> mouthMap{
+    // from central mouth to central head, which is slightly above mouth
+    {Define::Race::Type::Human, {"Mouth00", "NPC Head [Head]"}},
 };
 
 static std::unordered_map<Race::Type, std::array<PointName, 2>> handLeftMap{
@@ -66,9 +67,15 @@ static std::unordered_map<Race::Type, std::array<PointName, 3>> schlongMap{
 };
 
 static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
+    // from mid into head to neck
+    {BodyPart::Name::Throat, {"NPC Head [Head]", "NPC Neck [Neck]"}},
     // from base breast to nipple
     {BodyPart::Name::BreastLeft, {"L Breast02", "L Breast03"}},
     {BodyPart::Name::BreastRight, {"R Breast02", "R Breast03"}},
+    // normal vector of cleavage plane, facing outward
+    {BodyPart::Name::Cleavage,
+     {MidNodeName{"NPC L Breast02", "NPC R Breast02"},
+      MidNodeName{"NPC L Breast03", "NPC R Breast03"}}},
     // from root of middle finger to its tip
     {BodyPart::Name::FingerLeft, {"NPC L Finger20 [LF20]", "NPC L Finger22 [LF22]"}},
     {BodyPart::Name::FingerRight, {"NPC R Finger20 [RF20]", "NPC R Finger22 [RF22]"}},
@@ -95,9 +102,11 @@ static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
 };
 
 static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
-    {BodyPart::Name::Mouth, BodyPart::Type::Point},
+    {BodyPart::Name::Mouth, BodyPart::Type::Vector},
+    {BodyPart::Name::Throat, BodyPart::Type::Vector},
     {BodyPart::Name::BreastLeft, BodyPart::Type::Vector},
     {BodyPart::Name::BreastRight, BodyPart::Type::Vector},
+    {BodyPart::Name::Cleavage, BodyPart::Type::NormalVectorEnd},
     {BodyPart::Name::HandLeft, BodyPart::Type::Vector},
     {BodyPart::Name::HandRight, BodyPart::Type::Vector},
     {BodyPart::Name::FingerLeft, BodyPart::Type::Vector},
@@ -152,9 +161,11 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
     return true;
   case Name::BreastLeft:
   case Name::BreastRight:
+  case Name::Cleavage:
   case Name::Vagina:
   case Name::GlutealCleft:
     return isFemaleOrFuta;
+  case Name::Throat:
   case Name::Belly:
   case Name::ThighLeft:
   case Name::ThighRight:
@@ -179,7 +190,8 @@ BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name)
   // ── Per-race lookups ──────────────────────────────────────────────────────
   case Name::Mouth:
     if (auto it = mouthMap.find(a_race.GetType()); it != mouthMap.end())
-      nodeNames.push_back(&it->second);
+      for (auto& n : it->second)
+        nodeNames.push_back(&n);
     break;
 
   case Name::HandLeft:
@@ -215,8 +227,10 @@ BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name)
     break;
 
   // ── Human-only fixed lookups ─────────────────────────────────────────────
+  case Name::Throat:
   case Name::BreastLeft:
   case Name::BreastRight:
+  case Name::Cleavage:
   case Name::FingerLeft:
   case Name::FingerRight:
   case Name::Belly:
@@ -406,10 +420,8 @@ Vector3f BodyPart::FitVector()
 }
 
 // ─── Angle ───────────────────────────────────────────────────────────────────
-// Returns the signed angle (degrees) from this direction to other's direction,
-// in the range (-180, 180].
-// Sign convention: positive = counter-clockwise when viewed from above
-// (world-up = +Z), consistent with right-hand rule about Z axis.
+// Returns the absolute angle in [0, 180] degrees between the two direction vectors.
+// < 90 → roughly aligned; > 90 → roughly anti-aligned; = 90 → perpendicular.
 // Returns 0 if either part is Point type or has zero-length direction.
 
 float BodyPart::Angle(const BodyPart& other) const
@@ -419,15 +431,8 @@ float BodyPart::Angle(const BodyPart& other) const
   if (length < 1e-6f || other.length < 1e-6f)
     return 0.f;
 
-  // direction is already unit after UpdatePosition
-  const Vector3f& a = direction;
-  const Vector3f& b = other.direction;
-
-  const float dot     = std::clamp(a.dot(b), -1.f, 1.f);
-  const float cross_z = a.x() * b.y() - a.y() * b.x();  // Z component of a × b
-
-  // atan2 gives signed angle in (-π, π]; convert to degrees
-  return std::atan2(cross_z, dot) * (180.f / std::numbers::pi_v<float>);
+  const float dot = std::clamp(direction.dot(other.direction), -1.f, 1.f);
+  return std::acos(dot) * (180.f / std::numbers::pi_v<float>);
 }
 
 float BodyPart::Distance(const BodyPart& other) const

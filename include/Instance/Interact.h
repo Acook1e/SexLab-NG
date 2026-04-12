@@ -21,7 +21,7 @@ public:
     Cunnilingus,    // Mouth <-> Vagina
     Anilingus,      // Mouth <-> Anus
     Fellatio,       // Mouth <-> Penis
-    DeepThroat,     // Mouth <-> Penis (deeper)
+    DeepThroat,     // Throat <-> Penis
     MouthAnimObj,
     // Breast
     GropeBreast,  // Breast <-> Hand
