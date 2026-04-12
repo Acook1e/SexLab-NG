@@ -167,11 +167,11 @@ namespace
     if (!info)
       return 0.f;
     if (info->prevActor == partner && info->prevType == type)
-      return 0.08f;
+      return 0.12f;
     if (info->prevActor == partner)
-      return 0.04f;
+      return 0.06f;
     if (info->prevType == type)
-      return 0.02f;
+      return 0.03f;
     return 0.f;
   }
 
@@ -205,12 +205,16 @@ namespace
     // kSupportScale:
     //   把前后区域支撑点的距离差映射到 score 偏置时使用的缩放尺。
     //   数值越大，前后差异必须更明显才能改变排序；数值越小，系统更敏感。
-    constexpr float kSupportScale = 8.f;
+    constexpr float kSupportScale = 6.5f;
 
     // kMaxBias:
     //   前后区域上下文最多能对 Vaginal / Anal 候选施加多大的 score 修正。
     //   它只能用来打破僵局，不应覆盖距离与角度本身，因此保持在较小范围内。
-    constexpr float kMaxBias = 0.22f;
+    constexpr float kMaxBias = 0.34f;
+
+    // 当裆前与裆后的支撑距离接近时，默认轻微偏向 vaginal，
+    // 避免 pelvis 中心附近的模糊姿态长期被 anal 抢占。
+    constexpr float kVaginalTieBreakBias = 0.10f;
 
     const float vagSupport =
         thighCleft ? thighCleft->Distance(penisPart) : std::numeric_limits<float>::infinity();
@@ -220,11 +224,12 @@ namespace
     if (std::isfinite(vagSupport) && std::isfinite(analSupport)) {
       const float delta =
           std::clamp((vagSupport - analSupport) / kSupportScale, -kMaxBias, kMaxBias);
-      return type == Type::Vaginal ? delta : -delta;
+      const float tieBreak = vagSupport <= analSupport + 1.0f ? kVaginalTieBreakBias : 0.f;
+      return type == Type::Vaginal ? delta - tieBreak : -delta + tieBreak;
     }
 
     if (type == Type::Vaginal && std::isfinite(vagSupport))
-      return -std::clamp(1.f - vagSupport / kSupportScale, 0.f, kMaxBias);
+      return -std::clamp(1.f - vagSupport / kSupportScale, 0.f, kMaxBias) - 0.05f;
     if (type == Type::Anal && std::isfinite(analSupport))
       return -std::clamp(1.f - analSupport / kSupportScale, 0.f, kMaxBias);
     return 0.f;
@@ -326,18 +331,18 @@ namespace
     const BP& belly = *TryGetBodyPart(ctx.targetData, Name::Belly);
 
     const float distance = belly.Distance(penis);
-    if (distance > 9.f)
+    if (distance > 10.5f)
       return;
 
     const float angle = belly.Angle(penis);
-    if (angle > 50.f)
+    if (angle > 60.f)
       return;
 
     if (!belly.IsInFront(penis.GetEnd()) || !penis.IsHorizontal())
       return;
 
-    const float distNorm  = NormalizeDistance(distance, 9.f);
-    const float angleNorm = AngleDeviation(angle, {0.f, 50.f});
+    const float distNorm  = NormalizeDistance(distance, 10.5f);
+    const float angleNorm = AngleDeviation(angle, {0.f, 60.f});
     const float bonus =
         TemporalBonus(ctx.sourceData, Name::Penis, ctx.targetActor, Type::Naveljob) +
         TemporalBonus(ctx.targetData, Name::Belly, ctx.sourceActor, Type::Naveljob);
@@ -403,19 +408,19 @@ namespace
       return;
 
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kBreastParts, Type::BreastSucking,
-                                CandidateFamily::Oral, 7.f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Oral, 8.f, {0.f, 180.f}, 0.f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kFootParts, Type::ToeSucking,
-                                CandidateFamily::Oral, 7.f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Oral, 8.f, {0.f, 180.f}, 0.f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kThighCleftParts, Type::Cunnilingus,
-                                CandidateFamily::Oral, 6.f, {0.f, 180.f}, 0.f, -0.03f);
+                                CandidateFamily::Oral, 7.f, {0.f, 180.f}, 0.f, -0.05f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kVaginaParts, Type::Cunnilingus,
-                                CandidateFamily::Oral, 6.5f, {0.f, 180.f}, 0.f, 0.02f);
+                                CandidateFamily::Oral, 7.5f, {0.f, 180.f}, 0.f, 0.01f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kAnusParts, Type::Anilingus,
-                                CandidateFamily::Oral, 6.f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Oral, 6.8f, {0.f, 180.f}, 0.f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kPenisParts, Type::Fellatio,
-                                CandidateFamily::Oral, 7.f, {0.f, 35.f}, 0.45f);
+                                CandidateFamily::Oral, 8.2f, {0.f, 42.f}, 0.38f);
     AddSimpleDirectedCandidates(out, ctx, kThroatParts, kPenisParts, Type::DeepThroat,
-                                CandidateFamily::Oral, 6.f, {0.f, 28.f}, 0.50f, -0.01f);
+                                CandidateFamily::Oral, 7.f, {0.f, 34.f}, 0.42f, -0.02f);
   }
 
   void GenerateManualDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
@@ -424,22 +429,22 @@ namespace
       return;
 
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kBreastParts, Type::GropeBreast,
-                                CandidateFamily::Manual, 5.f, {150.f, 180.f}, 0.28f);
+                                CandidateFamily::Manual, 5.8f, {140.f, 180.f}, 0.24f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kThighParts, Type::GropeThigh,
-                                CandidateFamily::Manual, 5.5f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Manual, 6.2f, {0.f, 180.f}, 0.f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kButtParts, Type::GropeButt,
-                                CandidateFamily::Manual, 4.5f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Manual, 5.2f, {0.f, 180.f}, 0.f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kFootParts, Type::GropeFoot,
-                                CandidateFamily::Manual, 5.5f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Manual, 6.2f, {0.f, 180.f}, 0.f);
 
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kThighCleftParts, Type::FingerVagina,
-                                CandidateFamily::Manual, 4.5f, {0.f, 180.f}, 0.f, -0.03f);
+                                CandidateFamily::Manual, 5.2f, {0.f, 180.f}, 0.f, -0.04f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kVaginaParts, Type::FingerVagina,
-                                CandidateFamily::Manual, 5.5f, {0.f, 180.f}, 0.f, 0.02f);
+                                CandidateFamily::Manual, 6.2f, {0.f, 180.f}, 0.f, 0.01f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kAnusParts, Type::FingerAnus,
-                                CandidateFamily::Manual, 5.f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Manual, 5.8f, {0.f, 180.f}, 0.f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kPenisParts, Type::Handjob,
-                                CandidateFamily::Manual, 7.f, {60.f, 120.f}, 0.25f);
+                                CandidateFamily::Manual, 8.f, {50.f, 130.f}, 0.20f);
   }
 
   void GenerateContactDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
@@ -448,18 +453,18 @@ namespace
       return;
 
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kBreastParts, Type::Titfuck,
-                                CandidateFamily::Contact, 7.f, {0.f, 50.f}, 0.38f);
+                                CandidateFamily::Contact, 8.f, {0.f, 58.f}, 0.32f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kCleavageParts, Type::Titfuck,
-                                CandidateFamily::Contact, 7.f, {75.f, 105.f}, 0.48f, -0.02f);
+                                CandidateFamily::Contact, 8.f, {70.f, 110.f}, 0.40f, -0.03f);
     TryAddNaveljobCandidate(out, ctx);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighCleftParts, Type::Thighjob,
-                                CandidateFamily::Contact, 5.5f, {0.f, 25.f}, 0.30f, -0.03f);
+                                CandidateFamily::Contact, 6.5f, {0.f, 32.f}, 0.24f, -0.05f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighParts, Type::Thighjob,
-                                CandidateFamily::Contact, 4.5f, {0.f, 25.f}, 0.28f, 0.02f);
+                                CandidateFamily::Contact, 5.4f, {0.f, 32.f}, 0.22f, 0.01f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kGlutealCleftParts, Type::Frottage,
-                                CandidateFamily::Contact, 7.f, {145.f, 35.f}, 0.35f);
+                                CandidateFamily::Contact, 8.f, {140.f, 40.f}, 0.28f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kFootParts, Type::Footjob,
-                                CandidateFamily::Contact, 7.f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Contact, 8.2f, {0.f, 180.f}, 0.f);
   }
 
   void GeneratePenetrationDirectedCandidates(std::vector<Candidate>& out,
@@ -468,16 +473,17 @@ namespace
     if (ctx.self || !HasAnyPart(ctx.sourceData, kPenisParts))
       return;
 
-    TryAddPenetrationCandidate(out, ctx, Name::Vagina, Type::Vaginal, 7.f, 22.f, 4.5f, -2.5f, 10.f);
-    TryAddPenetrationCandidate(out, ctx, Name::Anus, Type::Anal, 6.f, 18.f, 4.f, -2.f, 9.f);
+    TryAddPenetrationCandidate(out, ctx, Name::Vagina, Type::Vaginal, 8.4f, 30.f, 5.5f, -3.5f,
+                               12.f);
+    TryAddPenetrationCandidate(out, ctx, Name::Anus, Type::Anal, 6.6f, 20.f, 4.5f, -2.5f, 9.8f);
   }
 
   void GenerateSymmetricCandidates(std::vector<Candidate>& out, const PairContext& pair)
   {
     TryAddSymmetricCandidate(out, pair, Name::Mouth, Name::Mouth, Type::Kiss, CandidateFamily::Oral,
-                             6.f, {145.f, 180.f}, 0.55f);
+                             6.8f, {140.f, 180.f}, 0.48f);
     TryAddSymmetricCandidate(out, pair, Name::Vagina, Name::Vagina, Type::Tribbing,
-                             CandidateFamily::Contact, 7.f, {145.f, 180.f}, 0.40f);
+                             CandidateFamily::Contact, 8.f, {140.f, 180.f}, 0.32f);
   }
 
   void GenerateDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
