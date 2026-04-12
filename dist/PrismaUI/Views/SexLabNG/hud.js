@@ -96,7 +96,7 @@ function createActorFragment(actor) {
 
   // 用初始数据刷新一次
   updateEnjoyBar(actor.index, actor.enjoy, actor.degree);
-  // interactions 在 initHud 时可能为空，跳过
+  updateInteractList(actor.index, actor.interactions);
 
   return frag;
 }
@@ -142,7 +142,7 @@ function updateEnjoyBar(index, value, degree) {
 
 /**
  * 更新交互列表
- * interactions: [{ type, partner, velocity }, ...]
+ * interactions: [{ part, type, partner, velocity }, ...]
  */
 function updateInteractList(index, interactions) {
   const listEl = document.getElementById('interact-list-' + index);
@@ -156,9 +156,30 @@ function updateInteractList(index, interactions) {
     const row = document.createElement('div');
     row.className = 'interact-row';
 
+    const content = document.createElement('div');
+    content.className = 'interact-content';
+
+    const meta = document.createElement('div');
+    meta.className = 'interact-meta';
+
+    const partSpan = document.createElement('span');
+    partSpan.className = 'interact-self-part';
+    partSpan.textContent = inter.part;
+
+    const separator = document.createElement('span');
+    separator.className = 'interact-separator';
+    separator.textContent = '·';
+
     const typeSpan = document.createElement('span');
     typeSpan.className = 'interact-type';
     typeSpan.textContent = inter.type;
+
+    meta.appendChild(partSpan);
+    meta.appendChild(separator);
+    meta.appendChild(typeSpan);
+
+    const partnerLine = document.createElement('div');
+    partnerLine.className = 'interact-partner-line';
 
     const arrow = document.createElement('span');
     arrow.className = 'interact-arrow';
@@ -167,6 +188,12 @@ function updateInteractList(index, interactions) {
     const partner = document.createElement('span');
     partner.className = 'interact-partner';
     partner.textContent = inter.partner;
+
+    partnerLine.appendChild(arrow);
+    partnerLine.appendChild(partner);
+
+    content.appendChild(meta);
+    content.appendChild(partnerLine);
 
     // velocity 指示点
     const velDot = document.createElement('span');
@@ -178,9 +205,7 @@ function updateInteractList(index, interactions) {
     else
       velDot.classList.add('vel-static');
 
-    row.appendChild(typeSpan);
-    row.appendChild(arrow);
-    row.appendChild(partner);
+    row.appendChild(content);
     row.appendChild(velDot);
     listEl.appendChild(row);
   }

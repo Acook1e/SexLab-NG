@@ -171,24 +171,59 @@ body {
 .interact-row {
     display: flex;
     align-items: center;
+    gap: 8px;
     font-size: 12px;
-    padding: 2px 0;
+    padding: 3px 0;
     color: rgba(255, 255, 255, 0.7);
+}
+
+.interact-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.interact-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+}
+
+.interact-self-part {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.52);
+    white-space: nowrap;
+}
+
+.interact-separator {
+    color: rgba(255, 255, 255, 0.24);
 }
 
 .interact-type {
     font-weight: 600;
-    min-width: 90px;
     color: #e0e0e0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.interact-partner-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1px;
+    min-width: 0;
 }
 
 .interact-arrow {
-    margin: 0 6px;
     color: rgba(255, 255, 255, 0.3);
 }
 
 .interact-partner {
     color: rgba(255, 255, 255, 0.6);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* velocity 指示器 */

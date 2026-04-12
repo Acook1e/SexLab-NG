@@ -2,6 +2,7 @@
 
 #include "Instance/Collision.h"
 #include "Instance/Manager.h"
+#include "Registry/Stat.h"
 #include "Utils/UI.h"
 
 namespace Hooks
@@ -9,11 +10,55 @@ namespace Hooks
 void MainUpdate::Update()
 {
   _Update();
-  // Placeholder for main update logic
+
+  // 场景更新
   try {
     Instance::SceneManager::GetSingleton().UpdateScenes();
   } catch (const std::exception& e) {
     logger::error("Error in MainUpdate: {}", e.what());
+  }
+
+  // ── 游戏时间 delta 计算 ──────────────────────────────────────────
+  // gameDaysPassed 单位为天
+  // 以下皆为根据时间更新
+  static const auto* gameDaysPassed = []() -> const RE::TESGlobal* {
+    const auto cal = RE::Calendar::GetSingleton();
+    return cal ? cal->gameDaysPassed : nullptr;
+  }();
+
+  if (!gameDaysPassed)
+    return;
+
+  // 以游戏小时为单位
+  const float currentGameHours      = gameDaysPassed->value * 24.f;
+  static float lastGameHours        = currentGameHours;
+  static float accumulatedGameHours = 0.f;
+
+  const float delta = currentGameHours - lastGameHours;
+  lastGameHours     = currentGameHours;
+
+  // 忽略时间倒流（读档、RevertToSavedGame 等）
+  if (delta <= 0.f)
+    return;
+
+  // 按天更新的部分
+
+  accumulatedGameHours += delta;
+
+  // 按小时更新的部分
+  // 每积累 1 游戏小时触发一次（约现实 1 分钟）
+  if (accumulatedGameHours < 1.f)
+    return;
+
+  const float tickHours = std::floor(accumulatedGameHours);
+  accumulatedGameHours -= tickHours;
+
+  // stat 更新
+  try {
+    // 不在场景的 actor 的 arouse/enjoy 时间衰减
+    Registry::ActorStat::GetSingleton().Update(tickHours);
+  } catch (const std::exception& e) {
+    logger::error("Error in MainUpdate::ActorStat::Update: {}", e.what());
   }
 }
 

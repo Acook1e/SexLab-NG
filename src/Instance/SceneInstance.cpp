@@ -50,7 +50,7 @@ SceneInstance::~SceneInstance()
   UI::GetSingleton().Hide(this);
 
   // ── 场景结束: 收集 enjoyment 记录并更新 stat ──────────────
-  Registry::ActorStat::GetSingleton().UpdateStat(actorInfoMap, currentScene);
+  Registry::ActorStat::GetSingleton().UpdateStat(currentScene, actorInfoMap);
 
   ResetActors();
   DressActors();
@@ -110,9 +110,7 @@ bool SceneInstance::Update()
   lastUpdateTime = now;
 
   interact.Update();
-  for (auto& [actor, info] : actorInfoMap)
-    Registry::ActorStat::GetSingleton().UpdateEnjoyment(actor, currentScene, *info.position,
-                                                        interact.GetData(actor));
+  Registry::ActorStat::GetSingleton().UpdateEnjoyment(currentScene, actorInfoMap, interact);
 
   // 总是最后更新 UI，确保数据同步
   UI::GetSingleton().Update(this);

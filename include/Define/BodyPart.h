@@ -9,16 +9,33 @@ namespace Define
 {
 using Point3f  = Eigen::Vector3f;
 using Vector3f = Eigen::Vector3f;
+using Matrix3f = Eigen::Matrix3f;
 
 using NodeName        = std::string_view;
 using MidNodeName     = std::array<std::string_view, 2>;
 using CentralNodeName = std::array<std::string_view, 3>;
-using PointName       = std::variant<NodeName, MidNodeName, CentralNodeName>;
+
+struct OffsetNodeName
+{
+  std::string_view baseNode;
+  Vector3f eulerRot;  // Euler angles in radians, XYZ order
+  Vector3f localTrans;
+};
+
+using PointName = std::variant<NodeName, MidNodeName, CentralNodeName, OffsetNodeName>;
 
 using Node        = RE::NiNode*;
 using MidNode     = std::array<RE::NiNode*, 2>;
 using CentralNode = std::array<RE::NiNode*, 3>;
-using Point       = std::variant<Node, MidNode, CentralNode>;
+
+struct OffsetNode
+{
+  RE::NiNode* baseNode;
+  Matrix3f localRot;
+  Vector3f localTrans;
+};
+
+using Point = std::variant<Node, MidNode, CentralNode, OffsetNode>;
 
 class BodyPart
 {
@@ -37,6 +54,7 @@ public:
     Belly,         // Human only
     ThighLeft,     // Human only
     ThighRight,    // Human only
+    ThighCleft,    // Female or Futa
     ButtLeft,      // Human only
     ButtRight,     // Human only
     GlutealCleft,  // Female or Futa

@@ -13,6 +13,20 @@
 static PRISMA_UI_API::IVPrismaUI2* prisma = nullptr;
 static PrismaView view                    = 0;
 
+namespace
+{
+nlohmann::json BuildInteractionJson(Define::BodyPart::Name partName,
+                                    const Instance::Interact::Info& bpInfo)
+{
+  nlohmann::json ij;
+  ij["part"]     = std::string(magic_enum::enum_name(partName));
+  ij["type"]     = std::string(magic_enum::enum_name(bpInfo.type));
+  ij["partner"]  = bpInfo.actor ? bpInfo.actor->GetDisplayFullName() : "";
+  ij["velocity"] = bpInfo.velocity;
+  return ij;
+}
+}  // namespace
+
 // ════════════════════════════════════════════════════════════
 // UI
 // ════════════════════════════════════════════════════════════
@@ -115,7 +129,7 @@ void UI::SetFocus(bool focused)
   if (!isActive || !prisma)
     return;
   if (focused && !isFocused) {
-    prisma->Focus(view, false, true);
+    prisma->Focus(view, false, false);
     isFocused = true;
   } else if (!focused && isFocused) {
     prisma->Unfocus(view);
@@ -164,11 +178,7 @@ void UI::SendInitData(Instance::SceneInstance* scene)
     for (const auto& [partName, bpInfo] : actorData.infos) {
       if (bpInfo.type == Instance::Interact::Type::None)
         continue;
-      nlohmann::json ij;
-      ij["type"]     = std::string(magic_enum::enum_name(bpInfo.type));
-      ij["partner"]  = bpInfo.actor ? bpInfo.actor->GetDisplayFullName() : "";
-      ij["velocity"] = bpInfo.velocity;
-      aj["interactions"].push_back(ij);
+      aj["interactions"].push_back(BuildInteractionJson(partName, bpInfo));
     }
 
     j["actors"].push_back(aj);
@@ -208,11 +218,7 @@ void UI::SendUpdateData(Instance::SceneInstance* scene)
     for (const auto& [partName, bpInfo] : actorData.infos) {
       if (bpInfo.type == Instance::Interact::Type::None)
         continue;
-      nlohmann::json ij;
-      ij["type"]     = std::string(magic_enum::enum_name(bpInfo.type));
-      ij["partner"]  = bpInfo.actor ? bpInfo.actor->GetDisplayFullName() : "";
-      ij["velocity"] = bpInfo.velocity;
-      aj["interactions"].push_back(ij);
+      aj["interactions"].push_back(BuildInteractionJson(partName, bpInfo));
     }
 
     j["actors"].push_back(aj);

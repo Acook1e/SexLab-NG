@@ -27,6 +27,9 @@ public:
     GropeBreast,  // Breast <-> Hand
     Titfuck,      // Breast <-> Penis
     // Hand / Finger
+    GropeThigh,    // Hand <-> Thigh
+    GropeButt,     // Hand <-> Butt
+    GropeFoot,     // Hand <-> Foot
     FingerVagina,  // Finger <-> Vagina
     FingerAnus,    // Finger <-> Anus
     Handjob,       // Hand <-> Penis

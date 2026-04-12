@@ -6,7 +6,9 @@ namespace Define
 {
 static std::unordered_map<Race::Type, std::array<PointName, 2>> mouthMap{
     // from central mouth to central head, which is slightly above mouth
-    {Define::Race::Type::Human, {"Mouth00", "NPC Head [Head]"}},
+    {Define::Race::Type::Human,
+     {OffsetNodeName{"NPC Head [Head]", {0.054f, 0.067f, 0.608f}, {-0.061f, 5.487f, -2.266f}},
+      "NPC Head [Head]"}},
 };
 
 static std::unordered_map<Race::Type, std::array<PointName, 2>> handLeftMap{
@@ -75,27 +77,25 @@ static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
     // normal vector of cleavage plane, facing outward
     {BodyPart::Name::Cleavage,
      {MidNodeName{"L Breast02", "R Breast02"}, MidNodeName{"L Breast03", "R Breast03"}}},
-    // from root of middle finger to its tip
-    {BodyPart::Name::FingerLeft, {"NPC L Finger20 [LF20]", "NPC L Finger22 [LF22]"}},
-    {BodyPart::Name::FingerRight, {"NPC R Finger20 [RF20]", "NPC R Finger22 [RF22]"}},
+    // use point describes mid finger's tip, better than vector at finger's case
+    {BodyPart::Name::FingerLeft, {"NPC L Finger22 [LF22]"}},
+    {BodyPart::Name::FingerRight, {"NPC R Finger22 [RF22]"}},
     // from Spine1 to Belly — direction = body-forward normal (3D, follows actor lean)
     {BodyPart::Name::Belly, {"NPC Spine1 [Spn1]", "NPC Belly"}},
     // from mid of back thigh to mid of front thigh
+    // not a pricise description of thigh, but can show how close with other part
     {BodyPart::Name::ThighLeft, {"NPC L RearThigh", "NPC L FrontThigh"}},
     {BodyPart::Name::ThighRight, {"NPC R RearThigh", "NPC R FrontThigh"}},
+    // form vagina entry to mid of clitoral
+    {BodyPart::Name::ThighCleft, {"VaginaB1", "Clitoral1"}},
     // single node for butt
     {BodyPart::Name::ButtLeft, {"NPC L Butt"}},
     {BodyPart::Name::ButtRight, {"NPC R Butt"}},
     // form mid of vagina and anus entry to mid of butt
     {BodyPart::Name::GlutealCleft, {"VaginaB1", MidNodeName{"NPC L Butt", "NPC R Butt"}}},
     // entry midpoint -> deep
-    // exclude pevis, cause vaginadeep1 maybe move above pevis when crouching, breaking the
     // direction assumption
-    {BodyPart::Name::Vagina,
-     {
-         MidNodeName{"NPC L Pussy02", "NPC R Pussy02"}, "VaginaDeep1"
-         //"NPC Pelvis [Pelv]"
-     }},
+    {BodyPart::Name::Vagina, {MidNodeName{"NPC L Pussy02", "NPC R Pussy02"}, "VaginaDeep1"}},
     // from entry to deep
     {BodyPart::Name::Anus, {"NPC LT Anus2", "NPC Anus Deep2"}},
 };
@@ -108,11 +108,12 @@ static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
     {BodyPart::Name::Cleavage, BodyPart::Type::NormalVectorEnd},
     {BodyPart::Name::HandLeft, BodyPart::Type::Vector},
     {BodyPart::Name::HandRight, BodyPart::Type::Vector},
-    {BodyPart::Name::FingerLeft, BodyPart::Type::Vector},
-    {BodyPart::Name::FingerRight, BodyPart::Type::Vector},
+    {BodyPart::Name::FingerLeft, BodyPart::Type::Point},
+    {BodyPart::Name::FingerRight, BodyPart::Type::Point},
     {BodyPart::Name::Belly, BodyPart::Type::NormalVectorEnd},
     {BodyPart::Name::ThighLeft, BodyPart::Type::Vector},
     {BodyPart::Name::ThighRight, BodyPart::Type::Vector},
+    {BodyPart::Name::ThighCleft, BodyPart::Type::Vector},
     {BodyPart::Name::ButtLeft, BodyPart::Type::Point},
     {BodyPart::Name::ButtRight, BodyPart::Type::Point},
     {BodyPart::Name::GlutealCleft, BodyPart::Type::Vector},
@@ -142,6 +143,25 @@ Point3f operator~(const Point& point)
     const auto c      = nodes[2]->world.translate;
     const auto center = (a + b + c) / 3.0f;
     return {center.x, center.y, center.z};
+  } else if (std::holds_alternative<OffsetNode>(point)) {
+    const auto& off = std::get<OffsetNode>(point);
+    if (!off.baseNode)
+      return Point3f::Zero();
+
+    // 1. 获取基准骨骼的世界位置和旋转矩阵
+    const auto& baseWorldPos = off.baseNode->world.translate;
+    const auto& baseWorldRot = off.baseNode->world.rotate;  // RE::NiMatrix3
+
+    // 2. 将 RE::NiMatrix3 转为 Eigen::Matrix3f（注意内存布局差异）
+    //    NiMatrix3 是列主序 3x3，可直接用 Map
+    Matrix3f worldRotMat = Eigen::Map<const Matrix3f>(&baseWorldRot.entry[0][0]);
+
+    // 3. 变换局部偏移：先应用局部附加旋转，再应用世界旋转
+    Vector3f localOffset{off.localTrans.x(), off.localTrans.y(), off.localTrans.z()};
+    Vector3f worldOffset = worldRotMat * (off.localRot * localOffset);
+
+    // 4. 返回世界坐标
+    return Point3f{baseWorldPos.x, baseWorldPos.y, baseWorldPos.z} + worldOffset;
   }
   return Point3f::Zero();
 }
@@ -161,8 +181,9 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
   case Name::BreastLeft:
   case Name::BreastRight:
   case Name::Cleavage:
-  case Name::Vagina:
+  case Name::ThighCleft:
   case Name::GlutealCleft:
+  case Name::Vagina:
     return isFemaleOrFuta;
   case Name::Throat:
   case Name::Belly:
@@ -235,6 +256,7 @@ BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name)
   case Name::Belly:
   case Name::ThighLeft:
   case Name::ThighRight:
+  case Name::ThighCleft:
   case Name::ButtLeft:
   case Name::ButtRight:
   case Name::GlutealCleft:
@@ -297,6 +319,17 @@ void BodyPart::UpdateNodes()
         centralNodes[i] = obj ? obj->AsNode() : nullptr;
       }
       nodes.push_back(centralNodes);
+    } else if (std::holds_alternative<OffsetNodeName>(*variant)) {
+      const auto& offsetNode = std::get<OffsetNodeName>(*variant);
+      auto* baseObj          = actor->GetNodeByName(offsetNode.baseNode);
+      if (!baseObj)
+        logger::warn("Offset node base not found: {}", offsetNode.baseNode);
+      Matrix3f localRot = (Eigen::AngleAxisf(offsetNode.eulerRot.x(), Vector3f::UnitX()) *
+                           Eigen::AngleAxisf(offsetNode.eulerRot.y(), Vector3f::UnitY()) *
+                           Eigen::AngleAxisf(offsetNode.eulerRot.z(), Vector3f::UnitZ()))
+                              .toRotationMatrix();
+      nodes.push_back(
+          OffsetNode{baseObj ? baseObj->AsNode() : nullptr, localRot, offsetNode.localTrans});
     }
   }
 }
@@ -316,6 +349,9 @@ bool BodyPart::IsValid() const
     } else if (std::holds_alternative<CentralNode>(p)) {
       const auto& c = std::get<CentralNode>(p);
       if (!c[0] || !c[1] || !c[2])
+        return false;
+    } else if (std::holds_alternative<OffsetNode>(p)) {
+      if (!std::get<OffsetNode>(p).baseNode)
         return false;
     }
   }

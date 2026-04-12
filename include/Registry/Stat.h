@@ -44,11 +44,14 @@ public:
     std::uint16_t TimesSameRace = 0;
     std::uint16_t TimesDiffRace = 0;
 
+    // 性欲值 [0, 100]
+    float arouse = 0.0f;
+
     // 记录全局享受值，随游戏更新/场景更新变化
     Define::Enjoyment enjoy{};
 
-    // 性欲值 [0, 100]
-    float arouse = 0.0f;
+    // 敏感度值 [-10, 10] 影响enjoy增量
+    float sensitive = 1.0f;
   };
 
   // 传入 UpdateOnSceneEnd 的每人记录: 最终 enjoyment 值 + 是否为主动方
@@ -70,20 +73,22 @@ public:
   void AddXP(RE::Actor* actor, ExperienceType type, float amount);
 
   // 全局游戏更新且不在场景的时候，性欲/享受等随时间变化的值
-  void Update();
+  // deltaGameHours: 距上次调用经过的游戏内小时数（由 Calendar 计算）
+  void Update(float deltaGameHours);
 
-  // 根据 actor 当前 stat 计算初始 enjoyment 值 [-100, 100]
-  // scene: 当前场景
-  // position:  该 actor 分配到的 position
-  // interactData: 该 actor 的交互信息
-  void UpdateEnjoyment(RE::Actor* actor, const Define::Scene* scene,
-                       const Define::Position& position,
-                       const Instance::Interact::ActorData& interactData);
+  // 根据全员 actorInfoMap 及交互数据为每个 actor 计算并更新 enjoy 增量
+  // 每 0.1 秒由 SceneInstance 在 UI 更新前调用一次
+  // actorInfoMap: 全员 position/climaxCount 信息，会在高潮时写入 climaxCount
+  // interact:     全员实时交互数据
+  void UpdateEnjoyment(
+      const Define::Scene* scene,
+      std::unordered_map<RE::Actor*, Instance::SceneInstance::SceneActorInfo>& actorInfoMap,
+      const Instance::Interact& interact);
 
   // 场景结束时统一更新所有 actor 的 stat
   void
-  UpdateStat(std::unordered_map<RE::Actor*, Instance::SceneInstance::SceneActorInfo> actorInfoMap,
-             const Define::Scene* scene);
+  UpdateStat(const Define::Scene* scene,
+             std::unordered_map<RE::Actor*, Instance::SceneInstance::SceneActorInfo> actorInfoMap);
 
   static void onSave(SKSE::SerializationInterface* serial);
   static void onLoad(SKSE::SerializationInterface* serial);
