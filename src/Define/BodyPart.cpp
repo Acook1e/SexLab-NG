@@ -91,8 +91,8 @@ static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
     // single node for butt
     {BodyPart::Name::ButtLeft, {"NPC L Butt"}},
     {BodyPart::Name::ButtRight, {"NPC R Butt"}},
-    // form mid of vagina and anus entry to mid of butt
-    {BodyPart::Name::GlutealCleft, {"VaginaB1", MidNodeName{"NPC L Butt", "NPC R Butt"}}},
+    // form Pelvis to mid of butt as normal vector
+    {BodyPart::Name::GlutealCleft, {"NPC Pelvis [Pelv]", MidNodeName{"NPC L Butt", "NPC R Butt"}}},
     // entry midpoint -> deep
     // direction assumption
     // use clitoral instead entry get more score
@@ -120,7 +120,7 @@ static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
     {BodyPart::Name::ThighCleft, BodyPart::Type::Vector},
     {BodyPart::Name::ButtLeft, BodyPart::Type::Point},
     {BodyPart::Name::ButtRight, BodyPart::Type::Point},
-    {BodyPart::Name::GlutealCleft, BodyPart::Type::Vector},
+    {BodyPart::Name::GlutealCleft, BodyPart::Type::NormalVectorEnd},
     {BodyPart::Name::FootLeft, BodyPart::Type::Vector},
     {BodyPart::Name::FootRight, BodyPart::Type::Vector},
     {BodyPart::Name::Vagina, BodyPart::Type::Vector},
@@ -459,130 +459,6 @@ Vector3f BodyPart::FitVector()
   Point3f startProj   = centroid + (*minIt) * axis;
   Point3f endProj     = centroid + (*maxIt) * axis;
   return endProj - startProj;
-}
-
-// ─── Angle ───────────────────────────────────────────────────────────────────
-// Returns the absolute angle in [0, 180] degrees between the two direction vectors.
-// < 90 → roughly aligned; > 90 → roughly anti-aligned; = 90 → perpendicular.
-// Returns 0 if either part is Point type or has zero-length direction.
-
-float BodyPart::Angle(const BodyPart& other) const
-{
-  if (type == Type::Point || other.type == Type::Point)
-    return 0.f;
-  if (length < 1e-6f || other.length < 1e-6f)
-    return 0.f;
-
-  const float dot = std::clamp(direction.dot(other.direction), -1.f, 1.f);
-  return std::acos(dot) * (180.f / std::numbers::pi_v<float>);
-}
-
-float BodyPart::Distance(const BodyPart& other) const
-{
-  // ── Point-to-point ────────────────────────────────────────────────────────
-  if (type == Type::Point && other.type == Type::Point)
-    return (start - other.start).norm();
-
-  // ── Helper: distance from a point to a parametric segment [s0, s0 + dN*len]
-  //   dN must be a unit vector, len is the segment length.
-  auto pointToSeg = [](const Point3f& p, const Point3f& s0, const Vector3f& dN,
-                       float len) -> float {
-    if (len < 1e-6f)
-      return (p - s0).norm();
-    const float t = std::clamp((p - s0).dot(dN), 0.f, len);
-    return (p - (s0 + dN * t)).norm();
-  };
-
-  // Determine unit directions and lengths for each part
-  // Point types have zero length; treat them as degenerate segments.
-  const bool aIsVec = (type != Type::Point && length > 1e-6f);
-  const bool bIsVec = (other.type != Type::Point && other.length > 1e-6f);
-
-  const Vector3f dA = aIsVec ? direction : Vector3f::Zero();  // already unit
-  const Vector3f dB = bIsVec ? other.direction : Vector3f::Zero();
-  const float lA    = aIsVec ? length : 0.f;
-  const float lB    = bIsVec ? other.length : 0.f;
-
-  // ── Point-to-segment ─────────────────────────────────────────────────────
-  if (!aIsVec)
-    return pointToSeg(start, other.start, dB, lB);
-  if (!bIsVec)
-    return pointToSeg(other.start, start, dA, lA);
-
-  // ── Segment-to-segment ───────────────────────────────────────────────────
-  // Parametrize: P(s) = start + dA*s,  s ∈ [0, lA]
-  //              Q(t) = other.start + dB*t,  t ∈ [0, lB]
-  const Vector3f w  = other.start - start;
-  const float b     = dA.dot(dB);
-  const float d     = dA.dot(w);
-  const float e     = dB.dot(w);
-  const float denom = 1.f - b * b;  // = 1 - cos²θ = sin²θ, always ∈ [0,1]
-
-  float s, t;
-
-  if (denom < 1e-6f) {
-    // Lines nearly parallel: fix s=0, project
-    s = 0.f;
-    t = std::clamp(e / lB, 0.f, 1.f) * lB;  // t ∈ [0, lB]
-    // Take minimum over all four endpoint combinations for robustness
-    float dist = pointToSeg(start, other.start, dB, lB);
-    dist       = min(dist, pointToSeg(other.start, start, dA, lA));
-    dist       = min(dist, pointToSeg(start + dA * lA, other.start, dB, lB));
-    dist       = min(dist, pointToSeg(other.start + dB * lB, start, dA, lA));
-    return dist;
-  }
-
-  // Unconstrained closest approach
-  s = (b * e - d) / denom;
-  t = (e - b * d) / denom;
-
-  // Clamp s to [0, lA], then re-derive t; clamp t to [0, lB], then re-derive s
-  if (s < 0.f) {
-    s = 0.f;
-    t = std::clamp(e, 0.f, lB);
-  } else if (s > lA) {
-    s = lA;
-    t = std::clamp(e + b * lA, 0.f, lB);
-  }
-
-  if (t < 0.f) {
-    t = 0.f;
-    s = std::clamp(-d, 0.f, lA);
-  } else if (t > lB) {
-    t = lB;
-    s = std::clamp(b * lB - d, 0.f, lA);
-  }
-
-  const Point3f p = start + dA * s;
-  const Point3f q = other.start + dB * t;
-  return (p - q).norm();
-}
-
-// ─── IsInFront ───────────────────────────────────────────────────────────────
-// Returns true if the point lies on the side that direction points toward.
-// For Belly (NormalVectorEnd): start=Spine1, end=Belly surface,
-//   direction = Spine1→Belly = body-forward; IsInFront(p) means p is in front of the actor.
-// For any Vector part the semantics follow the part's own axis direction.
-// Point-type parts always return false (no directional axis).
-
-bool BodyPart::IsInFront(const Point3f& p) const
-{
-  if (type == Type::Point || length < 1e-6f)
-    return false;
-  // Positive signed projection along direction from start
-  return (p - start).dot(direction) > 0.f;
-}
-
-// ─── IsHorizontal ────────────────────────────────────────────────────────────
-// Returns true if the direction vector is within toleranceDeg of the XY plane.
-// Useful for Naveljob (penis must be roughly horizontal, not pointing down into vagina).
-
-bool BodyPart::IsHorizontal(float toleranceDeg) const
-{
-  if (type == Type::Point || length < 1e-6f)
-    return false;
-  const float sinTol = std::sin(toleranceDeg * std::numbers::pi_v<float> / 180.f);
-  return std::abs(direction.z()) <= sinTol;
 }
 
 }  // namespace Define

@@ -1,4 +1,6 @@
 #include "Instance/Scale.h"
+#include "Papyrus/SexLab.h"
+#include "Registry/CumFx.h"
 #include "Registry/SceneLoader.h"
 #include "Registry/Stat.h"
 #include "Utils/Hooks.h"
@@ -18,6 +20,7 @@ inline void onPostLoad()
 inline void onPostPostLoad()
 {
   Instance::Scale::GetSingleton();
+  Registry::CumFx::GetSingleton();
   Registry::ActorStat::GetSingleton();
 }
 
@@ -77,7 +80,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
   // 注册 Papyrus Native 函数
   auto* papyrus = SKSE::GetPapyrusInterface();
   if (papyrus) {
-    // papyrus->Register(Papyrus::RegisterFunctions);
+    papyrus->Register(Papyrus::RegisterFunctions);
   }
 
   return true;

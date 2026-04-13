@@ -91,21 +91,6 @@ public:
   void UpdateNodes();
   void UpdatePosition();
 
-  // Returns the absolute angle (degrees, [0, 180]) between this direction and other's.
-  // Returns 0 if either part is Point type or has zero-length direction.
-  [[nodiscard]] float Angle(const BodyPart& other) const;
-
-  // Minimum distance between the two body parts (point/segment as appropriate).
-  [[nodiscard]] float Distance(const BodyPart& other) const;
-
-  // True if point p lies on the side that direction points toward (signed projection > 0).
-  // For Belly this means "in front of the actor". Always false for Point types.
-  [[nodiscard]] bool IsInFront(const Point3f& p) const;
-
-  // True if direction is within toleranceDeg of horizontal (|dir.z| <= sin(tol)).
-  // Useful for Naveljob guard (penis must not point downward into vagina area).
-  [[nodiscard]] bool IsHorizontal(float toleranceDeg = 20.f) const;
-
 private:
   Vector3f FitVector();
 

@@ -88,6 +88,74 @@ namespace
     RE::Actor* givesOralTo    = nullptr;
   };
 
+  enum class PenetrationDiagEvent : std::uint8_t
+  {
+    MissingReceiverPart = 0,
+    RejectedDistance,
+    RejectedAngle,
+    RejectedTipAxis,
+    RejectedDepth,
+    RejectedContextSwitch,
+    CandidateAccepted,
+    AssignSkipped,
+    Assigned,
+    FinalState,
+  };
+
+  struct PenetrationDiagKey
+  {
+    RE::Actor* sourceActor     = nullptr;
+    RE::Actor* targetActor     = nullptr;
+    Type type                  = Type::None;
+    PenetrationDiagEvent event = PenetrationDiagEvent::CandidateAccepted;
+
+    bool operator==(const PenetrationDiagKey&) const = default;
+  };
+
+  struct PenetrationDiagKeyHash
+  {
+    std::size_t operator()(const PenetrationDiagKey& key) const
+    {
+      std::size_t value = std::hash<RE::Actor*>{}(key.sourceActor);
+      value ^= std::hash<RE::Actor*>{}(key.targetActor) + 0x9E3779B97F4A7C15ull + (value << 6) +
+               (value >> 2);
+      value ^= static_cast<std::size_t>(key.type) << 8;
+      value ^= static_cast<std::size_t>(key.event) << 16;
+      return value;
+    }
+  };
+
+  struct PenetrationDiagMetrics
+  {
+    float distance             = std::numeric_limits<float>::infinity();
+    float maxDistance          = 0.f;
+    float rootEntryDistance    = std::numeric_limits<float>::infinity();
+    float angle                = 0.f;
+    float maxAngle             = 0.f;
+    float tipAxisDistance      = std::numeric_limits<float>::infinity();
+    float maxTipAxis           = 0.f;
+    float depth                = 0.f;
+    float minDepth             = 0.f;
+    float maxDepth             = 0.f;
+    float score                = -1.f;
+    float contextBias          = 0.f;
+    float bonus                = 0.f;
+    float vaginalSupport       = std::numeric_limits<float>::infinity();
+    float analSupport          = std::numeric_limits<float>::infinity();
+    float vaginalEntryDistance = std::numeric_limits<float>::infinity();
+    float analEntryDistance    = std::numeric_limits<float>::infinity();
+    float hysteresisBonus      = 0.f;
+    float switchPenalty        = 0.f;
+    bool hasVagina             = false;
+    bool hasAnus               = false;
+    bool stickyPair            = false;
+    bool complementaryContext  = false;
+    bool relaxVaginalGate      = false;
+    bool relaxAnalGate         = false;
+    bool previousSameType      = false;
+    bool previousOppositeType  = false;
+  };
+
   static constexpr std::array<Name, 1> kMouthParts{Name::Mouth};
   static constexpr std::array<Name, 1> kThroatParts{Name::Throat};
   static constexpr std::array<Name, 1> kPenisParts{Name::Penis};
@@ -126,6 +194,73 @@ namespace
         return true;
     }
     return false;
+  }
+
+  std::uint32_t GetActorFormID(RE::Actor* actor)
+  {
+    return actor ? actor->GetFormID() : 0u;
+  }
+
+  float GetSteadyNowMs()
+  {
+    return static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(
+                                  std::chrono::steady_clock::now().time_since_epoch())
+                                  .count()) /
+           1000.f;
+  }
+
+  bool HasPenetrationReceiverPart(const ActorData& data)
+  {
+    return TryGetBodyPart(data, Name::Vagina) || TryGetBodyPart(data, Name::Anus);
+  }
+
+  bool ShouldLogPenetrationDiagnostics(const DirectedContext& ctx)
+  {
+    return !ctx.self && TryGetBodyPart(ctx.sourceData, Name::Penis) &&
+           HasPenetrationReceiverPart(ctx.targetData);
+  }
+
+  bool ShouldEmitPenetrationDiag(RE::Actor* sourceActor, RE::Actor* targetActor, Type type,
+                                 PenetrationDiagEvent event, float minIntervalMs = 400.f)
+  {
+    static std::unordered_map<PenetrationDiagKey, float, PenetrationDiagKeyHash> s_lastLogTimes;
+
+    const float nowMs = GetSteadyNowMs();
+    const PenetrationDiagKey key{sourceActor, targetActor, type, event};
+    auto [it, inserted] = s_lastLogTimes.try_emplace(key, nowMs);
+    if (inserted || nowMs - it->second >= minIntervalMs) {
+      it->second = nowMs;
+      return true;
+    }
+
+    return false;
+  }
+
+  void LogPenetrationDiagnostic(const DirectedContext& ctx, Name receiverPartName, Type type,
+                                PenetrationDiagEvent event, std::string_view stage,
+                                std::string_view detail, const PenetrationDiagMetrics& metrics)
+  {
+    if (!ShouldLogPenetrationDiagnostics(ctx))
+      return;
+    if (!ShouldEmitPenetrationDiag(ctx.sourceActor, ctx.targetActor, type, event))
+      return;
+
+    logger::info("[SexLab NG] Interact PenetrationDiag {} src={:08X} dst={:08X} receiver={} "
+                 "target(vag={}, anus={}) sticky={} complement={} relax(vag={}, anal={}) "
+                 "hold(same={}, opposite={}) hyst={:.3f} switchPenalty={:.3f} "
+                 "dist={:.2f}/{:.2f} rootEntry={:.2f} angle={:.2f}/{:.2f} tipAxis={:.2f}/{:.2f} "
+                 "depth={:.2f}[{:.2f},{:.2f}] support(vag={:.2f}, anal={:.2f}) entry(vag={:.2f}, "
+                 "anal={:.2f}) score={:.3f} bias={:.3f} bonus={:.3f} detail={}",
+                 stage, GetActorFormID(ctx.sourceActor), GetActorFormID(ctx.targetActor),
+                 magic_enum::enum_name(receiverPartName), metrics.hasVagina, metrics.hasAnus,
+                 metrics.stickyPair, metrics.complementaryContext, metrics.relaxVaginalGate,
+                 metrics.relaxAnalGate, metrics.previousSameType, metrics.previousOppositeType,
+                 metrics.hysteresisBonus, metrics.switchPenalty, metrics.distance,
+                 metrics.maxDistance, metrics.rootEntryDistance, metrics.angle, metrics.maxAngle,
+                 metrics.tipAxisDistance, metrics.maxTipAxis, metrics.depth, metrics.minDepth,
+                 metrics.maxDepth, metrics.vaginalSupport, metrics.analSupport,
+                 metrics.vaginalEntryDistance, metrics.analEntryDistance, metrics.score,
+                 metrics.contextBias, metrics.bonus, detail);
   }
 
   bool IsAngleUnconstrained(AngleRange range)
@@ -170,49 +305,280 @@ namespace
     return std::clamp(distance / maxDistance, 0.f, 2.f);
   }
 
-  float DistancePointToSegment(const Define::Point3f& point, const Define::Point3f& segStart,
-                               const Define::Point3f& segEnd)
+  namespace Geometry
   {
-    const Define::Vector3f segment = segEnd - segStart;
-    const float length             = segment.norm();
-    if (length < 1e-6f)
-      return (point - segStart).norm();
 
-    const Define::Vector3f dir = segment / length;
-    const float t              = std::clamp((point - segStart).dot(dir), 0.f, length);
-    return (point - (segStart + dir * t)).norm();
-  }
+    bool HasDirectionalAxis(const BP& part)
+    {
+      return part.GetType() != BP::Type::Point && part.GetLength() >= 1e-6f;
+    }
 
-  float ProjectionOnSegmentAxis(const Define::Point3f& point, const Define::Point3f& segStart,
-                                const Define::Point3f& segEnd)
-  {
-    const Define::Vector3f segment = segEnd - segStart;
-    const float length             = segment.norm();
-    if (length < 1e-6f)
-      return 0.f;
+    bool IsPointInFront(const BP& part, const Define::Point3f& point)
+    {
+      if (!HasDirectionalAxis(part))
+        return false;
+      return (point - part.GetStart()).dot(part.GetDirection()) > 0.f;
+    }
 
-    return (point - segStart).dot(segment / length);
-  }
+    bool IsHorizontal(const BP& part, float toleranceDeg = 20.f)
+    {
+      if (!HasDirectionalAxis(part))
+        return false;
+
+      const float sinTol = std::sin(toleranceDeg * std::numbers::pi_v<float> / 180.f);
+      return std::abs(part.GetDirection().z()) <= sinTol;
+    }
+
+    float DistancePointToSegment(const Define::Point3f& point, const Define::Point3f& segStart,
+                                 const Define::Point3f& segEnd)
+    {
+      const Define::Vector3f segment = segEnd - segStart;
+      const float length             = segment.norm();
+      if (length < 1e-6f)
+        return (point - segStart).norm();
+
+      const Define::Vector3f dir = segment / length;
+      const float t              = std::clamp((point - segStart).dot(dir), 0.f, length);
+      return (point - (segStart + dir * t)).norm();
+    }
+
+    float ProjectionOnSegmentAxis(const Define::Point3f& point, const Define::Point3f& segStart,
+                                  const Define::Point3f& segEnd)
+    {
+      const Define::Vector3f segment = segEnd - segStart;
+      const float length             = segment.norm();
+      if (length < 1e-6f)
+        return 0.f;
+
+      return (point - segStart).dot(segment / length);
+    }
+
+    float MeasurePartAngle(const BP& lhs, const BP& rhs)
+    {
+      if (!HasDirectionalAxis(lhs) || !HasDirectionalAxis(rhs))
+        return 0.f;
+
+      const float dot = std::clamp(lhs.GetDirection().dot(rhs.GetDirection()), -1.f, 1.f);
+      return std::acos(dot) * (180.f / std::numbers::pi_v<float>);
+    }
+
+    float DistancePointToBodyPart(const Define::Point3f& point, const BP& part)
+    {
+      if (!HasDirectionalAxis(part))
+        return (point - part.GetStart()).norm();
+      return DistancePointToSegment(point, part.GetStart(), part.GetEnd());
+    }
+
+    float MeasurePartDistance(const BP& lhs, const BP& rhs)
+    {
+      if (lhs.GetType() == BP::Type::Point && rhs.GetType() == BP::Type::Point)
+        return (lhs.GetStart() - rhs.GetStart()).norm();
+
+      const bool lhsSegment = HasDirectionalAxis(lhs);
+      const bool rhsSegment = HasDirectionalAxis(rhs);
+
+      if (!lhsSegment)
+        return DistancePointToBodyPart(lhs.GetStart(), rhs);
+      if (!rhsSegment)
+        return DistancePointToBodyPart(rhs.GetStart(), lhs);
+
+      const Define::Vector3f dA = lhs.GetDirection();
+      const Define::Vector3f dB = rhs.GetDirection();
+      const float lA            = lhs.GetLength();
+      const float lB            = rhs.GetLength();
+      const Define::Vector3f w  = rhs.GetStart() - lhs.GetStart();
+      const float b             = dA.dot(dB);
+      const float d             = dA.dot(w);
+      const float e             = dB.dot(w);
+      const float denom         = 1.f - b * b;
+
+      if (denom < 1e-6f) {
+        float distance = DistancePointToBodyPart(lhs.GetStart(), rhs);
+        distance       = (std::min)(distance, DistancePointToBodyPart(rhs.GetStart(), lhs));
+        distance       = (std::min)(distance, DistancePointToBodyPart(lhs.GetEnd(), rhs));
+        distance       = (std::min)(distance, DistancePointToBodyPart(rhs.GetEnd(), lhs));
+        return distance;
+      }
+
+      float s = (b * e - d) / denom;
+      float t = (e - b * d) / denom;
+
+      if (s < 0.f) {
+        s = 0.f;
+        t = std::clamp(e, 0.f, lB);
+      } else if (s > lA) {
+        s = lA;
+        t = std::clamp(e + b * lA, 0.f, lB);
+      }
+
+      if (t < 0.f) {
+        t = 0.f;
+        s = std::clamp(-d, 0.f, lA);
+      } else if (t > lB) {
+        t = lB;
+        s = std::clamp(b * lB - d, 0.f, lA);
+      }
+
+      const Define::Point3f p = lhs.GetStart() + dA * s;
+      const Define::Point3f q = rhs.GetStart() + dB * t;
+      return (p - q).norm();
+    }
+
+    Define::Point3f SamplePartPoint(const BP& part, float fraction)
+    {
+      if (!HasDirectionalAxis(part))
+        return part.GetStart();
+      return part.GetStart() + (part.GetEnd() - part.GetStart()) * std::clamp(fraction, 0.f, 1.f);
+    }
+
+    struct SampledPartMetrics
+    {
+      Define::Point3f startPoint = Define::Point3f::Zero();
+      Define::Point3f midPoint   = Define::Point3f::Zero();
+      Define::Point3f endPoint   = Define::Point3f::Zero();
+      float startDistance        = std::numeric_limits<float>::infinity();
+      float midDistance          = std::numeric_limits<float>::infinity();
+      float endDistance          = std::numeric_limits<float>::infinity();
+      float minDistance          = std::numeric_limits<float>::infinity();
+      float startEntryDistance   = std::numeric_limits<float>::infinity();
+      float midEntryDistance     = std::numeric_limits<float>::infinity();
+      float endEntryDistance     = std::numeric_limits<float>::infinity();
+      float minEntryDistance     = std::numeric_limits<float>::infinity();
+      float startAxisDistance    = std::numeric_limits<float>::infinity();
+      float midAxisDistance      = std::numeric_limits<float>::infinity();
+      float endAxisDistance      = std::numeric_limits<float>::infinity();
+      float minAxisDistance      = std::numeric_limits<float>::infinity();
+      float startDepth           = 0.f;
+      float midDepth             = 0.f;
+      float endDepth             = 0.f;
+      float overlapDepth         = 0.f;
+    };
+
+    SampledPartMetrics MeasureSampledPartMetrics(const BP& sampledPart, const BP& targetPart)
+    {
+      SampledPartMetrics metrics;
+      metrics.startPoint = SamplePartPoint(sampledPart, 0.f);
+      metrics.midPoint   = SamplePartPoint(sampledPart, 0.5f);
+      metrics.endPoint   = SamplePartPoint(sampledPart, 1.f);
+
+      const auto measurePoint = [&](const Define::Point3f& point, float& distance,
+                                    float& entryDistance, float& axisDistance, float& depth) {
+        distance      = DistancePointToBodyPart(point, targetPart);
+        entryDistance = (point - targetPart.GetStart()).norm();
+
+        if (!HasDirectionalAxis(targetPart)) {
+          axisDistance = distance;
+          depth        = 0.f;
+          return;
+        }
+
+        axisDistance = DistancePointToSegment(point, targetPart.GetStart(), targetPart.GetEnd());
+        depth        = ProjectionOnSegmentAxis(point, targetPart.GetStart(), targetPart.GetEnd());
+      };
+
+      measurePoint(metrics.startPoint, metrics.startDistance, metrics.startEntryDistance,
+                   metrics.startAxisDistance, metrics.startDepth);
+      measurePoint(metrics.midPoint, metrics.midDistance, metrics.midEntryDistance,
+                   metrics.midAxisDistance, metrics.midDepth);
+      measurePoint(metrics.endPoint, metrics.endDistance, metrics.endEntryDistance,
+                   metrics.endAxisDistance, metrics.endDepth);
+
+      metrics.minDistance =
+          (std::min)(metrics.startDistance, (std::min)(metrics.midDistance, metrics.endDistance));
+      metrics.minEntryDistance =
+          (std::min)(metrics.startEntryDistance,
+                     (std::min)(metrics.midEntryDistance, metrics.endEntryDistance));
+      metrics.minAxisDistance =
+          (std::min)(metrics.startAxisDistance,
+                     (std::min)(metrics.midAxisDistance, metrics.endAxisDistance));
+
+      if (HasDirectionalAxis(targetPart)) {
+        const float projectedMin = (std::min)(metrics.startDepth, metrics.endDepth);
+        const float projectedMax = (std::max)(metrics.startDepth, metrics.endDepth);
+        metrics.overlapDepth = (std::max)(0.f, (std::min)(projectedMax, targetPart.GetLength()) -
+                                                   (std::max)(projectedMin, 0.f));
+      }
+
+      return metrics;
+    }
+
+    float SampledShaftDistance(const SampledPartMetrics& metrics)
+    {
+      return (std::min)(metrics.midDistance, metrics.endDistance);
+    }
+
+    float SampledShaftEntryDistance(const SampledPartMetrics& metrics)
+    {
+      return (std::min)(metrics.midEntryDistance, metrics.endEntryDistance);
+    }
+
+    Define::Point3f SelectAnchorPoint(const BP& part, bool useEnd)
+    {
+      return useEnd ? part.GetEnd() : part.GetStart();
+    }
+
+    float AnchorDistance(const BP& sourcePart, const BP& targetPart, AnchorMode mode)
+    {
+      switch (mode) {
+      case AnchorMode::StartToStart:
+        return (SelectAnchorPoint(sourcePart, false) - SelectAnchorPoint(targetPart, false)).norm();
+      case AnchorMode::EndToStart:
+        return (SelectAnchorPoint(sourcePart, true) - SelectAnchorPoint(targetPart, false)).norm();
+      case AnchorMode::StartToEnd:
+        return (SelectAnchorPoint(sourcePart, false) - SelectAnchorPoint(targetPart, true)).norm();
+      case AnchorMode::EndToEnd:
+        return (SelectAnchorPoint(sourcePart, true) - SelectAnchorPoint(targetPart, true)).norm();
+      case AnchorMode::None:
+      default:
+        return 0.f;
+      }
+    }
+
+  }  // namespace Geometry
+
+  using Geometry::AnchorDistance;
+  using Geometry::MeasurePartAngle;
+  using Geometry::MeasurePartDistance;
+  using Geometry::MeasureSampledPartMetrics;
+  using Geometry::SampledShaftDistance;
+  using Geometry::SampledShaftEntryDistance;
+  using Geometry::SamplePartPoint;
+  using SampledPartMetrics = Geometry::SampledPartMetrics;
 
   struct OralContactMetrics
   {
-    Define::Point3f point = Define::Point3f::Zero();
-    float axisDistance    = std::numeric_limits<float>::infinity();
-    float depth           = 0.f;
+    Define::Point3f point  = Define::Point3f::Zero();
+    float axisDistance     = std::numeric_limits<float>::infinity();
+    float depth            = 0.f;
+    float selectionPenalty = 0.f;
   };
 
   OralContactMetrics MeasureOralContactPoint(const Define::Point3f& point,
                                              const Define::Point3f& oralEntry,
-                                             const Define::Point3f& oralAxisEnd)
+                                             const Define::Point3f& oralAxisEnd,
+                                             float selectionPenalty = 0.f)
   {
-    return OralContactMetrics{point, DistancePointToSegment(point, oralEntry, oralAxisEnd),
-                              ProjectionOnSegmentAxis(point, oralEntry, oralAxisEnd)};
+    return OralContactMetrics{
+        point, Geometry::DistancePointToSegment(point, oralEntry, oralAxisEnd),
+        Geometry::ProjectionOnSegmentAxis(point, oralEntry, oralAxisEnd), selectionPenalty};
+  }
+
+  bool IsBetterOralContact(const OralContactMetrics& candidate, const OralContactMetrics& current)
+  {
+    const float candidateScore = candidate.axisDistance + candidate.selectionPenalty;
+    const float currentScore   = current.axisDistance + current.selectionPenalty;
+
+    if (candidateScore + 0.12f < currentScore)
+      return true;
+
+    return std::abs(candidateScore - currentScore) <= 0.12f && candidate.depth > current.depth;
   }
 
   OralContactMetrics SelectOralContactMetrics(const BP& penisPart, const Define::Point3f& oralEntry,
                                               const Define::Point3f& oralAxisEnd)
   {
-    OralContactMetrics best = MeasureOralContactPoint(penisPart.GetEnd(), oralEntry, oralAxisEnd);
+    OralContactMetrics best =
+        MeasureOralContactPoint(penisPart.GetEnd(), oralEntry, oralAxisEnd, 0.f);
 
     if (penisPart.GetLength() < 1e-6f)
       return best;
@@ -221,13 +587,18 @@ namespace
     const Define::Point3f nearTipPoint =
         penisPart.GetEnd() - penisPart.GetDirection() * sampleBackDistance;
     const OralContactMetrics nearTip =
-        MeasureOralContactPoint(nearTipPoint, oralEntry, oralAxisEnd);
+        MeasureOralContactPoint(nearTipPoint, oralEntry, oralAxisEnd, 0.08f);
+    const OralContactMetrics midPoint =
+        MeasureOralContactPoint(SamplePartPoint(penisPart, 0.5f), oralEntry, oralAxisEnd, 0.28f);
+    const OralContactMetrics rootPoint =
+        MeasureOralContactPoint(penisPart.GetStart(), oralEntry, oralAxisEnd, 0.62f);
 
-    if (nearTip.axisDistance + 0.15f < best.axisDistance ||
-        (std::abs(nearTip.axisDistance - best.axisDistance) <= 0.15f &&
-         nearTip.depth > best.depth)) {
+    if (IsBetterOralContact(nearTip, best))
       best = nearTip;
-    }
+    if (IsBetterOralContact(midPoint, best))
+      best = midPoint;
+    if (IsBetterOralContact(rootPoint, best))
+      best = rootPoint;
 
     return best;
   }
@@ -301,54 +672,53 @@ namespace
     return HasPreviousPartContext(data, Name::Anus, IncludesAnal);
   }
 
+  bool HadPreviousPenetrationWithPartner(const ActorData& data, Name part, RE::Actor* partner)
+  {
+    const Info* info = TryGetInfo(data, part);
+    if (!info || info->prevActor != partner)
+      return false;
+
+    return IncludesVaginal(info->prevType) || IncludesAnal(info->prevType);
+  }
+
+  bool HasStrongRearPreference(float vaginalMetric, float analMetric, float tolerance = 0.55f)
+  {
+    if (!std::isfinite(analMetric))
+      return false;
+    if (!std::isfinite(vaginalMetric))
+      return true;
+    return analMetric + tolerance < vaginalMetric;
+  }
+
+  bool HasStrongRearPreference(const PenetrationDiagMetrics& metrics)
+  {
+    return HasStrongRearPreference(metrics.vaginalSupport, metrics.analSupport) &&
+           HasStrongRearPreference(metrics.vaginalEntryDistance, metrics.analEntryDistance);
+  }
+
+  bool HasStrongFrontPreference(float vaginalMetric, float analMetric, float tolerance = 0.55f)
+  {
+    if (!std::isfinite(vaginalMetric))
+      return false;
+    if (!std::isfinite(analMetric))
+      return true;
+    return vaginalMetric + tolerance < analMetric;
+  }
+
+  bool HasStrongFrontPreference(const PenetrationDiagMetrics& metrics)
+  {
+    return HasStrongFrontPreference(metrics.vaginalSupport, metrics.analSupport) &&
+           HasStrongFrontPreference(metrics.vaginalEntryDistance, metrics.analEntryDistance);
+  }
+
   float MinDistanceToOralRegion(const ActorData& data, const BP& part)
   {
     float result = std::numeric_limits<float>::infinity();
     if (const BP* mouthPart = TryGetBodyPart(data, Name::Mouth))
-      result = (std::min)(result, part.Distance(*mouthPart));
+      result = (std::min)(result, MeasurePartDistance(part, *mouthPart));
     if (const BP* throatPart = TryGetBodyPart(data, Name::Throat))
-      result = (std::min)(result, part.Distance(*throatPart));
+      result = (std::min)(result, MeasurePartDistance(part, *throatPart));
     return result;
-  }
-
-  float ProjectionOnAxis(const Define::Point3f& point, const BP& axisPart)
-  {
-    if (axisPart.GetType() == BP::Type::Point || axisPart.GetLength() < 1e-6f)
-      return 0.f;
-    return (point - axisPart.GetStart()).dot(axisPart.GetDirection());
-  }
-
-  float DistanceToAxisSegment(const Define::Point3f& point, const BP& axisPart)
-  {
-    if (axisPart.GetType() == BP::Type::Point || axisPart.GetLength() < 1e-6f)
-      return (point - axisPart.GetStart()).norm();
-
-    const float t      = std::clamp((point - axisPart.GetStart()).dot(axisPart.GetDirection()), 0.f,
-                                    axisPart.GetLength());
-    const auto closest = axisPart.GetStart() + axisPart.GetDirection() * t;
-    return (point - closest).norm();
-  }
-
-  Define::Point3f SelectAnchorPoint(const BP& part, bool useEnd)
-  {
-    return useEnd ? part.GetEnd() : part.GetStart();
-  }
-
-  float AnchorDistance(const BP& sourcePart, const BP& targetPart, AnchorMode mode)
-  {
-    switch (mode) {
-    case AnchorMode::StartToStart:
-      return (SelectAnchorPoint(sourcePart, false) - SelectAnchorPoint(targetPart, false)).norm();
-    case AnchorMode::EndToStart:
-      return (SelectAnchorPoint(sourcePart, true) - SelectAnchorPoint(targetPart, false)).norm();
-    case AnchorMode::StartToEnd:
-      return (SelectAnchorPoint(sourcePart, false) - SelectAnchorPoint(targetPart, true)).norm();
-    case AnchorMode::EndToEnd:
-      return (SelectAnchorPoint(sourcePart, true) - SelectAnchorPoint(targetPart, true)).norm();
-    case AnchorMode::None:
-    default:
-      return 0.f;
-    }
   }
 
   float CalculatePenetrationContextBias(const ActorData& receiverData, const BP& penisPart,
@@ -383,15 +753,15 @@ namespace
     const BP* vaginaPart = TryGetBodyPart(receiverData, Name::Vagina);
     const BP* anusPart   = TryGetBodyPart(receiverData, Name::Anus);
 
-    const float vagSupport =
-        thighCleft ? thighCleft->Distance(penisPart) : std::numeric_limits<float>::infinity();
-    const float analSupport =
-        glutealPart ? glutealPart->Distance(penisPart) : std::numeric_limits<float>::infinity();
+    const float vagSupport  = thighCleft ? MeasurePartDistance(*thighCleft, penisPart)
+                                         : std::numeric_limits<float>::infinity();
+    const float analSupport = glutealPart ? MeasurePartDistance(*glutealPart, penisPart)
+                                          : std::numeric_limits<float>::infinity();
     const float vagEntryDistance =
-        vaginaPart ? AnchorDistance(penisPart, *vaginaPart, AnchorMode::StartToStart)
+        vaginaPart ? SampledShaftEntryDistance(MeasureSampledPartMetrics(penisPart, *vaginaPart))
                    : std::numeric_limits<float>::infinity();
     const float analEntryDistance =
-        anusPart ? AnchorDistance(penisPart, *anusPart, AnchorMode::StartToStart)
+        anusPart ? SampledShaftEntryDistance(MeasureSampledPartMetrics(penisPart, *anusPart))
                  : std::numeric_limits<float>::infinity();
 
     float bias = 0.f;
@@ -425,12 +795,12 @@ namespace
   bool ShouldRelaxVaginalGate(const ActorData& receiverData, const BP& penisPart,
                               float rootEntryDistance, float partDistance, bool stickyPair)
   {
-    const BP* thighCleft  = TryGetBodyPart(receiverData, Name::ThighCleft);
-    const BP* glutealPart = TryGetBodyPart(receiverData, Name::GlutealCleft);
-    const float vagSupport =
-        thighCleft ? thighCleft->Distance(penisPart) : std::numeric_limits<float>::infinity();
-    const float analSupport =
-        glutealPart ? glutealPart->Distance(penisPart) : std::numeric_limits<float>::infinity();
+    const BP* thighCleft    = TryGetBodyPart(receiverData, Name::ThighCleft);
+    const BP* glutealPart   = TryGetBodyPart(receiverData, Name::GlutealCleft);
+    const float vagSupport  = thighCleft ? MeasurePartDistance(*thighCleft, penisPart)
+                                         : std::numeric_limits<float>::infinity();
+    const float analSupport = glutealPart ? MeasurePartDistance(*glutealPart, penisPart)
+                                          : std::numeric_limits<float>::infinity();
 
     if (!std::isfinite(vagSupport))
       return false;
@@ -441,9 +811,11 @@ namespace
     const bool strongFrontContext =
         !std::isfinite(analSupport) || vagSupport + 0.75f <= analSupport;
 
-    if (stickyPair && rootEntryDistance <= 8.2f && partDistance <= 9.6f && frontContext)
+    if (stickyPair && rootEntryDistance <= 9.1f && partDistance <= 10.4f && frontContext)
       return true;
-    if (rootEntryDistance <= 6.8f && partDistance <= 8.8f && strongFrontContext)
+    if (stickyPair && rootEntryDistance <= 9.8f && partDistance <= 10.8f && strongFrontContext)
+      return true;
+    if (rootEntryDistance <= 7.4f && partDistance <= 9.2f && strongFrontContext)
       return true;
     return false;
   }
@@ -452,12 +824,12 @@ namespace
                            float rootEntryDistance, float partDistance, bool stickyPair,
                            bool complementaryVaginalContext)
   {
-    const BP* thighCleft  = TryGetBodyPart(receiverData, Name::ThighCleft);
-    const BP* glutealPart = TryGetBodyPart(receiverData, Name::GlutealCleft);
-    const float vagSupport =
-        thighCleft ? thighCleft->Distance(penisPart) : std::numeric_limits<float>::infinity();
-    const float analSupport =
-        glutealPart ? glutealPart->Distance(penisPart) : std::numeric_limits<float>::infinity();
+    const BP* thighCleft    = TryGetBodyPart(receiverData, Name::ThighCleft);
+    const BP* glutealPart   = TryGetBodyPart(receiverData, Name::GlutealCleft);
+    const float vagSupport  = thighCleft ? MeasurePartDistance(*thighCleft, penisPart)
+                                         : std::numeric_limits<float>::infinity();
+    const float analSupport = glutealPart ? MeasurePartDistance(*glutealPart, penisPart)
+                                          : std::numeric_limits<float>::infinity();
 
     if (!std::isfinite(analSupport))
       return false;
@@ -467,12 +839,12 @@ namespace
     const bool rearContext       = !std::isfinite(vagSupport) || analSupport <= vagSupport + 1.1f;
     const bool strongRearContext = !std::isfinite(vagSupport) || analSupport + 0.75f <= vagSupport;
 
-    if (stickyPair && rootEntryDistance <= 6.8f && partDistance <= 7.8f && rearContext)
+    if (stickyPair && rootEntryDistance <= 7.8f && partDistance <= 8.8f && rearContext)
       return true;
-    if (complementaryVaginalContext && rootEntryDistance <= 7.2f && partDistance <= 8.2f &&
+    if (complementaryVaginalContext && rootEntryDistance <= 8.0f && partDistance <= 8.8f &&
         rearContext)
       return true;
-    if (rootEntryDistance <= 5.8f && partDistance <= 7.2f && strongRearContext)
+    if (rootEntryDistance <= 6.8f && partDistance <= 8.0f && strongRearContext)
       return true;
     return false;
   }
@@ -506,11 +878,11 @@ namespace
         if (!targetPart)
           continue;
 
-        const float distance = sourcePart->Distance(*targetPart);
+        const float distance = MeasurePartDistance(*sourcePart, *targetPart);
         if (distance > maxDistance)
           continue;
 
-        const float angle = sourcePart->Angle(*targetPart);
+        const float angle = MeasurePartAngle(*sourcePart, *targetPart);
         if (!CheckAngle(angle, angleRange))
           continue;
 
@@ -537,6 +909,55 @@ namespace
     }
   }
 
+  template <std::size_t NT>
+  void AddSampledPenisDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx,
+                                         const std::array<Name, NT>& targetParts, Type type,
+                                         CandidateFamily family, float maxDistance,
+                                         AngleRange angleRange, float angleWeight,
+                                         float scoreOffset     = 0.f,
+                                         AnchorMode anchorMode = AnchorMode::None,
+                                         float anchorWeight = 0.f, float anchorMaxDistance = 0.f)
+  {
+    const BP* penisPart = TryGetBodyPart(ctx.sourceData, Name::Penis);
+    if (!penisPart)
+      return;
+
+    for (Name targetName : targetParts) {
+      const BP* targetPart = TryGetBodyPart(ctx.targetData, targetName);
+      if (!targetPart)
+        continue;
+
+      const SampledPartMetrics penisMetrics = MeasureSampledPartMetrics(*penisPart, *targetPart);
+      const float distance                  = SampledShaftDistance(penisMetrics);
+      if (distance > maxDistance)
+        continue;
+
+      const float angle = MeasurePartAngle(*penisPart, *targetPart);
+      if (!CheckAngle(angle, angleRange))
+        continue;
+
+      const float distNorm = NormalizeDistance(distance, maxDistance);
+      float score          = distNorm;
+      if (!IsAngleUnconstrained(angleRange)) {
+        const float angleNorm = AngleDeviation(angle, angleRange);
+        score                 = distNorm * (1.f - angleWeight) + angleNorm * angleWeight;
+      }
+
+      if (anchorMode != AnchorMode::None && anchorWeight > 1e-4f) {
+        const float auxMaxDistance = anchorMaxDistance > 1e-4f ? anchorMaxDistance : maxDistance;
+        const float anchorDistance = AnchorDistance(*penisPart, *targetPart, anchorMode);
+        const float anchorNorm     = NormalizeDistance(anchorDistance, auxMaxDistance);
+        score                      = score * (1.f - anchorWeight) + anchorNorm * anchorWeight;
+      }
+
+      const float bonus = TemporalBonus(ctx.sourceData, Name::Penis, ctx.targetActor, type) +
+                          TemporalBonus(ctx.targetData, targetName, ctx.sourceActor, type);
+      score             = (std::max)(0.f, score + scoreOffset - bonus);
+
+      AddCandidate(out, ctx, Name::Penis, targetName, type, family, distance, score);
+    }
+  }
+
   void TryAddSymmetricCandidate(std::vector<Candidate>& out, const PairContext& pair, Name partA,
                                 Name partB, Type type, CandidateFamily family, float maxDistance,
                                 AngleRange angleRange, float angleWeight, float scoreOffset = 0.f)
@@ -549,11 +970,11 @@ namespace
     if (!lhs || !rhs)
       return;
 
-    const float distance = lhs->Distance(*rhs);
+    const float distance = MeasurePartDistance(*lhs, *rhs);
     if (distance > maxDistance)
       return;
 
-    const float angle = lhs->Angle(*rhs);
+    const float angle = MeasurePartAngle(*lhs, *rhs);
     if (!CheckAngle(angle, angleRange))
       return;
 
@@ -578,18 +999,19 @@ namespace
         !TryGetBodyPart(ctx.targetData, Name::Belly))
       return;
 
-    const BP& penis = *TryGetBodyPart(ctx.sourceData, Name::Penis);
-    const BP& belly = *TryGetBodyPart(ctx.targetData, Name::Belly);
+    const BP& penis                       = *TryGetBodyPart(ctx.sourceData, Name::Penis);
+    const BP& belly                       = *TryGetBodyPart(ctx.targetData, Name::Belly);
+    const SampledPartMetrics penisMetrics = MeasureSampledPartMetrics(penis, belly);
 
-    const float distance = belly.Distance(penis);
+    const float distance = SampledShaftDistance(penisMetrics);
     if (distance > 10.5f)
       return;
 
-    const float angle = belly.Angle(penis);
+    const float angle = MeasurePartAngle(belly, penis);
     if (angle > 60.f)
       return;
 
-    if (!belly.IsInFront(penis.GetEnd()) || !penis.IsHorizontal())
+    if (!Geometry::IsPointInFront(belly, penis.GetEnd()) || !Geometry::IsHorizontal(penis))
       return;
 
     const float distNorm  = NormalizeDistance(distance, 10.5f);
@@ -613,8 +1035,8 @@ namespace
 
     constexpr float kMaxDistance       = 9.4f;
     constexpr float kStickyMaxDistance = 10.4f;
-    constexpr float kMaxAngle          = 70.f;
-    constexpr float kStickyMaxAngle    = 78.f;
+    constexpr float kMaxAngle          = 76.f;
+    constexpr float kStickyMaxAngle    = 84.f;
     constexpr float kMaxTipAxis        = 6.6f;
     constexpr float kStickyMaxTipAxis  = 7.8f;
     constexpr float kMinDepth          = -2.5f;
@@ -636,13 +1058,13 @@ namespace
 
     const OralContactMetrics oralContact =
         SelectOralContactMetrics(*penisPart, oralEntry, oralAxisEnd);
-    const float mouthDistance = mouthPart->Distance(*penisPart);
+    const float mouthDistance = MeasurePartDistance(*mouthPart, *penisPart);
     const float entryDistance = (oralContact.point - oralEntry).norm();
     const float distance      = (std::min)(mouthDistance, entryDistance);
     if (distance > effectiveMaxDistance)
       return;
 
-    const float angle = mouthPart->Angle(*penisPart);
+    const float angle = MeasurePartAngle(*mouthPart, *penisPart);
     if (angle > effectiveMaxAngle)
       return;
 
@@ -695,11 +1117,13 @@ namespace
       if (!handPart)
         continue;
 
-      const float distance = handPart->Distance(*penisPart);
+      const SampledPartMetrics penisMetrics = MeasureSampledPartMetrics(*penisPart, *handPart);
+
+      const float distance = SampledShaftDistance(penisMetrics);
       if (distance > kMaxDistance)
         continue;
 
-      const float angle = handPart->Angle(*penisPart);
+      const float angle = MeasurePartAngle(*handPart, *penisPart);
       if (!CheckAngle(angle, kAngleRange))
         continue;
 
@@ -728,19 +1152,91 @@ namespace
     }
   }
 
+  void TryAddGropeBreastCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
+  {
+    constexpr float kMaxDistance       = 5.4f;
+    constexpr float kMaxNippleDistance = 4.9f;
+    constexpr AngleRange kAngleRange{156.f, 180.f};
+
+    for (Name handName : kHandParts) {
+      const BP* handPart = TryGetBodyPart(ctx.sourceData, handName);
+      if (!handPart)
+        continue;
+
+      for (Name breastName : kBreastParts) {
+        const BP* breastPart = TryGetBodyPart(ctx.targetData, breastName);
+        if (!breastPart)
+          continue;
+
+        const float distance = MeasurePartDistance(*handPart, *breastPart);
+        if (distance > kMaxDistance)
+          continue;
+
+        const float angle = MeasurePartAngle(*handPart, *breastPart);
+        if (!CheckAngle(angle, kAngleRange))
+          continue;
+
+        const float nippleDistance = (handPart->GetStart() - breastPart->GetEnd()).norm();
+        if (nippleDistance > kMaxNippleDistance)
+          continue;
+
+        const float distNorm   = NormalizeDistance(distance, kMaxDistance);
+        const float angleNorm  = AngleDeviation(angle, kAngleRange);
+        const float nippleNorm = NormalizeDistance(nippleDistance, kMaxNippleDistance);
+        const float bonus =
+            TemporalBonus(ctx.sourceData, handName, ctx.targetActor, Type::GropeBreast) +
+            TemporalBonus(ctx.targetData, breastName, ctx.sourceActor, Type::GropeBreast);
+        const float score =
+            (std::max)(0.f, distNorm * 0.44f + angleNorm * 0.24f + nippleNorm * 0.32f - bonus);
+
+        AddCandidate(out, ctx, handName, breastName, Type::GropeBreast, CandidateFamily::Contact,
+                     distance, score);
+      }
+    }
+  }
+
   void TryAddPenetrationCandidate(std::vector<Candidate>& out, const DirectedContext& ctx,
                                   Name receiverPartName, Type type, float maxDistance,
                                   float maxAngle, float maxTipAxis, float minDepth, float maxDepth)
   {
     const BP* penisPart    = TryGetBodyPart(ctx.sourceData, Name::Penis);
     const BP* receiverPart = TryGetBodyPart(ctx.targetData, receiverPartName);
-    if (!penisPart || !receiverPart)
-      return;
+    const BP* vaginaPart   = TryGetBodyPart(ctx.targetData, Name::Vagina);
+    const BP* anusPart     = TryGetBodyPart(ctx.targetData, Name::Anus);
+    const BP* thighCleft   = TryGetBodyPart(ctx.targetData, Name::ThighCleft);
+    const BP* glutealCleft = TryGetBodyPart(ctx.targetData, Name::GlutealCleft);
 
-    const float distance = receiverPart->Distance(*penisPart);
-    const float rootEntryDistance =
-        AnchorDistance(*penisPart, *receiverPart, AnchorMode::StartToStart);
+    PenetrationDiagMetrics metrics;
+    metrics.hasVagina = vaginaPart != nullptr;
+    metrics.hasAnus   = anusPart != nullptr;
+
+    if (!penisPart || !receiverPart) {
+      if (penisPart && HasPenetrationReceiverPart(ctx.targetData)) {
+        LogPenetrationDiagnostic(ctx, receiverPartName, type,
+                                 PenetrationDiagEvent::MissingReceiverPart, "missing-receiver",
+                                 "receiver bodypart missing or invalid", metrics);
+      }
+      return;
+    }
+
+    const SampledPartMetrics penetrationMetrics =
+        MeasureSampledPartMetrics(*penisPart, *receiverPart);
+    const float distance           = SampledShaftDistance(penetrationMetrics);
+    const float rootEntryDistance  = penetrationMetrics.startEntryDistance;
+    const float shaftEntryDistance = SampledShaftEntryDistance(penetrationMetrics);
     const bool stickyPair = HasStickyInteractionPair(ctx, Name::Penis, receiverPartName, type);
+    const bool previousSameTypePair =
+        HadPreviousInteraction(ctx.sourceData, Name::Penis, ctx.targetActor, type) ||
+        HadPreviousInteraction(ctx.targetData, receiverPartName, ctx.sourceActor, type);
+    const bool previousOppositeTypePair =
+        type == Type::Anal
+            ? (HadPreviousInteraction(ctx.sourceData, Name::Penis, ctx.targetActor,
+                                      Type::Vaginal) ||
+               HadPreviousInteraction(ctx.targetData, Name::Vagina, ctx.sourceActor, Type::Vaginal))
+        : type == Type::Vaginal
+            ? (HadPreviousInteraction(ctx.sourceData, Name::Penis, ctx.targetActor, Type::Anal) ||
+               HadPreviousInteraction(ctx.targetData, Name::Anus, ctx.sourceActor, Type::Anal))
+            : false;
     const bool complementaryPenetrationContext =
         type == Type::Anal      ? HasPreviousVaginalContext(ctx.targetData)
         : type == Type::Vaginal ? HasPreviousAnalContext(ctx.targetData)
@@ -752,6 +1248,26 @@ namespace
         type == Type::Anal &&
         ShouldRelaxAnalGate(ctx.targetData, *penisPart, rootEntryDistance, distance, stickyPair,
                             complementaryPenetrationContext);
+
+    metrics.distance             = distance;
+    metrics.rootEntryDistance    = rootEntryDistance;
+    metrics.stickyPair           = stickyPair;
+    metrics.previousSameType     = previousSameTypePair;
+    metrics.previousOppositeType = previousOppositeTypePair;
+    metrics.complementaryContext = complementaryPenetrationContext;
+    metrics.relaxVaginalGate     = relaxVaginalGate;
+    metrics.relaxAnalGate        = relaxAnalGate;
+    metrics.vaginalSupport       = thighCleft ? MeasurePartDistance(*thighCleft, *penisPart)
+                                              : std::numeric_limits<float>::infinity();
+    metrics.analSupport          = glutealCleft ? MeasurePartDistance(*glutealCleft, *penisPart)
+                                                : std::numeric_limits<float>::infinity();
+    metrics.vaginalEntryDistance =
+        vaginaPart ? SampledShaftEntryDistance(MeasureSampledPartMetrics(*penisPart, *vaginaPart))
+                   : std::numeric_limits<float>::infinity();
+    metrics.analEntryDistance =
+        anusPart ? SampledShaftEntryDistance(MeasureSampledPartMetrics(*penisPart, *anusPart))
+                 : std::numeric_limits<float>::infinity();
+
     float effectiveMaxDistance = maxDistance;
     float effectiveMaxAngle    = maxAngle;
     float effectiveMaxTipAxis  = maxTipAxis;
@@ -760,7 +1276,7 @@ namespace
 
     if (relaxVaginalGate) {
       effectiveMaxDistance = (std::max)(effectiveMaxDistance, stickyPair ? 9.6f : 8.8f);
-      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 68.f : 64.f);
+      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 72.f : 68.f);
       effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, 10.f);
       effectiveMinDepth    = (std::min)(effectiveMinDepth, -5.5f);
       effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 14.f);
@@ -768,38 +1284,145 @@ namespace
 
     if (type == Type::Vaginal && complementaryPenetrationContext) {
       effectiveMaxDistance = (std::max)(effectiveMaxDistance, stickyPair ? 9.8f : 9.1f);
-      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 70.f : 66.f);
+      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 72.f : 68.f);
       effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, 10.4f);
       effectiveMinDepth    = (std::min)(effectiveMinDepth, -5.8f);
       effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 14.5f);
     }
 
     if (relaxAnalGate) {
-      effectiveMaxDistance = (std::max)(effectiveMaxDistance, stickyPair ? 7.8f : 7.2f);
-      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 30.f : 26.f);
-      effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, stickyPair ? 6.4f : 5.8f);
-      effectiveMinDepth    = (std::min)(effectiveMinDepth, -3.2f);
-      effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 11.2f);
+      effectiveMaxDistance = (std::max)(effectiveMaxDistance, stickyPair ? 8.4f : 8.0f);
+      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 48.f : 44.f);
+      effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, stickyPair ? 7.2f : 6.6f);
+      effectiveMinDepth    = (std::min)(effectiveMinDepth, -3.6f);
+      effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 11.8f);
     }
 
-    if (distance > effectiveMaxDistance)
-      return;
+    float hysteresisBonus = 0.f;
+    float switchPenalty   = 0.f;
 
-    const float angle = receiverPart->Angle(*penisPart);
-    if (angle > effectiveMaxAngle)
-      return;
+    if (previousSameTypePair) {
+      if (type == Type::Vaginal) {
+        effectiveMaxDistance = (std::max)(effectiveMaxDistance, 10.2f);
+        effectiveMaxAngle    = (std::max)(effectiveMaxAngle, 60.f);
+        effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, 8.4f);
+        effectiveMinDepth    = (std::min)(effectiveMinDepth, -4.8f);
+        effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 13.8f);
+        hysteresisBonus += 0.26f;
+      } else if (type == Type::Anal) {
+        effectiveMaxDistance = (std::max)(effectiveMaxDistance, 8.8f);
+        effectiveMaxAngle    = (std::max)(effectiveMaxAngle, 42.f);
+        effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, 6.9f);
+        effectiveMinDepth    = (std::min)(effectiveMinDepth, -3.8f);
+        effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 11.8f);
+        hysteresisBonus += 0.24f;
+      }
+    }
 
-    const float tipAxisDistance = DistanceToAxisSegment(penisPart->GetEnd(), *receiverPart);
-    if (tipAxisDistance > effectiveMaxTipAxis)
-      return;
+    if (previousOppositeTypePair) {
+      const bool strongContext = type == Type::Anal      ? HasStrongRearPreference(metrics)
+                                 : type == Type::Vaginal ? HasStrongFrontPreference(metrics)
+                                                         : false;
+      if (!strongContext)
+        switchPenalty = type == Type::Anal ? 0.32f : 0.26f;
+    }
 
-    const float depth = ProjectionOnAxis(penisPart->GetEnd(), *receiverPart);
-    if (depth < effectiveMinDepth || depth > effectiveMaxDepth)
+    metrics.maxDistance     = effectiveMaxDistance;
+    metrics.maxAngle        = effectiveMaxAngle;
+    metrics.maxTipAxis      = effectiveMaxTipAxis;
+    metrics.minDepth        = effectiveMinDepth;
+    metrics.maxDepth        = effectiveMaxDepth;
+    metrics.hysteresisBonus = hysteresisBonus;
+    metrics.switchPenalty   = switchPenalty;
+    metrics.contextBias     = CalculatePenetrationContextBias(ctx.targetData, *penisPart, type);
+    metrics.bonus = TemporalBonus(ctx.sourceData, Name::Penis, ctx.targetActor, type) +
+                    TemporalBonus(ctx.targetData, receiverPartName, ctx.sourceActor, type);
+
+    if (distance > effectiveMaxDistance) {
+      LogPenetrationDiagnostic(ctx, receiverPartName, type, PenetrationDiagEvent::RejectedDistance,
+                               "reject-distance", "distance above gate", metrics);
       return;
+    }
+
+    const float angle = MeasurePartAngle(*receiverPart, *penisPart);
+    metrics.angle     = angle;
+    if (angle > effectiveMaxAngle) {
+      LogPenetrationDiagnostic(ctx, receiverPartName, type, PenetrationDiagEvent::RejectedAngle,
+                               "reject-angle", "angle above gate", metrics);
+      return;
+    }
+
+    const bool midDepthInRange = penetrationMetrics.midDepth >= effectiveMinDepth &&
+                                 penetrationMetrics.midDepth <= effectiveMaxDepth;
+    const bool tipDepthInRange = penetrationMetrics.endDepth >= effectiveMinDepth &&
+                                 penetrationMetrics.endDepth <= effectiveMaxDepth;
+
+    bool useMidSample =
+        penetrationMetrics.midAxisDistance + 0.12f < penetrationMetrics.endAxisDistance;
+    if (midDepthInRange != tipDepthInRange)
+      useMidSample = midDepthInRange;
+
+    float axisDistance =
+        useMidSample ? penetrationMetrics.midAxisDistance : penetrationMetrics.endAxisDistance;
+    if (axisDistance > effectiveMaxTipAxis) {
+      const float alternateAxisDistance =
+          useMidSample ? penetrationMetrics.endAxisDistance : penetrationMetrics.midAxisDistance;
+      if (alternateAxisDistance <= effectiveMaxTipAxis) {
+        useMidSample = !useMidSample;
+        axisDistance = alternateAxisDistance;
+      }
+    }
+
+    metrics.tipAxisDistance = axisDistance;
+    if (axisDistance > effectiveMaxTipAxis) {
+      LogPenetrationDiagnostic(ctx, receiverPartName, type, PenetrationDiagEvent::RejectedTipAxis,
+                               "reject-tip-axis", "shaft axis distance above gate", metrics);
+      return;
+    }
+
+    float depth = useMidSample ? penetrationMetrics.midDepth : penetrationMetrics.endDepth;
+    const bool shaftInsideReceiver = penetrationMetrics.overlapDepth > 0.05f;
+    const bool nearEntryHold       = previousSameTypePair && shaftEntryDistance <= 2.0f &&
+                                     axisDistance <= effectiveMaxTipAxis + 0.6f;
+
+    if (!shaftInsideReceiver && !nearEntryHold) {
+      metrics.depth = depth;
+      LogPenetrationDiagnostic(ctx, receiverPartName, type, PenetrationDiagEvent::RejectedDepth,
+                               "reject-depth", "shaft fully outside receiver interval", metrics);
+      return;
+    }
+
+    if (depth < effectiveMinDepth || depth > effectiveMaxDepth) {
+      if (midDepthInRange && penetrationMetrics.midAxisDistance <= effectiveMaxTipAxis) {
+        useMidSample = true;
+        axisDistance = penetrationMetrics.midAxisDistance;
+        depth        = penetrationMetrics.midDepth;
+      } else if (tipDepthInRange && penetrationMetrics.endAxisDistance <= effectiveMaxTipAxis) {
+        useMidSample = false;
+        axisDistance = penetrationMetrics.endAxisDistance;
+        depth        = penetrationMetrics.endDepth;
+      } else if (nearEntryHold) {
+        depth = std::clamp(depth, effectiveMinDepth + 0.05f, effectiveMaxDepth - 0.05f);
+      } else if (!nearEntryHold) {
+        metrics.depth           = depth;
+        metrics.tipAxisDistance = axisDistance;
+        LogPenetrationDiagnostic(ctx, receiverPartName, type, PenetrationDiagEvent::RejectedDepth,
+                                 "reject-depth", "depth outside gate", metrics);
+        return;
+      }
+    }
+
+    metrics.tipAxisDistance = axisDistance;
+    metrics.depth           = depth;
+    if (depth < effectiveMinDepth || depth > effectiveMaxDepth) {
+      LogPenetrationDiagnostic(ctx, receiverPartName, type, PenetrationDiagEvent::RejectedDepth,
+                               "reject-depth", "depth outside gate", metrics);
+      return;
+    }
 
     const float distNorm  = NormalizeDistance(distance, effectiveMaxDistance);
     const float angleNorm = AngleDeviation(angle, {0.f, effectiveMaxAngle});
-    const float axisNorm  = NormalizeDistance(tipAxisDistance, effectiveMaxTipAxis);
+    const float axisNorm  = NormalizeDistance(axisDistance, effectiveMaxTipAxis);
 
     float depthPenalty = 0.f;
     if (depth < 0.f)
@@ -808,17 +1431,19 @@ namespace
       depthPenalty = (depth - receiverPart->GetLength()) /
                      (std::max)(effectiveMaxDepth - receiverPart->GetLength(), 1e-4f);
 
-    const float contextBias = CalculatePenetrationContextBias(ctx.targetData, *penisPart, type);
-    const float bonus = TemporalBonus(ctx.sourceData, Name::Penis, ctx.targetActor, type) +
-                        TemporalBonus(ctx.targetData, receiverPartName, ctx.sourceActor, type);
     constexpr float kPenetrationPriorityBias = 0.10f;
     const float complementaryBonus =
         complementaryPenetrationContext ? (type == Type::Anal ? 0.12f : 0.08f) : 0.f;
 
     const float score =
         (std::max)(0.f, distNorm * 0.42f + angleNorm * 0.22f + axisNorm * 0.22f +
-                            std::clamp(depthPenalty, 0.f, 1.f) * 0.14f + contextBias - bonus -
+                            std::clamp(depthPenalty, 0.f, 1.f) * 0.14f + metrics.contextBias -
+                            metrics.bonus - hysteresisBonus + switchPenalty -
                             kPenetrationPriorityBias - complementaryBonus);
+
+    metrics.score = score;
+    LogPenetrationDiagnostic(ctx, receiverPartName, type, PenetrationDiagEvent::CandidateAccepted,
+                             "candidate-accepted", "penetration candidate added", metrics);
 
     AddCandidate(out, ctx, Name::Penis, receiverPartName, type, CandidateFamily::Penetration,
                  distance, score);
@@ -854,28 +1479,26 @@ namespace
     if (!HasAnyPart(ctx.sourceData, kHandParts) && !HasAnyPart(ctx.sourceData, kFingerParts))
       return;
 
-    AddSimpleDirectedCandidates(out, ctx, kHandParts, kBreastParts, Type::GropeBreast,
-                                CandidateFamily::Contact, 6.8f, {140.f, 180.f}, 0.24f, 0.f,
-                                AnchorMode::StartToStart, 0.16f, 6.2f);
+    TryAddGropeBreastCandidates(out, ctx);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kThighParts, Type::GropeThigh,
                                 CandidateFamily::Contact, 7.1f, {0.f, 180.f}, 0.f, 0.f,
                                 AnchorMode::StartToStart, 0.14f, 6.4f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kButtParts, Type::GropeButt,
-                                CandidateFamily::Contact, 6.0f, {0.f, 180.f}, 0.f, 0.f,
-                                AnchorMode::StartToStart, 0.16f, 5.5f);
+                                CandidateFamily::Contact, 5.2f, {0.f, 180.f}, 0.f, 0.f,
+                                AnchorMode::StartToStart, 0.16f, 4.8f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kFootParts, Type::GropeFoot,
                                 CandidateFamily::Contact, 7.0f, {0.f, 180.f}, 0.f, 0.f,
                                 AnchorMode::StartToStart, 0.12f, 6.4f);
 
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kThighCleftParts, Type::FingerVagina,
-                                CandidateFamily::Contact, 5.9f, {0.f, 180.f}, 0.f, -0.04f,
-                                AnchorMode::StartToStart, 0.18f, 5.6f);
+                                CandidateFamily::Contact, 6.4f, {0.f, 180.f}, 0.f, -0.04f,
+                                AnchorMode::StartToStart, 0.18f, 6.0f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kVaginaParts, Type::FingerVagina,
-                                CandidateFamily::Contact, 6.8f, {0.f, 180.f}, 0.f, 0.01f,
-                                AnchorMode::StartToStart, 0.22f, 6.2f);
+                                CandidateFamily::Contact, 7.2f, {0.f, 180.f}, 0.f, 0.01f,
+                                AnchorMode::StartToStart, 0.22f, 6.6f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kAnusParts, Type::FingerAnus,
-                                CandidateFamily::Contact, 6.3f, {0.f, 180.f}, 0.f, 0.f,
-                                AnchorMode::StartToStart, 0.20f, 5.8f);
+                                CandidateFamily::Contact, 6.8f, {0.f, 180.f}, 0.f, 0.f,
+                                AnchorMode::StartToStart, 0.20f, 6.2f);
     TryAddHandjobCandidates(out, ctx);
   }
 
@@ -884,19 +1507,20 @@ namespace
     if (!HasAnyPart(ctx.sourceData, kPenisParts))
       return;
 
-    AddSimpleDirectedCandidates(out, ctx, kPenisParts, kBreastParts, Type::Titfuck,
-                                CandidateFamily::Proximity, 8.f, {0.f, 58.f}, 0.32f);
-    AddSimpleDirectedCandidates(out, ctx, kPenisParts, kCleavageParts, Type::Titfuck,
-                                CandidateFamily::Proximity, 8.f, {70.f, 110.f}, 0.40f, -0.03f);
+    AddSampledPenisDirectedCandidates(out, ctx, kBreastParts, Type::Titfuck,
+                                      CandidateFamily::Proximity, 8.f, {0.f, 58.f}, 0.32f);
+    AddSampledPenisDirectedCandidates(out, ctx, kCleavageParts, Type::Titfuck,
+                                      CandidateFamily::Proximity, 8.f, {70.f, 110.f}, 0.40f,
+                                      -0.03f);
     TryAddNaveljobCandidate(out, ctx);
-    AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighCleftParts, Type::Thighjob,
-                                CandidateFamily::Proximity, 6.5f, {0.f, 32.f}, 0.24f, 0.02f);
-    AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighParts, Type::Thighjob,
-                                CandidateFamily::Proximity, 5.4f, {0.f, 32.f}, 0.22f, 0.01f);
-    AddSimpleDirectedCandidates(out, ctx, kPenisParts, kGlutealCleftParts, Type::Frottage,
-                                CandidateFamily::Proximity, 8.f, {140.f, 40.f}, 0.28f);
-    AddSimpleDirectedCandidates(out, ctx, kPenisParts, kFootParts, Type::Footjob,
-                                CandidateFamily::Proximity, 8.2f, {0.f, 180.f}, 0.f);
+    AddSampledPenisDirectedCandidates(out, ctx, kThighCleftParts, Type::Thighjob,
+                                      CandidateFamily::Proximity, 6.5f, {0.f, 32.f}, 0.24f, 0.02f);
+    AddSampledPenisDirectedCandidates(out, ctx, kThighParts, Type::Thighjob,
+                                      CandidateFamily::Proximity, 5.4f, {0.f, 32.f}, 0.22f, 0.01f);
+    AddSampledPenisDirectedCandidates(out, ctx, kGlutealCleftParts, Type::Frottage,
+                                      CandidateFamily::Proximity, 8.f, {140.f, 40.f}, 0.28f);
+    AddSampledPenisDirectedCandidates(out, ctx, kFootParts, Type::Footjob,
+                                      CandidateFamily::Proximity, 8.2f, {0.f, 180.f}, 0.f);
   }
 
   void GeneratePenetrationDirectedCandidates(std::vector<Candidate>& out,
@@ -953,6 +1577,45 @@ namespace
   }
 
   using AssignMap = std::unordered_map<RE::Actor*, std::unordered_map<Name, AssignInfo>>;
+
+  const AssignInfo* FindAssignInfo(const AssignMap& assigns, RE::Actor* actor, Name partName)
+  {
+    auto actorIt = assigns.find(actor);
+    if (actorIt == assigns.end())
+      return nullptr;
+
+    auto partIt = actorIt->second.find(partName);
+    return partIt == actorIt->second.end() ? nullptr : &partIt->second;
+  }
+
+  void LogPenetrationFinalStates(const std::unordered_map<RE::Actor*, ActorData>& datas,
+                                 const AssignMap& assigns)
+  {
+    for (const auto& [actor, data] : datas) {
+      const bool hasVagina = TryGetBodyPart(data, Name::Vagina) != nullptr;
+      const bool hasAnus   = TryGetBodyPart(data, Name::Anus) != nullptr;
+      if (!hasVagina && !hasAnus)
+        continue;
+
+      const AssignInfo* vaginalAssign = FindAssignInfo(assigns, actor, Name::Vagina);
+      const AssignInfo* analAssign    = FindAssignInfo(assigns, actor, Name::Anus);
+      if (!vaginalAssign && !analAssign)
+        continue;
+
+      if (!ShouldEmitPenetrationDiag(actor, actor, Type::None, PenetrationDiagEvent::FinalState,
+                                     250.f)) {
+        continue;
+      }
+
+      logger::info("[SexLab NG] Interact PenetrationFinal actor={:08X} has(vag={}, anus={}) "
+                   "vaginal={} partner={:08X} anal={} partner={:08X}",
+                   GetActorFormID(actor), hasVagina, hasAnus,
+                   magic_enum::enum_name(vaginalAssign ? vaginalAssign->type : Type::None),
+                   GetActorFormID(vaginalAssign ? vaginalAssign->partner : nullptr),
+                   magic_enum::enum_name(analAssign ? analAssign->type : Type::None),
+                   GetActorFormID(analAssign ? analAssign->partner : nullptr));
+    }
+  }
 
   void BuildSummaries(const AssignMap& assigns,
                       std::unordered_map<RE::Actor*, ActorInteractSummary>& summaries)
@@ -1164,10 +1827,54 @@ namespace
     return penalty;
   }
 
+  bool
+  ShouldSuppressRecentPenetrationFallback(const Candidate& candidate,
+                                          const std::unordered_map<RE::Actor*, ActorData>& datas)
+  {
+    if (!IsPenetrationSensitiveProximity(candidate.type) || candidate.sourcePart != Name::Penis)
+      return false;
+
+    const auto sourceIt = datas.find(candidate.sourceActor);
+    const auto targetIt = datas.find(candidate.targetActor);
+    if (sourceIt == datas.end() || targetIt == datas.end())
+      return false;
+
+    const bool sourceRecent =
+        HadPreviousPenetrationWithPartner(sourceIt->second, Name::Penis, candidate.targetActor);
+    const bool targetRecent =
+        HadPreviousPenetrationWithPartner(targetIt->second, Name::Vagina, candidate.sourceActor) ||
+        HadPreviousPenetrationWithPartner(targetIt->second, Name::Anus, candidate.sourceActor);
+    if (!sourceRecent && !targetRecent)
+      return false;
+
+    return TryGetBodyPart(targetIt->second, Name::Vagina) ||
+           TryGetBodyPart(targetIt->second, Name::Anus);
+  }
+
   bool TryAssignCandidate(const Candidate& candidate, UsedPartSet& usedParts, AssignMap& assigns)
   {
-    if (usedParts.count({candidate.sourceActor, candidate.sourcePart}) ||
-        usedParts.count({candidate.targetActor, candidate.targetPart})) {
+    const bool sourceUsed = usedParts.count({candidate.sourceActor, candidate.sourcePart}) > 0;
+    const bool targetUsed = usedParts.count({candidate.targetActor, candidate.targetPart}) > 0;
+    if (sourceUsed || targetUsed) {
+      if (candidate.family == CandidateFamily::Penetration &&
+          ShouldEmitPenetrationDiag(candidate.sourceActor, candidate.targetActor, candidate.type,
+                                    PenetrationDiagEvent::AssignSkipped, 200.f)) {
+        const AssignInfo* sourceAssign =
+            FindAssignInfo(assigns, candidate.sourceActor, candidate.sourcePart);
+        const AssignInfo* targetAssign =
+            FindAssignInfo(assigns, candidate.targetActor, candidate.targetPart);
+        logger::info(
+            "[SexLab NG] Interact PenetrationAssign skipped type={} src={:08X}:{} dst={:08X}:{} "
+            "score={:.3f} distance={:.2f} sourceUsed={} sourceBy={} sourcePartner={:08X} "
+            "targetUsed={} targetBy={} targetPartner={:08X}",
+            magic_enum::enum_name(candidate.type), GetActorFormID(candidate.sourceActor),
+            magic_enum::enum_name(candidate.sourcePart), GetActorFormID(candidate.targetActor),
+            magic_enum::enum_name(candidate.targetPart), candidate.score, candidate.distance,
+            sourceUsed, magic_enum::enum_name(sourceAssign ? sourceAssign->type : Type::None),
+            GetActorFormID(sourceAssign ? sourceAssign->partner : nullptr), targetUsed,
+            magic_enum::enum_name(targetAssign ? targetAssign->type : Type::None),
+            GetActorFormID(targetAssign ? targetAssign->partner : nullptr));
+      }
       return false;
     }
 
@@ -1182,6 +1889,19 @@ namespace
         candidate.sourceActor, candidate.targetPart, candidate.sourcePart, candidate.distance,
         resolvedType};
     usedParts.insert({candidate.targetActor, candidate.targetPart});
+
+    if (candidate.family == CandidateFamily::Penetration &&
+        ShouldEmitPenetrationDiag(candidate.sourceActor, candidate.targetActor, candidate.type,
+                                  PenetrationDiagEvent::Assigned, 200.f)) {
+      logger::info("[SexLab NG] Interact PenetrationAssign applied type={} src={:08X}:{} "
+                   "dst={:08X}:{} resolvedType={} score={:.3f} distance={:.2f}",
+                   magic_enum::enum_name(candidate.type), GetActorFormID(candidate.sourceActor),
+                   magic_enum::enum_name(candidate.sourcePart),
+                   GetActorFormID(candidate.targetActor),
+                   magic_enum::enum_name(candidate.targetPart), magic_enum::enum_name(resolvedType),
+                   candidate.score, candidate.distance);
+    }
+
     return true;
   }
 
@@ -1202,6 +1922,8 @@ namespace
       Candidate adjusted = candidate;
       if (family == CandidateFamily::Proximity) {
         if (ShouldSuppressProximityCandidate(adjusted, summaries))
+          continue;
+        if (ShouldSuppressRecentPenetrationFallback(adjusted, datas))
           continue;
         adjusted.score += GetProximityPenalty(adjusted, summaries, datas);
       }
@@ -1299,6 +2021,7 @@ void Interact::Update()
   std::unordered_map<RE::Actor*, std::vector<Type>> comboTypes;
   BuildComboTypes(summaries, comboTypes);
   ApplyComboOverrides(assigns, summaries, comboTypes);
+  LogPenetrationFinalStates(datas, assigns);
 
   const float nowMs = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(
                                              std::chrono::steady_clock::now().time_since_epoch())
