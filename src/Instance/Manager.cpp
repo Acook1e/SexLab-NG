@@ -15,6 +15,28 @@ struct ActorInfo
   float scale;
 };
 
+struct SceneCandidate
+{
+  Define::Scene* scene         = nullptr;
+  std::uint64_t actorOrderCode = 0;
+  float totalScaleDeviation    = 0.f;
+  std::uint32_t highCostScales = 0;
+};
+
+constexpr std::size_t kPackedActorOrderCapacity = sizeof(std::uint64_t) / sizeof(std::uint8_t);
+constexpr std::uint8_t kInvalidPackedActorIndex = 0xFF;
+
+static std::uint64_t PackActorOrder(const std::vector<std::size_t>& actorOrder)
+{
+  std::uint64_t packed = (std::numeric_limits<std::uint64_t>::max)();
+  for (std::size_t positionIndex = 0; positionIndex < actorOrder.size(); ++positionIndex) {
+    const std::uint64_t shift = static_cast<std::uint64_t>(positionIndex) * 8ULL;
+    packed &= ~(0xFFULL << shift);
+    packed |= (static_cast<std::uint64_t>(actorOrder[positionIndex]) & 0xFFULL) << shift;
+  }
+  return packed;
+}
+
 // ════════════════════════════════════════════════════════════
 // O(N³) 匈牙利算法: 最小代价完美匹配
 // cost[i][j] = 将第 i 行分配给第 j 列的代价 (N×N 方阵)
@@ -77,14 +99,29 @@ static std::vector<int> HungarianAssign(const std::vector<std::vector<float>>& c
 
 // ════════════════════════════════════════════════════════════
 // Stage 0: Race + Gender 完全匹配 + 最优 scale 分配 (匈牙利)
-// 返回最小总 scaleDev; 若无法完全匹配则返回 1e9f
+// 返回最小总 scaleDev、高代价 scale 次数，以及 position 顺序下的 actor 分配
 // ════════════════════════════════════════════════════════════
-static float MatchActorsToPositions(const std::vector<RE::Actor*>& actors,
-                                    const std::unordered_map<RE::Actor*, ActorInfo>& infos,
-                                    std::vector<Define::Position>& positions)
+struct ScaleMatchResult
 {
-  constexpr float kInf = 1e9f;
-  const int n          = static_cast<int>(actors.size());
+  bool valid                   = false;
+  float totalScaleDeviation    = 0.f;
+  std::uint32_t highCostScales = 0;
+  std::uint64_t actorOrderCode = 0;
+};
+
+static ScaleMatchResult
+MatchActorsToPositions(const std::vector<RE::Actor*>& actors,
+                       const std::unordered_map<RE::Actor*, ActorInfo>& infos,
+                       const std::vector<Define::Position>& positions)
+{
+  constexpr float kInf                    = 1e9f;
+  constexpr float kHighCostScaleDeviation = 0.10f;
+  const int n                             = static_cast<int>(actors.size());
+  ScaleMatchResult result;
+  if (actors.size() > kPackedActorOrderCapacity)
+    return result;
+
+  std::vector<std::size_t> actorOrder(n, static_cast<std::size_t>(kInvalidPackedActorIndex));
 
   // 构建代价矩阵: race/gender 不匹配 → kInf, 否则 |scaleDiff|
   std::vector<std::vector<float>> cost(n, std::vector<float>(n, kInf));
@@ -98,14 +135,20 @@ static float MatchActorsToPositions(const std::vector<RE::Actor*>& actors,
 
   const auto assignment = HungarianAssign(cost);
 
-  float total = 0.f;
   for (int a = 0; a < n; ++a) {
     const int pa = assignment[a];
     if (pa < 0 || cost[a][pa] >= kInf * 0.5f)
-      return kInf;
-    total += cost[a][pa];
+      return result;
+
+    result.totalScaleDeviation += cost[a][pa];
+    if (cost[a][pa] > kHighCostScaleDeviation)
+      ++result.highCostScales;
+    actorOrder[pa] = static_cast<std::size_t>(a);
   }
-  return total;
+
+  result.actorOrderCode = PackActorOrder(actorOrder);
+  result.valid          = true;
+  return result;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -164,14 +207,19 @@ MatchInteractTags(const std::vector<RE::Actor*>& actors,
 //   Stage 3: Scale (totalScaleDev ≤ 阈值)     → 排序返回 / fallback
 // ════════════════════════════════════════════════════════════
 
-std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> actors,
-                                                       SearchOptions options)
+SceneSearchResult SceneManager::SearchScenes(std::vector<RE::Actor*> actors, SearchOptions options)
 {
   ScopeTimer timer("SceneManager::SearchScenes");
 
   for (auto* actor : actors)
     if (!actor)
       return {};
+
+  if (actors.size() > kPackedActorOrderCapacity) {
+    logger::warn("[SexLab NG] SearchScenes: {} actors exceed packed order capacity {}",
+                 actors.size(), kPackedActorOrderCapacity);
+    return {};
+  }
 
   // ── 预计算 actor 信息 ─────────────────────────────────────
   std::unordered_map<RE::Actor*, ActorInfo> infos;
@@ -194,21 +242,13 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
     }
 
   // ══════════════════════════════════════════════════════════
-  // Stage 0: Race + Gender + 人数 + LeadIn 过滤
+  // Stage 0: Race + Gender + 人数过滤
   // ══════════════════════════════════════════════════════════
-  struct BaseEntry
-  {
-    Define::Scene* scene;
-    float totalScaleDev;
-  };
-
-  std::vector<BaseEntry> basePool;
+  std::vector<SceneCandidate> basePool;
 
   for (auto& animPack : animPacks) {
     for (auto& scene : animPack.GetScenes()) {
-      // LeadIn 过滤: SceneTags 中的 LeadIn 位
-      bool isLeadIn = scene.GetTags().Has(Define::SceneTags::Type::LeadIn);
-      if (options.useLeadIn != isLeadIn)
+      if (scene.GetTags().Has(Define::SceneTags::Type::LeadIn))
         continue;
 
       // Races 掩码快速排除
@@ -221,11 +261,12 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
         continue;
 
       // Race + Gender 一一对应 (匈牙利最优匹配, 同时算出最小 scaleDev)
-      const float scaleDev = MatchActorsToPositions(actors, infos, positions);
-      if (scaleDev >= 1e9f)
+      const ScaleMatchResult scaleMatch = MatchActorsToPositions(actors, infos, positions);
+      if (!scaleMatch.valid)
         continue;
 
-      basePool.push_back({&scene, scaleDev});
+      basePool.push_back(SceneCandidate{&scene, scaleMatch.actorOrderCode,
+                                        scaleMatch.totalScaleDeviation, scaleMatch.highCostScales});
     }
   }
 
@@ -240,11 +281,11 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
   // ══════════════════════════════════════════════════════════
   // Stage 1: SceneTags
   // ══════════════════════════════════════════════════════════
-  auto sceneTagPool = [&]() -> std::vector<BaseEntry> {
+  auto sceneTagPool = [&]() -> std::vector<SceneCandidate> {
     if (!hasSceneTagReq)
       return basePool;
 
-    std::vector<BaseEntry> pool;
+    std::vector<SceneCandidate> pool;
     for (auto& entry : basePool)
       if (MatchSceneTags(entry.scene->GetTags(), options.sceneTags))
         pool.push_back(entry);
@@ -269,11 +310,11 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
   // ══════════════════════════════════════════════════════════
   // Stage 2: InteractTags (per-actor)
   // ══════════════════════════════════════════════════════════
-  auto interactPool = [&]() -> std::vector<BaseEntry> {
+  auto interactPool = [&]() -> std::vector<SceneCandidate> {
     if (!hasInteractTagReq)
       return sceneTagPool;
 
-    std::vector<BaseEntry> pool;
+    std::vector<SceneCandidate> pool;
     for (auto& entry : sceneTagPool) {
       auto& positions = entry.scene->GetPositions();
       if (MatchInteractTags(actors, infos, options.actorInteractTags, positions))
@@ -301,37 +342,59 @@ std::vector<Define::Scene*> SceneManager::SearchScenes(std::vector<RE::Actor*> a
   // ══════════════════════════════════════════════════════════
   // Stage 3: Scale (totalScaleDev ≤ 阈值, 否则 fallback)
   // ══════════════════════════════════════════════════════════
-  std::vector<BaseEntry> scaleStrict;
-  for (auto& entry : interactPool)
-    if (entry.totalScaleDev <= Settings::fMaxScaleDeviation)
+  const auto minHighCostIt =
+      std::min_element(interactPool.begin(), interactPool.end(),
+                       [](const SceneCandidate& lhs, const SceneCandidate& rhs) {
+                         return lhs.highCostScales < rhs.highCostScales;
+                       });
+  const std::uint32_t minHighCostScales =
+      minHighCostIt != interactPool.end() ? minHighCostIt->highCostScales : 0;
+
+  std::vector<SceneCandidate> minHighCostPool;
+  for (const auto& entry : interactPool)
+    if (entry.highCostScales == minHighCostScales)
+      minHighCostPool.push_back(entry);
+
+  logger::info("[SexLab NG] SearchScenes: Stage 3 (ScaleCost) — minHighCost={} => {} / {} scenes",
+               minHighCostScales, minHighCostPool.size(), interactPool.size());
+
+  std::vector<SceneCandidate> scaleStrict;
+  for (const auto& entry : minHighCostPool)
+    if (entry.totalScaleDeviation <= Settings::fMaxScaleDeviation)
       scaleStrict.push_back(entry);
 
-  auto& finalPool = scaleStrict.empty() ? interactPool : scaleStrict;
+  std::vector<SceneCandidate> finalPool =
+      scaleStrict.empty() ? std::move(minHighCostPool) : std::move(scaleStrict);
 
   if (!scaleStrict.empty()) {
-    logger::info("[SexLab NG] SearchScenes: Stage 3 (Scale) — {} / {} scenes pass",
-                 scaleStrict.size(), interactPool.size());
+    logger::info("[SexLab NG] SearchScenes: Stage 3 (ScaleDeviation) — {} scenes within {:.3f}",
+                 finalPool.size(), Settings::fMaxScaleDeviation);
   } else {
-    logger::info("[SexLab NG] SearchScenes: Scale fallback — returning all {} scenes",
-                 interactPool.size());
+    logger::info("[SexLab NG] SearchScenes: Scale deviation fallback — keeping {} scenes",
+                 finalPool.size());
   }
 
-  // 按 totalScaleDev 升序排序, scale 最契合的排前面
-  std::sort(finalPool.begin(), finalPool.end(), [](const BaseEntry& a, const BaseEntry& b) {
-    return a.totalScaleDev < b.totalScaleDev;
-  });
+  std::sort(
+      finalPool.begin(), finalPool.end(), [](const SceneCandidate& a, const SceneCandidate& b) {
+        if (a.highCostScales != b.highCostScales)
+          return a.highCostScales < b.highCostScales;
+        if (a.totalScaleDeviation != b.totalScaleDeviation)
+          return a.totalScaleDeviation < b.totalScaleDeviation;
+        return a.scene && b.scene ? a.scene->GetName() < b.scene->GetName() : a.scene < b.scene;
+      });
 
-  // 转换为结果
-  std::vector<Define::Scene*> res;
-  res.reserve(finalPool.size());
-  for (auto& entry : finalPool)
-    res.push_back(entry.scene);
+  SceneSearchResult result;
+  result.reserve(finalPool.size());
+  for (const auto& entry : finalPool) {
+    if (!entry.scene)
+      continue;
+    result.emplace(entry.scene, entry.actorOrderCode);
+  }
 
-  return res;
+  return result;
 }
 
-std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors,
-                                           std::vector<Define::Scene*> scenes)
+std::uint64_t SceneManager::CreateInstance(std::vector<RE::Actor*> actors, SceneSearchResult scenes)
 {
   std::lock_guard<std::mutex> lock(mapMutex);
   static std::mt19937_64 rng{std::random_device{}()};

@@ -6,6 +6,8 @@
 
 namespace Instance
 {
+using SceneSearchResult = std::unordered_map<Define::Scene*, std::uint64_t>;
+
 class SceneInstance
 {
 public:
@@ -26,14 +28,14 @@ public:
     ActorApproach,  // Only used when enable Actor Walk to Center, otherwise will be skipped and
                     // directly set to Ready
     SceneReady,     // Include lock strip and ready
-    LeadIn,         // Only used when enable Lead-In, otherwise will be skipped and directly set to
-                    // ScenePlay
     ScenePlay,
+    // TODO(API): When reaching SceneEnd, allow injecting a new SceneSearchResult and restart
+    // ScenePlay without recreating SceneInstance.
+    SceneEnd,
     DestroyInstance
   };
 
-  SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
-                std::vector<Define::Scene*> scenes, Define::Scene* leadIn = nullptr);
+  SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants, SceneSearchResult scenes);
   ~SceneInstance();
 
   bool Update();
@@ -47,7 +49,7 @@ public:
   void UnlockActors();
 
   Define::Scene* RandomScene();
-  void SetPositions();
+  bool SetPositions();
   bool SetStage(std::uint32_t stage);
 
   Define::Scene* GetCurrentScene() const { return currentScene; }
@@ -56,7 +58,7 @@ public:
   const Interact& GetInteract() const { return interact; }
 
 private:
-  std::vector<Define::Scene*> availableScenes;
+  SceneSearchResult availableScenes;
   Define::Scene* currentScene;
   std::uint32_t currentStage;
 

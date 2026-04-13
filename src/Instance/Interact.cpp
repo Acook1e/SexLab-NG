@@ -18,7 +18,7 @@ namespace
   {
     Penetration = 0,
     Oral        = 1,
-    Manual      = 2,
+    Proximity   = 2,
     Contact     = 3,
   };
 
@@ -259,6 +259,48 @@ namespace
            HadPreviousInteraction(ctx.targetData, targetPart, ctx.sourceActor, type);
   }
 
+  bool IncludesVaginal(Type type)
+  {
+    switch (type) {
+    case Type::Vaginal:
+    case Type::DoublePenetration:
+    case Type::TriplePenetration:
+    case Type::Spitroast:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool IncludesAnal(Type type)
+  {
+    switch (type) {
+    case Type::Anal:
+    case Type::DoublePenetration:
+    case Type::TriplePenetration:
+    case Type::Spitroast:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool HasPreviousPartContext(const ActorData& data, Name part, bool (*predicate)(Type))
+  {
+    const Info* info = TryGetInfo(data, part);
+    return info && predicate(info->prevType);
+  }
+
+  bool HasPreviousVaginalContext(const ActorData& data)
+  {
+    return HasPreviousPartContext(data, Name::Vagina, IncludesVaginal);
+  }
+
+  bool HasPreviousAnalContext(const ActorData& data)
+  {
+    return HasPreviousPartContext(data, Name::Anus, IncludesAnal);
+  }
+
   float MinDistanceToOralRegion(const ActorData& data, const BP& part)
   {
     float result = std::numeric_limits<float>::infinity();
@@ -406,6 +448,35 @@ namespace
     return false;
   }
 
+  bool ShouldRelaxAnalGate(const ActorData& receiverData, const BP& penisPart,
+                           float rootEntryDistance, float partDistance, bool stickyPair,
+                           bool complementaryVaginalContext)
+  {
+    const BP* thighCleft  = TryGetBodyPart(receiverData, Name::ThighCleft);
+    const BP* glutealPart = TryGetBodyPart(receiverData, Name::GlutealCleft);
+    const float vagSupport =
+        thighCleft ? thighCleft->Distance(penisPart) : std::numeric_limits<float>::infinity();
+    const float analSupport =
+        glutealPart ? glutealPart->Distance(penisPart) : std::numeric_limits<float>::infinity();
+
+    if (!std::isfinite(analSupport))
+      return false;
+    if (rootEntryDistance <= 3.4f)
+      return !std::isfinite(vagSupport) || analSupport <= vagSupport + 1.1f;
+
+    const bool rearContext       = !std::isfinite(vagSupport) || analSupport <= vagSupport + 1.1f;
+    const bool strongRearContext = !std::isfinite(vagSupport) || analSupport + 0.75f <= vagSupport;
+
+    if (stickyPair && rootEntryDistance <= 6.8f && partDistance <= 7.8f && rearContext)
+      return true;
+    if (complementaryVaginalContext && rootEntryDistance <= 7.2f && partDistance <= 8.2f &&
+        rearContext)
+      return true;
+    if (rootEntryDistance <= 5.8f && partDistance <= 7.2f && strongRearContext)
+      return true;
+    return false;
+  }
+
   void AddCandidate(std::vector<Candidate>& out, const DirectedContext& ctx, Name sourcePart,
                     Name targetPart, Type type, CandidateFamily family, float distance, float score)
   {
@@ -528,7 +599,7 @@ namespace
         TemporalBonus(ctx.targetData, Name::Belly, ctx.sourceActor, Type::Naveljob);
     const float score = (std::max)(0.f, distNorm * 0.55f + angleNorm * 0.45f - bonus);
 
-    AddCandidate(out, ctx, Name::Penis, Name::Belly, Type::Naveljob, CandidateFamily::Contact,
+    AddCandidate(out, ctx, Name::Penis, Name::Belly, Type::Naveljob, CandidateFamily::Proximity,
                  distance, score);
   }
 
@@ -652,7 +723,7 @@ namespace
           TemporalBonus(ctx.targetData, Name::Penis, ctx.sourceActor, Type::Handjob);
       score = (std::max)(0.f, score - bonus);
 
-      AddCandidate(out, ctx, handName, Name::Penis, Type::Handjob, CandidateFamily::Manual,
+      AddCandidate(out, ctx, handName, Name::Penis, Type::Handjob, CandidateFamily::Contact,
                    distance, score);
     }
   }
@@ -670,16 +741,46 @@ namespace
     const float rootEntryDistance =
         AnchorDistance(*penisPart, *receiverPart, AnchorMode::StartToStart);
     const bool stickyPair = HasStickyInteractionPair(ctx, Name::Penis, receiverPartName, type);
+    const bool complementaryPenetrationContext =
+        type == Type::Anal      ? HasPreviousVaginalContext(ctx.targetData)
+        : type == Type::Vaginal ? HasPreviousAnalContext(ctx.targetData)
+                                : false;
     const bool relaxVaginalGate =
         type == Type::Vaginal &&
         ShouldRelaxVaginalGate(ctx.targetData, *penisPart, rootEntryDistance, distance, stickyPair);
-    const float effectiveMaxDistance =
-        relaxVaginalGate ? (std::max)(maxDistance, stickyPair ? 9.6f : 8.8f) : maxDistance;
-    const float effectiveMaxAngle =
-        relaxVaginalGate ? (std::max)(maxAngle, stickyPair ? 68.f : 64.f) : maxAngle;
-    const float effectiveMaxTipAxis = relaxVaginalGate ? (std::max)(maxTipAxis, 10.f) : maxTipAxis;
-    const float effectiveMinDepth   = relaxVaginalGate ? (std::min)(minDepth, -5.5f) : minDepth;
-    const float effectiveMaxDepth   = relaxVaginalGate ? (std::max)(maxDepth, 14.f) : maxDepth;
+    const bool relaxAnalGate =
+        type == Type::Anal &&
+        ShouldRelaxAnalGate(ctx.targetData, *penisPart, rootEntryDistance, distance, stickyPair,
+                            complementaryPenetrationContext);
+    float effectiveMaxDistance = maxDistance;
+    float effectiveMaxAngle    = maxAngle;
+    float effectiveMaxTipAxis  = maxTipAxis;
+    float effectiveMinDepth    = minDepth;
+    float effectiveMaxDepth    = maxDepth;
+
+    if (relaxVaginalGate) {
+      effectiveMaxDistance = (std::max)(effectiveMaxDistance, stickyPair ? 9.6f : 8.8f);
+      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 68.f : 64.f);
+      effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, 10.f);
+      effectiveMinDepth    = (std::min)(effectiveMinDepth, -5.5f);
+      effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 14.f);
+    }
+
+    if (type == Type::Vaginal && complementaryPenetrationContext) {
+      effectiveMaxDistance = (std::max)(effectiveMaxDistance, stickyPair ? 9.8f : 9.1f);
+      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 70.f : 66.f);
+      effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, 10.4f);
+      effectiveMinDepth    = (std::min)(effectiveMinDepth, -5.8f);
+      effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 14.5f);
+    }
+
+    if (relaxAnalGate) {
+      effectiveMaxDistance = (std::max)(effectiveMaxDistance, stickyPair ? 7.8f : 7.2f);
+      effectiveMaxAngle    = (std::max)(effectiveMaxAngle, stickyPair ? 30.f : 26.f);
+      effectiveMaxTipAxis  = (std::max)(effectiveMaxTipAxis, stickyPair ? 6.4f : 5.8f);
+      effectiveMinDepth    = (std::min)(effectiveMinDepth, -3.2f);
+      effectiveMaxDepth    = (std::max)(effectiveMaxDepth, 11.2f);
+    }
 
     if (distance > effectiveMaxDistance)
       return;
@@ -711,10 +812,13 @@ namespace
     const float bonus = TemporalBonus(ctx.sourceData, Name::Penis, ctx.targetActor, type) +
                         TemporalBonus(ctx.targetData, receiverPartName, ctx.sourceActor, type);
     constexpr float kPenetrationPriorityBias = 0.10f;
+    const float complementaryBonus =
+        complementaryPenetrationContext ? (type == Type::Anal ? 0.12f : 0.08f) : 0.f;
 
-    const float score = (std::max)(0.f, distNorm * 0.42f + angleNorm * 0.22f + axisNorm * 0.22f +
-                                            std::clamp(depthPenalty, 0.f, 1.f) * 0.14f +
-                                            contextBias - bonus - kPenetrationPriorityBias);
+    const float score =
+        (std::max)(0.f, distNorm * 0.42f + angleNorm * 0.22f + axisNorm * 0.22f +
+                            std::clamp(depthPenalty, 0.f, 1.f) * 0.14f + contextBias - bonus -
+                            kPenetrationPriorityBias - complementaryBonus);
 
     AddCandidate(out, ctx, Name::Penis, receiverPartName, type, CandidateFamily::Penetration,
                  distance, score);
@@ -751,26 +855,26 @@ namespace
       return;
 
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kBreastParts, Type::GropeBreast,
-                                CandidateFamily::Manual, 6.8f, {140.f, 180.f}, 0.24f, 0.f,
+                                CandidateFamily::Contact, 6.8f, {140.f, 180.f}, 0.24f, 0.f,
                                 AnchorMode::StartToStart, 0.16f, 6.2f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kThighParts, Type::GropeThigh,
-                                CandidateFamily::Manual, 7.1f, {0.f, 180.f}, 0.f, 0.f,
+                                CandidateFamily::Contact, 7.1f, {0.f, 180.f}, 0.f, 0.f,
                                 AnchorMode::StartToStart, 0.14f, 6.4f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kButtParts, Type::GropeButt,
-                                CandidateFamily::Manual, 6.0f, {0.f, 180.f}, 0.f, 0.f,
+                                CandidateFamily::Contact, 6.0f, {0.f, 180.f}, 0.f, 0.f,
                                 AnchorMode::StartToStart, 0.16f, 5.5f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kFootParts, Type::GropeFoot,
-                                CandidateFamily::Manual, 7.0f, {0.f, 180.f}, 0.f, 0.f,
+                                CandidateFamily::Contact, 7.0f, {0.f, 180.f}, 0.f, 0.f,
                                 AnchorMode::StartToStart, 0.12f, 6.4f);
 
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kThighCleftParts, Type::FingerVagina,
-                                CandidateFamily::Manual, 5.9f, {0.f, 180.f}, 0.f, -0.04f,
+                                CandidateFamily::Contact, 5.9f, {0.f, 180.f}, 0.f, -0.04f,
                                 AnchorMode::StartToStart, 0.18f, 5.6f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kVaginaParts, Type::FingerVagina,
-                                CandidateFamily::Manual, 6.8f, {0.f, 180.f}, 0.f, 0.01f,
+                                CandidateFamily::Contact, 6.8f, {0.f, 180.f}, 0.f, 0.01f,
                                 AnchorMode::StartToStart, 0.22f, 6.2f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kAnusParts, Type::FingerAnus,
-                                CandidateFamily::Manual, 6.3f, {0.f, 180.f}, 0.f, 0.f,
+                                CandidateFamily::Contact, 6.3f, {0.f, 180.f}, 0.f, 0.f,
                                 AnchorMode::StartToStart, 0.20f, 5.8f);
     TryAddHandjobCandidates(out, ctx);
   }
@@ -781,18 +885,18 @@ namespace
       return;
 
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kBreastParts, Type::Titfuck,
-                                CandidateFamily::Contact, 8.f, {0.f, 58.f}, 0.32f);
+                                CandidateFamily::Proximity, 8.f, {0.f, 58.f}, 0.32f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kCleavageParts, Type::Titfuck,
-                                CandidateFamily::Contact, 8.f, {70.f, 110.f}, 0.40f, -0.03f);
+                                CandidateFamily::Proximity, 8.f, {70.f, 110.f}, 0.40f, -0.03f);
     TryAddNaveljobCandidate(out, ctx);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighCleftParts, Type::Thighjob,
-                                CandidateFamily::Contact, 6.5f, {0.f, 32.f}, 0.24f, 0.02f);
+                                CandidateFamily::Proximity, 6.5f, {0.f, 32.f}, 0.24f, 0.02f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighParts, Type::Thighjob,
-                                CandidateFamily::Contact, 5.4f, {0.f, 32.f}, 0.22f, 0.01f);
+                                CandidateFamily::Proximity, 5.4f, {0.f, 32.f}, 0.22f, 0.01f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kGlutealCleftParts, Type::Frottage,
-                                CandidateFamily::Contact, 8.f, {140.f, 40.f}, 0.28f);
+                                CandidateFamily::Proximity, 8.f, {140.f, 40.f}, 0.28f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kFootParts, Type::Footjob,
-                                CandidateFamily::Contact, 8.2f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Proximity, 8.2f, {0.f, 180.f}, 0.f);
   }
 
   void GeneratePenetrationDirectedCandidates(std::vector<Candidate>& out,
@@ -811,7 +915,7 @@ namespace
     TryAddSymmetricCandidate(out, pair, Name::Mouth, Name::Mouth, Type::Kiss, CandidateFamily::Oral,
                              6.8f, {140.f, 180.f}, 0.48f);
     TryAddSymmetricCandidate(out, pair, Name::Vagina, Name::Vagina, Type::Tribbing,
-                             CandidateFamily::Contact, 8.f, {140.f, 180.f}, 0.32f);
+                             CandidateFamily::Proximity, 8.f, {140.f, 180.f}, 0.32f);
   }
 
   void GenerateDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
@@ -989,6 +1093,135 @@ namespace
     }
   }
 
+  using PartKey = std::pair<RE::Actor*, Name>;
+
+  struct PartKeyHash
+  {
+    std::size_t operator()(const PartKey& key) const
+    {
+      return std::hash<RE::Actor*>{}(key.first) ^ (static_cast<std::size_t>(key.second) << 8);
+    }
+  };
+
+  using UsedPartSet = std::unordered_set<PartKey, PartKeyHash>;
+
+  bool IsPenetrationSensitiveProximity(Type type)
+  {
+    switch (type) {
+    case Type::Frottage:
+    case Type::Thighjob:
+    case Type::Naveljob:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool ShouldSuppressProximityCandidate(
+      const Candidate& candidate,
+      const std::unordered_map<RE::Actor*, ActorInteractSummary>& summaries)
+  {
+    if (!IsPenetrationSensitiveProximity(candidate.type))
+      return false;
+
+    auto it = summaries.find(candidate.targetActor);
+    if (it == summaries.end())
+      return false;
+
+    return it->second.hasVaginal || it->second.hasAnal;
+  }
+
+  float GetProximityPenalty(const Candidate& candidate,
+                            const std::unordered_map<RE::Actor*, ActorInteractSummary>& summaries,
+                            const std::unordered_map<RE::Actor*, ActorData>& datas)
+  {
+    if (!IsPenetrationSensitiveProximity(candidate.type))
+      return 0.f;
+
+    const auto summaryIt      = summaries.find(candidate.targetActor);
+    const bool currentVaginal = summaryIt != summaries.end() && summaryIt->second.hasVaginal;
+    const bool currentAnal    = summaryIt != summaries.end() && summaryIt->second.hasAnal;
+
+    const auto dataIt      = datas.find(candidate.targetActor);
+    const bool prevVaginal = dataIt != datas.end() && HasPreviousVaginalContext(dataIt->second);
+    const bool prevAnal    = dataIt != datas.end() && HasPreviousAnalContext(dataIt->second);
+    const bool anyCurrent  = currentVaginal || currentAnal;
+    const bool anyPrevious = prevVaginal || prevAnal;
+    float penalty          = 0.f;
+
+    if (anyCurrent)
+      penalty += 0.22f;
+    if (anyPrevious)
+      penalty += 0.10f;
+
+    if (candidate.type == Type::Frottage && (currentVaginal || prevVaginal))
+      penalty += 0.16f;
+    else if (candidate.type == Type::Thighjob && (anyCurrent || anyPrevious))
+      penalty += 0.10f;
+    else if (candidate.type == Type::Naveljob && (anyCurrent || anyPrevious))
+      penalty += 0.14f;
+
+    return penalty;
+  }
+
+  bool TryAssignCandidate(const Candidate& candidate, UsedPartSet& usedParts, AssignMap& assigns)
+  {
+    if (usedParts.count({candidate.sourceActor, candidate.sourcePart}) ||
+        usedParts.count({candidate.targetActor, candidate.targetPart})) {
+      return false;
+    }
+
+    const Type resolvedType = ResolveSelfType(candidate);
+
+    assigns[candidate.sourceActor][candidate.sourcePart] = {
+        candidate.targetActor, candidate.sourcePart, candidate.targetPart, candidate.distance,
+        resolvedType};
+    usedParts.insert({candidate.sourceActor, candidate.sourcePart});
+
+    assigns[candidate.targetActor][candidate.targetPart] = {
+        candidate.sourceActor, candidate.targetPart, candidate.sourcePart, candidate.distance,
+        resolvedType};
+    usedParts.insert({candidate.targetActor, candidate.targetPart});
+    return true;
+  }
+
+  void AssignFamilyCandidates(const std::vector<Candidate>& allCandidates, CandidateFamily family,
+                              const std::unordered_map<RE::Actor*, ActorData>& datas,
+                              UsedPartSet& usedParts, AssignMap& assigns)
+  {
+    std::unordered_map<RE::Actor*, ActorInteractSummary> summaries;
+    if (family == CandidateFamily::Proximity)
+      BuildSummaries(assigns, summaries);
+
+    std::vector<Candidate> familyCandidates;
+    familyCandidates.reserve(allCandidates.size());
+    for (const Candidate& candidate : allCandidates) {
+      if (candidate.family != family)
+        continue;
+
+      Candidate adjusted = candidate;
+      if (family == CandidateFamily::Proximity) {
+        if (ShouldSuppressProximityCandidate(adjusted, summaries))
+          continue;
+        adjusted.score += GetProximityPenalty(adjusted, summaries, datas);
+      }
+
+      familyCandidates.push_back(adjusted);
+    }
+
+    std::sort(familyCandidates.begin(), familyCandidates.end(),
+              [](const Candidate& lhs, const Candidate& rhs) {
+                if (lhs.score != rhs.score)
+                  return lhs.score < rhs.score;
+                if (lhs.distance != rhs.distance)
+                  return lhs.distance < rhs.distance;
+                return static_cast<std::uint8_t>(lhs.type) < static_cast<std::uint8_t>(rhs.type);
+              });
+
+    for (const Candidate& candidate : familyCandidates)
+      TryAssignCandidate(candidate, usedParts, assigns);
+  }
+
 }  // namespace
 
 Interact::Interact(std::vector<RE::Actor*> actors)
@@ -1052,46 +1285,13 @@ void Interact::Update()
     }
   }
 
-  std::sort(candidates.begin(), candidates.end(), [](const Candidate& lhs, const Candidate& rhs) {
-    if (lhs.score != rhs.score)
-      return lhs.score < rhs.score;
-    if (lhs.family != rhs.family)
-      return static_cast<std::uint8_t>(lhs.family) < static_cast<std::uint8_t>(rhs.family);
-    if (lhs.distance != rhs.distance)
-      return lhs.distance < rhs.distance;
-    return static_cast<std::uint8_t>(lhs.type) < static_cast<std::uint8_t>(rhs.type);
-  });
-
-  using PartKey = std::pair<RE::Actor*, Name>;
-  struct PartKeyHash
-  {
-    std::size_t operator()(const PartKey& key) const
-    {
-      return std::hash<RE::Actor*>{}(key.first) ^ (static_cast<std::size_t>(key.second) << 8);
-    }
-  };
-
-  std::unordered_set<PartKey, PartKeyHash> usedParts;
+  UsedPartSet usedParts;
   AssignMap assigns;
 
-  for (const Candidate& candidate : candidates) {
-    if (usedParts.count({candidate.sourceActor, candidate.sourcePart}) ||
-        usedParts.count({candidate.targetActor, candidate.targetPart})) {
-      continue;
-    }
-
-    const Type resolvedType = ResolveSelfType(candidate);
-
-    assigns[candidate.sourceActor][candidate.sourcePart] = {
-        candidate.targetActor, candidate.sourcePart, candidate.targetPart, candidate.distance,
-        resolvedType};
-    usedParts.insert({candidate.sourceActor, candidate.sourcePart});
-
-    assigns[candidate.targetActor][candidate.targetPart] = {
-        candidate.sourceActor, candidate.targetPart, candidate.sourcePart, candidate.distance,
-        resolvedType};
-    usedParts.insert({candidate.targetActor, candidate.targetPart});
-  }
+  AssignFamilyCandidates(candidates, CandidateFamily::Penetration, datas, usedParts, assigns);
+  AssignFamilyCandidates(candidates, CandidateFamily::Oral, datas, usedParts, assigns);
+  AssignFamilyCandidates(candidates, CandidateFamily::Proximity, datas, usedParts, assigns);
+  AssignFamilyCandidates(candidates, CandidateFamily::Contact, datas, usedParts, assigns);
 
   std::unordered_map<RE::Actor*, ActorInteractSummary> summaries;
   BuildSummaries(assigns, summaries);

@@ -95,7 +95,11 @@ static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
     {BodyPart::Name::GlutealCleft, {"VaginaB1", MidNodeName{"NPC L Butt", "NPC R Butt"}}},
     // entry midpoint -> deep
     // direction assumption
-    {BodyPart::Name::Vagina, {MidNodeName{"NPC L Pussy02", "NPC R Pussy02"}, "VaginaDeep1"}},
+    // use clitoral instead entry get more score
+    {BodyPart::Name::Vagina,
+     {// MidNodeName{"NPC L Pussy02", "NPC R Pussy02"},
+      {"Clitoral1"},
+      "VaginaDeep1"}},
     // from entry to deep
     {BodyPart::Name::Anus, {"NPC LT Anus2", "NPC Anus Deep2"}},
 };

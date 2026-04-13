@@ -11,7 +11,6 @@ struct SearchOptions
 {
   Define::SceneTags sceneTags = 0;
   std::unordered_map<RE::Actor*, Define::InteractTags> actorInteractTags{};
-  bool useLeadIn               = Settings::bUseLeadIn;
   bool strictMatchSceneTags    = Settings::bStrictSceneTags;
   bool strictMatchInteractTags = Settings::bStrictInteractTags;
 };
@@ -25,10 +24,8 @@ public:
     return singleton;
   }
 
-  std::vector<Define::Scene*> SearchScenes(std::vector<RE::Actor*> actors,
-                                           SearchOptions options = {});
-  static std::uint64_t CreateInstance(std::vector<RE::Actor*> actors,
-                                      std::vector<Define::Scene*> scenes);
+  SceneSearchResult SearchScenes(std::vector<RE::Actor*> actors, SearchOptions options = {});
+  static std::uint64_t CreateInstance(std::vector<RE::Actor*> actors, SceneSearchResult scenes);
   static void DestroyInstance(std::uint64_t id);
   static bool IsActorInScene(RE::Actor* actor);
 

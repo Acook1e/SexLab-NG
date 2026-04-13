@@ -54,13 +54,6 @@ public:
     float sensitive = 1.0f;
   };
 
-  // 传入 UpdateOnSceneEnd 的每人记录: 最终 enjoyment 值 + 是否为主动方
-  struct EndSceneRecord
-  {
-    float enjoyment  = 0.f;
-    bool isAggressor = false;
-  };
-
   static ActorStat& GetSingleton()
   {
     static ActorStat instance;

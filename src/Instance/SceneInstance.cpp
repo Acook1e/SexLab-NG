@@ -7,10 +7,91 @@
 
 namespace Instance
 {
-SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
-                             std::vector<Define::Scene*> scenes, Define::Scene* leadIn)
-    : availableScenes(std::move(scenes))
+
+namespace
 {
+  constexpr std::size_t kPackedActorOrderCapacity = sizeof(std::uint64_t) / sizeof(std::uint8_t);
+  constexpr std::uint8_t kInvalidPackedActorIndex = 0xFF;
+  constexpr float kEquivalentScaleDelta           = 0.01f;
+
+  std::uint8_t UnpackActorIndex(std::uint64_t packedOrder, std::size_t positionIndex)
+  {
+    if (positionIndex >= kPackedActorOrderCapacity)
+      return kInvalidPackedActorIndex;
+
+    const std::uint64_t shift = static_cast<std::uint64_t>(positionIndex) * 8ULL;
+    return static_cast<std::uint8_t>((packedOrder >> shift) & 0xFFULL);
+  }
+
+  struct PendingAssignment
+  {
+    std::size_t actorIndex;
+    RE::Actor* actor;
+    Define::Position* position;
+    Define::Race race;
+    Define::Gender gender;
+    float scale;
+  };
+
+  void ShuffleEquivalentAssignments(std::vector<PendingAssignment>& assignments)
+  {
+    static std::mt19937 rng(std::random_device{}());
+
+    std::vector<std::size_t> order(assignments.size());
+    std::iota(order.begin(), order.end(), 0);
+    std::sort(order.begin(), order.end(), [&](std::size_t lhsIndex, std::size_t rhsIndex) {
+      const auto& lhs = assignments[lhsIndex];
+      const auto& rhs = assignments[rhsIndex];
+      if (lhs.race.Get() != rhs.race.Get())
+        return lhs.race.Get() < rhs.race.Get();
+      if (lhs.gender.Get() != rhs.gender.Get())
+        return lhs.gender.Get() < rhs.gender.Get();
+      if (lhs.scale != rhs.scale)
+        return lhs.scale < rhs.scale;
+      return lhs.actorIndex < rhs.actorIndex;
+    });
+
+    for (std::size_t begin = 0; begin < order.size();) {
+      std::size_t end              = begin + 1;
+      const auto& anchorAssignment = assignments[order[begin]];
+      const auto anchorRace        = anchorAssignment.race.Get();
+      const auto anchorGender      = anchorAssignment.gender.Get();
+      const float anchorScale      = anchorAssignment.scale;
+
+      while (end < order.size()) {
+        const auto& candidate = assignments[order[end]];
+        if (candidate.race.Get() != anchorRace || candidate.gender.Get() != anchorGender ||
+            std::abs(candidate.scale - anchorScale) >= kEquivalentScaleDelta) {
+          break;
+        }
+        ++end;
+      }
+
+      if (end - begin > 1) {
+        std::vector<std::size_t> shuffledActorIndices;
+        shuffledActorIndices.reserve(end - begin);
+        for (std::size_t index = begin; index < end; ++index)
+          shuffledActorIndices.push_back(assignments[order[index]].actorIndex);
+
+        std::shuffle(shuffledActorIndices.begin(), shuffledActorIndices.end(), rng);
+
+        for (std::size_t index = begin; index < end; ++index) {
+          auto& assignment       = assignments[order[index]];
+          const std::size_t slot = index - begin;
+          assignment.actorIndex  = shuffledActorIndices[slot];
+        }
+      }
+
+      begin = end;
+    }
+  }
+}  // namespace
+
+SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
+                             SceneSearchResult scenes)
+{
+  availableScenes = std::move(scenes);
+
   actors.reserve(participants.size() + 1);
   actors.push_back(central);
   for (auto* participant : participants)
@@ -26,15 +107,16 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
 
   state = InstanceState::CreateInstance;
 
-  if (leadIn)
-    currentScene = leadIn;
-  else
-    currentScene = RandomScene();
+  currentScene = RandomScene();
   currentStage = 0;
 
   logger::info("[SexLab NG] Current scene: '{}'", currentScene ? currentScene->GetName() : "null");
 
-  SetPositions();
+  if (!SetPositions()) {
+    currentScene = nullptr;
+    currentStage = 0;
+    return;
+  }
 
   for (auto* actor : actors) {
     if (!actor)
@@ -98,11 +180,7 @@ bool SceneInstance::Update()
 
     currentStage        = 1;
     lastStageUpdateTime = now - STAGE_LENGTH + SOS_READY;  // Schedule the first stage update
-    if (std::find(availableScenes.begin(), availableScenes.end(), currentScene) ==
-        availableScenes.end())
-      state = InstanceState::LeadIn;
-    else
-      state = InstanceState::ScenePlay;
+    state               = InstanceState::ScenePlay;
     interact.FlashNodeData();
   }
 
@@ -117,19 +195,11 @@ bool SceneInstance::Update()
 
   if (now - lastStageUpdateTime > STAGE_LENGTH) {
     lastStageUpdateTime = now;
-    if (state == InstanceState::LeadIn) {
-      if (SetStage(currentStage))
-        return currentStage++;
-      else {
-        state        = InstanceState::ScenePlay;
-        currentScene = RandomScene();
-        currentStage = 1;
-        for (auto& [actor, info] : actorInfoMap)
-          info.position = nullptr;  // Clear previous position info
-        SetPositions();
-      }
-    }
-    return SetStage(currentStage) ? currentStage++ : false;
+    if (SetStage(currentStage))
+      return currentStage++;
+
+    state = InstanceState::SceneEnd;
+    return false;
   }
 
   return true;
@@ -282,104 +352,70 @@ Define::Scene* SceneInstance::RandomScene()
 
   static std::mt19937 rng(std::random_device{}());
   std::uniform_int_distribution<std::size_t> dist(0, availableScenes.size() - 1);
-  return availableScenes.at(dist(rng));
+  auto it = availableScenes.begin();
+  std::advance(it, static_cast<std::ptrdiff_t>(dist(rng)));
+  return it != availableScenes.end() ? it->first : nullptr;
 }
 
-// ════════════════════════════════════════════════════════════
-// O(N³) 匈牙利算法: 最小代价完美匹配
-// cost[i][j] = 将第 i 行分配给第 j 列的代价 (N×N 方阵)
-// 返回 assignment[i] = j (0-indexed)
-// ════════════════════════════════════════════════════════════
-static std::vector<int> HungarianAssign(const std::vector<std::vector<float>>& cost)
+bool SceneInstance::SetPositions()
 {
-  const int n           = static_cast<int>(cost.size());
-  constexpr float kHInf = 2e9f;
+  if (!currentScene)
+    return false;
 
-  std::vector<float> u(n + 1, 0.f), v(n + 1, 0.f);
-  std::vector<int> p(n + 1, 0), way(n + 1, 0);
+  auto& positions = currentScene->GetPositions();
 
-  for (int i = 1; i <= n; ++i) {
-    p[0]   = i;
-    int j0 = 0;
-    std::vector<float> minv(n + 1, kHInf);
-    std::vector<bool> used(n + 1, false);
-    do {
-      used[j0]     = true;
-      const int i0 = p[j0];
-      float delta  = kHInf;
-      int j1       = -1;
-      for (int j = 1; j <= n; ++j) {
-        if (!used[j]) {
-          const float cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
-          if (cur < minv[j]) {
-            minv[j] = cur;
-            way[j]  = j0;
-          }
-          if (minv[j] < delta) {
-            delta = minv[j];
-            j1    = j;
+  if (auto orderIt = availableScenes.find(currentScene); orderIt != availableScenes.end()) {
+    const std::uint64_t packedOrder = orderIt->second;
+    if (positions.size() <= kPackedActorOrderCapacity) {
+      bool validRecordedOrder = true;
+      std::vector<bool> seen(actors.size(), false);
+      std::vector<PendingAssignment> assignments;
+      assignments.reserve(positions.size());
+
+      for (std::size_t p = 0; p < positions.size(); ++p) {
+        const std::size_t actorIndex = UnpackActorIndex(packedOrder, p);
+        if (actorIndex >= actors.size() || seen[actorIndex] || !actors[actorIndex]) {
+          validRecordedOrder = false;
+          break;
+        }
+        seen[actorIndex] = true;
+
+        RE::Actor* actor = actors[actorIndex];
+        assignments.push_back(
+            PendingAssignment{actorIndex, actor, &positions[p], Define::Race::GetRace(actor),
+                              Define::Gender::GetGender(actor), Scale::CalculateScale(actor)});
+      }
+
+      if (validRecordedOrder) {
+        ShuffleEquivalentAssignments(assignments);
+
+        for (auto& assignment : assignments) {
+          assignment.actor = actors[assignment.actorIndex];
+          if (!assignment.actor) {
+            validRecordedOrder = false;
+            break;
           }
         }
-      }
-      for (int j = 0; j <= n; ++j) {
-        if (used[j]) {
-          u[p[j]] += delta;
-          v[j] -= delta;
-        } else {
-          minv[j] -= delta;
+
+        if (!validRecordedOrder)
+          return false;
+
+        for (const auto& assignment : assignments) {
+          auto* actor                = assignment.actor;
+          Define::Position* position = assignment.position;
+          if (auto it = actorInfoMap.find(actor); it != actorInfoMap.end())
+            it->second.position = position;
+          else
+            actorInfoMap.emplace(actor, SceneActorInfo(position));
         }
+        return true;
       }
-      j0 = j1;
-    } while (p[j0] != 0);
-    do {
-      const int j1 = way[j0];
-      p[j0]        = p[j1];
-      j0           = j1;
-    } while (j0 != 0);
-  }
-
-  std::vector<int> assignment(n, -1);
-  for (int j = 1; j <= n; ++j)
-    if (p[j] != 0)
-      assignment[p[j] - 1] = j - 1;
-  return assignment;
-}
-
-void SceneInstance::SetPositions()
-{
-  auto& positions      = currentScene->GetPositions();
-  const int n          = static_cast<int>(actors.size());
-  constexpr float kInf = 1e9f;
-
-  // 构建代价矩阵: race/gender 不匹配 → kInf, 否则 |scaleDiff|
-  std::vector<std::vector<float>> cost(n, std::vector<float>(n, kInf));
-  for (int a = 0; a < n; ++a) {
-    auto* actor = actors[a];
-    if (!actor)
-      continue;
-    const auto race   = Define::Race::GetRace(actor);
-    const auto gender = Define::Gender::GetGender(actor);
-    const float scale = Scale::CalculateScale(actor);
-    for (int p = 0; p < n; ++p) {
-      if (positions[p].GetRace() == race && positions[p].GetGender() == gender)
-        cost[a][p] = std::abs(scale - positions[p].GetScale());
     }
   }
 
-  const auto assignment = HungarianAssign(cost);
-
-  for (int a = 0; a < n; ++a) {
-    const int pa = assignment[a];
-    if (pa < 0 || cost[a][pa] >= kInf * 0.5f)
-      continue;
-    auto* actor = actors[a];
-    if (!actor)
-      continue;
-    if (auto it = actorInfoMap.find(actor); it != actorInfoMap.end())
-      it->second.position = &positions[pa];
-    else
-      actorInfoMap.emplace(actor, SceneActorInfo(&positions[pa]));
-  }
+  logger::warn("[SexLab NG] SetPositions: missing or invalid packed order for scene '{}'",
+               currentScene ? currentScene->GetName() : "null");
+  return false;
 }
 
 bool SceneInstance::SetStage(std::uint32_t stage)

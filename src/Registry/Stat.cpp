@@ -419,12 +419,12 @@ void ActorStat::Update(float deltaGameHours)
     // arouse 自然增长: +0.5 / game hour，上限 100
     stat.arouse = min(100.f, stat.arouse + 0.5f * deltaGameHours);
 
-    // enjoy 向 0 衰减: 每小时衰减 30%，但不越过 0
-    const float current = stat.enjoy.GetValue();
-    if (current > 0.f)
-      stat.enjoy.SetValue(max(0.f, current - current * 0.3f * deltaGameHours));
-    else if (current < 0.f)
-      stat.enjoy.SetValue(min(0.f, current - current * 0.3f * deltaGameHours));
+    // enjoy 向 0 衰减: 每小时衰减 60%，绝对值小于 0.1 时直接归零
+    float current = stat.enjoy.GetValue();
+    current       = current - current * 0.6f * deltaGameHours;
+    if (std::abs(current) < 0.1f)
+      current = 0.f;
+    stat.enjoy.SetValue(current);
   };
 
   for (auto& [formID, stat] : actorStats) {
