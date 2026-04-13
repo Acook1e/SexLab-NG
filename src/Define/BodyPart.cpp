@@ -152,9 +152,9 @@ Point3f operator~(const Point& point)
     const auto& baseWorldPos = off.baseNode->world.translate;
     const auto& baseWorldRot = off.baseNode->world.rotate;  // RE::NiMatrix3
 
-    // 2. 将 RE::NiMatrix3 转为 Eigen::Matrix3f（注意内存布局差异）
-    //    NiMatrix3 是列主序 3x3，可直接用 Map
-    Matrix3f worldRotMat = Eigen::Map<const Matrix3f>(&baseWorldRot.entry[0][0]);
+    // 2. NiMatrix3 的 entry 内存布局与 Eigen 默认列主序不一致；这里转置后再使用，
+    //    否则 mouth 这类 offset 点会在世界空间偏移 8-10 个单位。
+    Matrix3f worldRotMat = Eigen::Map<const Matrix3f>(&baseWorldRot.entry[0][0]).transpose();
 
     // 3. 变换局部偏移：先应用局部附加旋转，再应用世界旋转
     Vector3f localOffset{off.localTrans.x(), off.localTrans.y(), off.localTrans.z()};

@@ -28,6 +28,15 @@ namespace
     float max = 180.f;
   };
 
+  enum class AnchorMode : std::uint8_t
+  {
+    None = 0,
+    StartToStart,
+    EndToStart,
+    StartToEnd,
+    EndToEnd,
+  };
+
   struct PairContext
   {
     RE::Actor* actorA;
@@ -161,6 +170,68 @@ namespace
     return std::clamp(distance / maxDistance, 0.f, 2.f);
   }
 
+  float DistancePointToSegment(const Define::Point3f& point, const Define::Point3f& segStart,
+                               const Define::Point3f& segEnd)
+  {
+    const Define::Vector3f segment = segEnd - segStart;
+    const float length             = segment.norm();
+    if (length < 1e-6f)
+      return (point - segStart).norm();
+
+    const Define::Vector3f dir = segment / length;
+    const float t              = std::clamp((point - segStart).dot(dir), 0.f, length);
+    return (point - (segStart + dir * t)).norm();
+  }
+
+  float ProjectionOnSegmentAxis(const Define::Point3f& point, const Define::Point3f& segStart,
+                                const Define::Point3f& segEnd)
+  {
+    const Define::Vector3f segment = segEnd - segStart;
+    const float length             = segment.norm();
+    if (length < 1e-6f)
+      return 0.f;
+
+    return (point - segStart).dot(segment / length);
+  }
+
+  struct OralContactMetrics
+  {
+    Define::Point3f point = Define::Point3f::Zero();
+    float axisDistance    = std::numeric_limits<float>::infinity();
+    float depth           = 0.f;
+  };
+
+  OralContactMetrics MeasureOralContactPoint(const Define::Point3f& point,
+                                             const Define::Point3f& oralEntry,
+                                             const Define::Point3f& oralAxisEnd)
+  {
+    return OralContactMetrics{point, DistancePointToSegment(point, oralEntry, oralAxisEnd),
+                              ProjectionOnSegmentAxis(point, oralEntry, oralAxisEnd)};
+  }
+
+  OralContactMetrics SelectOralContactMetrics(const BP& penisPart, const Define::Point3f& oralEntry,
+                                              const Define::Point3f& oralAxisEnd)
+  {
+    OralContactMetrics best = MeasureOralContactPoint(penisPart.GetEnd(), oralEntry, oralAxisEnd);
+
+    if (penisPart.GetLength() < 1e-6f)
+      return best;
+
+    const float sampleBackDistance = std::clamp(penisPart.GetLength() * 0.30f, 1.2f, 3.5f);
+    const Define::Point3f nearTipPoint =
+        penisPart.GetEnd() - penisPart.GetDirection() * sampleBackDistance;
+    const OralContactMetrics nearTip =
+        MeasureOralContactPoint(nearTipPoint, oralEntry, oralAxisEnd);
+
+    if (nearTip.axisDistance + 0.15f < best.axisDistance ||
+        (std::abs(nearTip.axisDistance - best.axisDistance) <= 0.15f &&
+         nearTip.depth > best.depth)) {
+      best = nearTip;
+    }
+
+    return best;
+  }
+
   float TemporalBonus(const ActorData& data, Name part, RE::Actor* partner, Type type)
   {
     const Info* info = TryGetInfo(data, part);
@@ -173,6 +244,29 @@ namespace
     if (info->prevType == type)
       return 0.03f;
     return 0.f;
+  }
+
+  bool HadPreviousInteraction(const ActorData& data, Name part, RE::Actor* partner, Type type)
+  {
+    const Info* info = TryGetInfo(data, part);
+    return info && info->prevActor == partner && info->prevType == type;
+  }
+
+  bool HasStickyInteractionPair(const DirectedContext& ctx, Name sourcePart, Name targetPart,
+                                Type type)
+  {
+    return HadPreviousInteraction(ctx.sourceData, sourcePart, ctx.targetActor, type) ||
+           HadPreviousInteraction(ctx.targetData, targetPart, ctx.sourceActor, type);
+  }
+
+  float MinDistanceToOralRegion(const ActorData& data, const BP& part)
+  {
+    float result = std::numeric_limits<float>::infinity();
+    if (const BP* mouthPart = TryGetBodyPart(data, Name::Mouth))
+      result = (std::min)(result, part.Distance(*mouthPart));
+    if (const BP* throatPart = TryGetBodyPart(data, Name::Throat))
+      result = (std::min)(result, part.Distance(*throatPart));
+    return result;
   }
 
   float ProjectionOnAxis(const Define::Point3f& point, const BP& axisPart)
@@ -191,6 +285,28 @@ namespace
                                     axisPart.GetLength());
     const auto closest = axisPart.GetStart() + axisPart.GetDirection() * t;
     return (point - closest).norm();
+  }
+
+  Define::Point3f SelectAnchorPoint(const BP& part, bool useEnd)
+  {
+    return useEnd ? part.GetEnd() : part.GetStart();
+  }
+
+  float AnchorDistance(const BP& sourcePart, const BP& targetPart, AnchorMode mode)
+  {
+    switch (mode) {
+    case AnchorMode::StartToStart:
+      return (SelectAnchorPoint(sourcePart, false) - SelectAnchorPoint(targetPart, false)).norm();
+    case AnchorMode::EndToStart:
+      return (SelectAnchorPoint(sourcePart, true) - SelectAnchorPoint(targetPart, false)).norm();
+    case AnchorMode::StartToEnd:
+      return (SelectAnchorPoint(sourcePart, false) - SelectAnchorPoint(targetPart, true)).norm();
+    case AnchorMode::EndToEnd:
+      return (SelectAnchorPoint(sourcePart, true) - SelectAnchorPoint(targetPart, true)).norm();
+    case AnchorMode::None:
+    default:
+      return 0.f;
+    }
   }
 
   float CalculatePenetrationContextBias(const ActorData& receiverData, const BP& penisPart,
@@ -216,23 +332,78 @@ namespace
     // 避免 pelvis 中心附近的模糊姿态长期被 anal 抢占。
     constexpr float kVaginalTieBreakBias = 0.10f;
 
+    // 入口点与 penis root 的相对距离，用来区分前后两个 entry 很近的姿态。
+    constexpr float kEntryScale               = 5.2f;
+    constexpr float kEntryMaxBias             = 0.24f;
+    constexpr float kVaginalEntryTieBreakBias = 0.06f;
+    constexpr float kTotalMaxBias             = 0.52f;
+
+    const BP* vaginaPart = TryGetBodyPart(receiverData, Name::Vagina);
+    const BP* anusPart   = TryGetBodyPart(receiverData, Name::Anus);
+
     const float vagSupport =
         thighCleft ? thighCleft->Distance(penisPart) : std::numeric_limits<float>::infinity();
     const float analSupport =
         glutealPart ? glutealPart->Distance(penisPart) : std::numeric_limits<float>::infinity();
+    const float vagEntryDistance =
+        vaginaPart ? AnchorDistance(penisPart, *vaginaPart, AnchorMode::StartToStart)
+                   : std::numeric_limits<float>::infinity();
+    const float analEntryDistance =
+        anusPart ? AnchorDistance(penisPart, *anusPart, AnchorMode::StartToStart)
+                 : std::numeric_limits<float>::infinity();
+
+    float bias = 0.f;
 
     if (std::isfinite(vagSupport) && std::isfinite(analSupport)) {
       const float delta =
           std::clamp((vagSupport - analSupport) / kSupportScale, -kMaxBias, kMaxBias);
       const float tieBreak = vagSupport <= analSupport + 1.0f ? kVaginalTieBreakBias : 0.f;
-      return type == Type::Vaginal ? delta - tieBreak : -delta + tieBreak;
+      bias += type == Type::Vaginal ? delta - tieBreak : -delta + tieBreak;
+    } else if (type == Type::Vaginal && std::isfinite(vagSupport)) {
+      bias += -std::clamp(1.f - vagSupport / kSupportScale, 0.f, kMaxBias) - 0.05f;
+    } else if (type == Type::Anal && std::isfinite(analSupport)) {
+      bias += -std::clamp(1.f - analSupport / kSupportScale, 0.f, kMaxBias);
     }
 
-    if (type == Type::Vaginal && std::isfinite(vagSupport))
-      return -std::clamp(1.f - vagSupport / kSupportScale, 0.f, kMaxBias) - 0.05f;
-    if (type == Type::Anal && std::isfinite(analSupport))
-      return -std::clamp(1.f - analSupport / kSupportScale, 0.f, kMaxBias);
-    return 0.f;
+    if (std::isfinite(vagEntryDistance) && std::isfinite(analEntryDistance)) {
+      const float delta = std::clamp((vagEntryDistance - analEntryDistance) / kEntryScale,
+                                     -kEntryMaxBias, kEntryMaxBias);
+      const float tieBreak =
+          vagEntryDistance <= analEntryDistance + 0.75f ? kVaginalEntryTieBreakBias : 0.f;
+      bias += type == Type::Vaginal ? delta - tieBreak : -delta + tieBreak;
+    } else if (type == Type::Vaginal && std::isfinite(vagEntryDistance)) {
+      bias += -std::clamp(1.f - vagEntryDistance / kEntryScale, 0.f, kEntryMaxBias) - 0.03f;
+    } else if (type == Type::Anal && std::isfinite(analEntryDistance)) {
+      bias += -std::clamp(1.f - analEntryDistance / kEntryScale, 0.f, kEntryMaxBias);
+    }
+
+    return std::clamp(bias, -kTotalMaxBias, kTotalMaxBias);
+  }
+
+  bool ShouldRelaxVaginalGate(const ActorData& receiverData, const BP& penisPart,
+                              float rootEntryDistance, float partDistance, bool stickyPair)
+  {
+    const BP* thighCleft  = TryGetBodyPart(receiverData, Name::ThighCleft);
+    const BP* glutealPart = TryGetBodyPart(receiverData, Name::GlutealCleft);
+    const float vagSupport =
+        thighCleft ? thighCleft->Distance(penisPart) : std::numeric_limits<float>::infinity();
+    const float analSupport =
+        glutealPart ? glutealPart->Distance(penisPart) : std::numeric_limits<float>::infinity();
+
+    if (!std::isfinite(vagSupport))
+      return false;
+    if (rootEntryDistance <= 3.6f)
+      return !std::isfinite(analSupport) || vagSupport <= analSupport + 1.25f;
+
+    const bool frontContext = !std::isfinite(analSupport) || vagSupport <= analSupport + 1.25f;
+    const bool strongFrontContext =
+        !std::isfinite(analSupport) || vagSupport + 0.75f <= analSupport;
+
+    if (stickyPair && rootEntryDistance <= 8.2f && partDistance <= 9.6f && frontContext)
+      return true;
+    if (rootEntryDistance <= 6.8f && partDistance <= 8.8f && strongFrontContext)
+      return true;
+    return false;
   }
 
   void AddCandidate(std::vector<Candidate>& out, const DirectedContext& ctx, Name sourcePart,
@@ -247,7 +418,9 @@ namespace
                                    const std::array<Name, NS>& sourceParts,
                                    const std::array<Name, NT>& targetParts, Type type,
                                    CandidateFamily family, float maxDistance, AngleRange angleRange,
-                                   float angleWeight, float scoreOffset = 0.f)
+                                   float angleWeight, float scoreOffset = 0.f,
+                                   AnchorMode anchorMode = AnchorMode::None,
+                                   float anchorWeight = 0.f, float anchorMaxDistance = 0.f)
   {
     for (Name sourceName : sourceParts) {
       const BP* sourcePart = TryGetBodyPart(ctx.sourceData, sourceName);
@@ -275,6 +448,13 @@ namespace
         if (!IsAngleUnconstrained(angleRange)) {
           const float angleNorm = AngleDeviation(angle, angleRange);
           score                 = distNorm * (1.f - angleWeight) + angleNorm * angleWeight;
+        }
+
+        if (anchorMode != AnchorMode::None && anchorWeight > 1e-4f) {
+          const float auxMaxDistance = anchorMaxDistance > 1e-4f ? anchorMaxDistance : maxDistance;
+          const float anchorDistance = AnchorDistance(*sourcePart, *targetPart, anchorMode);
+          const float anchorNorm     = NormalizeDistance(anchorDistance, auxMaxDistance);
+          score                      = score * (1.f - anchorWeight) + anchorNorm * anchorWeight;
         }
 
         const float bonus = TemporalBonus(ctx.sourceData, sourceName, ctx.targetActor, type) +
@@ -352,6 +532,131 @@ namespace
                  distance, score);
   }
 
+  void TryAddFellatioCandidate(std::vector<Candidate>& out, const DirectedContext& ctx)
+  {
+    const BP* mouthPart  = TryGetBodyPart(ctx.sourceData, Name::Mouth);
+    const BP* penisPart  = TryGetBodyPart(ctx.targetData, Name::Penis);
+    const BP* throatPart = TryGetBodyPart(ctx.sourceData, Name::Throat);
+    if (!mouthPart || !penisPart)
+      return;
+
+    constexpr float kMaxDistance       = 9.4f;
+    constexpr float kStickyMaxDistance = 10.4f;
+    constexpr float kMaxAngle          = 70.f;
+    constexpr float kStickyMaxAngle    = 78.f;
+    constexpr float kMaxTipAxis        = 6.6f;
+    constexpr float kStickyMaxTipAxis  = 7.8f;
+    constexpr float kMinDepth          = -2.5f;
+    constexpr float kStickyMinDepth    = -3.6f;
+    constexpr float kMaxDepth          = 10.5f;
+    constexpr float kStickyMaxDepth    = 12.4f;
+
+    const Define::Point3f oralEntry   = mouthPart->GetStart();
+    const Define::Point3f oralAxisEnd = throatPart ? throatPart->GetEnd() : mouthPart->GetEnd();
+    if ((oralAxisEnd - oralEntry).norm() < 1e-6f)
+      return;
+
+    const bool stickyPair = HasStickyInteractionPair(ctx, Name::Mouth, Name::Penis, Type::Fellatio);
+    const float effectiveMaxDistance = stickyPair ? kStickyMaxDistance : kMaxDistance;
+    const float effectiveMaxAngle    = stickyPair ? kStickyMaxAngle : kMaxAngle;
+    const float effectiveMaxTipAxis  = stickyPair ? kStickyMaxTipAxis : kMaxTipAxis;
+    const float effectiveMinDepth    = stickyPair ? kStickyMinDepth : kMinDepth;
+    const float effectiveMaxDepth    = stickyPair ? kStickyMaxDepth : kMaxDepth;
+
+    const OralContactMetrics oralContact =
+        SelectOralContactMetrics(*penisPart, oralEntry, oralAxisEnd);
+    const float mouthDistance = mouthPart->Distance(*penisPart);
+    const float entryDistance = (oralContact.point - oralEntry).norm();
+    const float distance      = (std::min)(mouthDistance, entryDistance);
+    if (distance > effectiveMaxDistance)
+      return;
+
+    const float angle = mouthPart->Angle(*penisPart);
+    if (angle > effectiveMaxAngle)
+      return;
+
+    const float tipAxisDistance = oralContact.axisDistance;
+    if (tipAxisDistance > effectiveMaxTipAxis)
+      return;
+
+    const float depth = oralContact.depth;
+    if (depth < effectiveMinDepth || depth > effectiveMaxDepth)
+      return;
+
+    const float distNorm  = NormalizeDistance(distance, effectiveMaxDistance);
+    const float axisNorm  = NormalizeDistance(tipAxisDistance, effectiveMaxTipAxis);
+    const float angleNorm = AngleDeviation(angle, {0.f, effectiveMaxAngle});
+
+    float depthPenalty         = 0.f;
+    const float oralAxisLength = (oralAxisEnd - oralEntry).norm();
+    if (depth < 0.f)
+      depthPenalty = std::abs(depth) / (std::max)(std::abs(effectiveMinDepth), 1e-4f);
+    else if (depth > oralAxisLength)
+      depthPenalty =
+          (depth - oralAxisLength) / (std::max)(effectiveMaxDepth - oralAxisLength, 1e-4f);
+
+    const float bonus =
+        TemporalBonus(ctx.sourceData, Name::Mouth, ctx.targetActor, Type::Fellatio) +
+        TemporalBonus(ctx.targetData, Name::Penis, ctx.sourceActor, Type::Fellatio);
+    const float score = (std::max)(0.f, distNorm * 0.34f + axisNorm * 0.34f + angleNorm * 0.18f +
+                                            std::clamp(depthPenalty, 0.f, 1.f) * 0.14f - bonus -
+                                            (stickyPair ? 0.16f : 0.12f));
+
+    AddCandidate(out, ctx, Name::Mouth, Name::Penis, Type::Fellatio, CandidateFamily::Oral,
+                 distance, score);
+  }
+
+  void TryAddHandjobCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
+  {
+    const BP* penisPart = TryGetBodyPart(ctx.targetData, Name::Penis);
+    if (!penisPart)
+      return;
+
+    constexpr float kMaxDistance = 8.f;
+    constexpr AngleRange kAngleRange{50.f, 130.f};
+    constexpr float kAngleWeight             = 0.20f;
+    constexpr float kSelfFaceGuardDistance   = 6.6f;
+    constexpr float kOralInterferencePenalty = 0.45f;
+    constexpr float kPartnerOralDistance     = 8.6f;
+
+    for (Name handName : kHandParts) {
+      const BP* handPart = TryGetBodyPart(ctx.sourceData, handName);
+      if (!handPart)
+        continue;
+
+      const float distance = handPart->Distance(*penisPart);
+      if (distance > kMaxDistance)
+        continue;
+
+      const float angle = handPart->Angle(*penisPart);
+      if (!CheckAngle(angle, kAngleRange))
+        continue;
+
+      const float handToOral  = MinDistanceToOralRegion(ctx.sourceData, *handPart);
+      const float penisToOral = MinDistanceToOralRegion(ctx.sourceData, *penisPart);
+      if (ctx.self && std::isfinite(handToOral) && handToOral < kSelfFaceGuardDistance)
+        continue;
+
+      const bool oralInterference =
+          !ctx.self && std::isfinite(handToOral) && handToOral < kSelfFaceGuardDistance &&
+          std::isfinite(penisToOral) && penisToOral < kPartnerOralDistance;
+
+      const float distNorm  = NormalizeDistance(distance, kMaxDistance);
+      const float angleNorm = AngleDeviation(angle, kAngleRange);
+      float score           = distNorm * (1.f - kAngleWeight) + angleNorm * kAngleWeight;
+      if (oralInterference)
+        score += kOralInterferencePenalty;
+
+      const float bonus =
+          TemporalBonus(ctx.sourceData, handName, ctx.targetActor, Type::Handjob) +
+          TemporalBonus(ctx.targetData, Name::Penis, ctx.sourceActor, Type::Handjob);
+      score = (std::max)(0.f, score - bonus);
+
+      AddCandidate(out, ctx, handName, Name::Penis, Type::Handjob, CandidateFamily::Manual,
+                   distance, score);
+    }
+  }
+
   void TryAddPenetrationCandidate(std::vector<Candidate>& out, const DirectedContext& ctx,
                                   Name receiverPartName, Type type, float maxDistance,
                                   float maxAngle, float maxTipAxis, float minDepth, float maxDepth)
@@ -362,39 +667,54 @@ namespace
       return;
 
     const float distance = receiverPart->Distance(*penisPart);
-    if (distance > maxDistance)
+    const float rootEntryDistance =
+        AnchorDistance(*penisPart, *receiverPart, AnchorMode::StartToStart);
+    const bool stickyPair = HasStickyInteractionPair(ctx, Name::Penis, receiverPartName, type);
+    const bool relaxVaginalGate =
+        type == Type::Vaginal &&
+        ShouldRelaxVaginalGate(ctx.targetData, *penisPart, rootEntryDistance, distance, stickyPair);
+    const float effectiveMaxDistance =
+        relaxVaginalGate ? (std::max)(maxDistance, stickyPair ? 9.6f : 8.8f) : maxDistance;
+    const float effectiveMaxAngle =
+        relaxVaginalGate ? (std::max)(maxAngle, stickyPair ? 68.f : 64.f) : maxAngle;
+    const float effectiveMaxTipAxis = relaxVaginalGate ? (std::max)(maxTipAxis, 10.f) : maxTipAxis;
+    const float effectiveMinDepth   = relaxVaginalGate ? (std::min)(minDepth, -5.5f) : minDepth;
+    const float effectiveMaxDepth   = relaxVaginalGate ? (std::max)(maxDepth, 14.f) : maxDepth;
+
+    if (distance > effectiveMaxDistance)
       return;
 
     const float angle = receiverPart->Angle(*penisPart);
-    if (angle > maxAngle)
+    if (angle > effectiveMaxAngle)
       return;
 
     const float tipAxisDistance = DistanceToAxisSegment(penisPart->GetEnd(), *receiverPart);
-    if (tipAxisDistance > maxTipAxis)
+    if (tipAxisDistance > effectiveMaxTipAxis)
       return;
 
     const float depth = ProjectionOnAxis(penisPart->GetEnd(), *receiverPart);
-    if (depth < minDepth || depth > maxDepth)
+    if (depth < effectiveMinDepth || depth > effectiveMaxDepth)
       return;
 
-    const float distNorm  = NormalizeDistance(distance, maxDistance);
-    const float angleNorm = AngleDeviation(angle, {0.f, maxAngle});
-    const float axisNorm  = NormalizeDistance(tipAxisDistance, maxTipAxis);
+    const float distNorm  = NormalizeDistance(distance, effectiveMaxDistance);
+    const float angleNorm = AngleDeviation(angle, {0.f, effectiveMaxAngle});
+    const float axisNorm  = NormalizeDistance(tipAxisDistance, effectiveMaxTipAxis);
 
     float depthPenalty = 0.f;
     if (depth < 0.f)
-      depthPenalty = std::abs(depth) / (std::max)(std::abs(minDepth), 1e-4f);
+      depthPenalty = std::abs(depth) / (std::max)(std::abs(effectiveMinDepth), 1e-4f);
     else if (depth > receiverPart->GetLength())
       depthPenalty = (depth - receiverPart->GetLength()) /
-                     (std::max)(maxDepth - receiverPart->GetLength(), 1e-4f);
+                     (std::max)(effectiveMaxDepth - receiverPart->GetLength(), 1e-4f);
 
     const float contextBias = CalculatePenetrationContextBias(ctx.targetData, *penisPart, type);
     const float bonus = TemporalBonus(ctx.sourceData, Name::Penis, ctx.targetActor, type) +
                         TemporalBonus(ctx.targetData, receiverPartName, ctx.sourceActor, type);
+    constexpr float kPenetrationPriorityBias = 0.10f;
 
-    const float score =
-        (std::max)(0.f, distNorm * 0.42f + angleNorm * 0.22f + axisNorm * 0.22f +
-                            std::clamp(depthPenalty, 0.f, 1.f) * 0.14f + contextBias - bonus);
+    const float score = (std::max)(0.f, distNorm * 0.42f + angleNorm * 0.22f + axisNorm * 0.22f +
+                                            std::clamp(depthPenalty, 0.f, 1.f) * 0.14f +
+                                            contextBias - bonus - kPenetrationPriorityBias);
 
     AddCandidate(out, ctx, Name::Penis, receiverPartName, type, CandidateFamily::Penetration,
                  distance, score);
@@ -412,13 +732,15 @@ namespace
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kFootParts, Type::ToeSucking,
                                 CandidateFamily::Oral, 8.f, {0.f, 180.f}, 0.f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kThighCleftParts, Type::Cunnilingus,
-                                CandidateFamily::Oral, 7.f, {0.f, 180.f}, 0.f, -0.05f);
+                                CandidateFamily::Oral, 7.2f, {0.f, 180.f}, 0.f, -0.05f,
+                                AnchorMode::StartToStart, 0.18f, 7.2f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kVaginaParts, Type::Cunnilingus,
-                                CandidateFamily::Oral, 7.5f, {0.f, 180.f}, 0.f, 0.01f);
+                                CandidateFamily::Oral, 7.7f, {0.f, 180.f}, 0.f, 0.01f,
+                                AnchorMode::StartToStart, 0.22f, 7.4f);
     AddSimpleDirectedCandidates(out, ctx, kMouthParts, kAnusParts, Type::Anilingus,
-                                CandidateFamily::Oral, 6.8f, {0.f, 180.f}, 0.f);
-    AddSimpleDirectedCandidates(out, ctx, kMouthParts, kPenisParts, Type::Fellatio,
-                                CandidateFamily::Oral, 8.2f, {0.f, 42.f}, 0.38f);
+                                CandidateFamily::Oral, 7.1f, {0.f, 180.f}, 0.f, 0.f,
+                                AnchorMode::StartToStart, 0.20f, 6.8f);
+    TryAddFellatioCandidate(out, ctx);
     AddSimpleDirectedCandidates(out, ctx, kThroatParts, kPenisParts, Type::DeepThroat,
                                 CandidateFamily::Oral, 7.f, {0.f, 34.f}, 0.42f, -0.02f);
   }
@@ -429,22 +751,28 @@ namespace
       return;
 
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kBreastParts, Type::GropeBreast,
-                                CandidateFamily::Manual, 5.8f, {140.f, 180.f}, 0.24f);
+                                CandidateFamily::Manual, 6.8f, {140.f, 180.f}, 0.24f, 0.f,
+                                AnchorMode::StartToStart, 0.16f, 6.2f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kThighParts, Type::GropeThigh,
-                                CandidateFamily::Manual, 6.2f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Manual, 7.1f, {0.f, 180.f}, 0.f, 0.f,
+                                AnchorMode::StartToStart, 0.14f, 6.4f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kButtParts, Type::GropeButt,
-                                CandidateFamily::Manual, 5.2f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Manual, 6.0f, {0.f, 180.f}, 0.f, 0.f,
+                                AnchorMode::StartToStart, 0.16f, 5.5f);
     AddSimpleDirectedCandidates(out, ctx, kHandParts, kFootParts, Type::GropeFoot,
-                                CandidateFamily::Manual, 6.2f, {0.f, 180.f}, 0.f);
+                                CandidateFamily::Manual, 7.0f, {0.f, 180.f}, 0.f, 0.f,
+                                AnchorMode::StartToStart, 0.12f, 6.4f);
 
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kThighCleftParts, Type::FingerVagina,
-                                CandidateFamily::Manual, 5.2f, {0.f, 180.f}, 0.f, -0.04f);
+                                CandidateFamily::Manual, 5.9f, {0.f, 180.f}, 0.f, -0.04f,
+                                AnchorMode::StartToStart, 0.18f, 5.6f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kVaginaParts, Type::FingerVagina,
-                                CandidateFamily::Manual, 6.2f, {0.f, 180.f}, 0.f, 0.01f);
+                                CandidateFamily::Manual, 6.8f, {0.f, 180.f}, 0.f, 0.01f,
+                                AnchorMode::StartToStart, 0.22f, 6.2f);
     AddSimpleDirectedCandidates(out, ctx, kFingerParts, kAnusParts, Type::FingerAnus,
-                                CandidateFamily::Manual, 5.8f, {0.f, 180.f}, 0.f);
-    AddSimpleDirectedCandidates(out, ctx, kHandParts, kPenisParts, Type::Handjob,
-                                CandidateFamily::Manual, 8.f, {50.f, 130.f}, 0.20f);
+                                CandidateFamily::Manual, 6.3f, {0.f, 180.f}, 0.f, 0.f,
+                                AnchorMode::StartToStart, 0.20f, 5.8f);
+    TryAddHandjobCandidates(out, ctx);
   }
 
   void GenerateContactDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
@@ -458,7 +786,7 @@ namespace
                                 CandidateFamily::Contact, 8.f, {70.f, 110.f}, 0.40f, -0.03f);
     TryAddNaveljobCandidate(out, ctx);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighCleftParts, Type::Thighjob,
-                                CandidateFamily::Contact, 6.5f, {0.f, 32.f}, 0.24f, -0.05f);
+                                CandidateFamily::Contact, 6.5f, {0.f, 32.f}, 0.24f, 0.02f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kThighParts, Type::Thighjob,
                                 CandidateFamily::Contact, 5.4f, {0.f, 32.f}, 0.22f, 0.01f);
     AddSimpleDirectedCandidates(out, ctx, kPenisParts, kGlutealCleftParts, Type::Frottage,
