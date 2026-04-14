@@ -3,6 +3,7 @@
 #include "Define/BodyPart.h"
 #include "Define/Gender.h"
 #include "Define/Race.h"
+#include "Define/Tag.h"
 
 namespace Instance
 {
@@ -74,12 +75,39 @@ public:
     float velocity       = 0.f;  // 靠近速度（units/ms，负=靠近）
   };
 
+  struct MotionSnapshot
+  {
+    Define::Point3f start      = Define::Point3f::Zero();
+    Define::Point3f end        = Define::Point3f::Zero();
+    Define::Vector3f direction = Define::Vector3f::Zero();
+    float length               = 0.f;
+    float timeMs               = 0.f;
+    bool valid                 = false;
+    bool directional           = false;
+  };
+
+  struct MotionHistory
+  {
+    MotionSnapshot current{};
+    MotionSnapshot previous{};
+    MotionSnapshot older{};
+  };
+
   struct ActorData
   {
     std::unordered_map<Define::BodyPart::Name, Interact::Info> infos{};
+    std::unordered_map<Define::BodyPart::Name, Interact::MotionHistory> motion{};
     Define::Race race     = Define::Race::Type::Unknown;
     Define::Gender gender = Define::Gender::Type::Unknown;
     float lastUpdateMs    = 0.f;
+  };
+
+  struct GenitalSlotMemory
+  {
+    RE::Actor* vaginalPartner      = nullptr;
+    RE::Actor* analPartner         = nullptr;
+    std::uint8_t vaginalContinuity = 0;
+    std::uint8_t analContinuity    = 0;
   };
 
   Interact() = default;
@@ -91,9 +119,12 @@ public:
   // ── 查询 ────────────────────────────────────────────────────────────────
   [[nodiscard]] const ActorData& GetData(RE::Actor* actor) const { return datas.at(actor); }
   [[nodiscard]] const Info& GetInfo(RE::Actor* actor, Define::BodyPart::Name part) const;
+  [[nodiscard]] const Define::InteractTags& GetObservedInteractTags(RE::Actor* actor) const;
 
 private:
   std::unordered_map<RE::Actor*, ActorData> datas{};
+  std::unordered_map<RE::Actor*, GenitalSlotMemory> genitalSlotMemory{};
+  std::unordered_map<RE::Actor*, Define::InteractTags> observedInteractTags{};
 };
 
 }  // namespace Instance

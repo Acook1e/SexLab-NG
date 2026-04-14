@@ -2,173 +2,259 @@
 
 #include "magic_enum/magic_enum.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <initializer_list>
+#include <unordered_map>
+
 namespace Define
 {
-static std::unordered_map<Race::Type, std::array<PointName, 2>> mouthMap{
-    // from central mouth to central head, which is slightly above mouth
-    {Define::Race::Type::Human,
-     {OffsetNodeName{"NPC Head [Head]", {0.054f, 0.067f, 0.608f}, {-0.061f, 5.487f, -2.266f}},
-      "NPC Head [Head]"}},
-};
-
-static std::unordered_map<Race::Type, std::array<PointName, 2>> handLeftMap{
-    {Define::Race::Type::Human,
-     {CentralNodeName{"NPC L Hand [LHnd]", "NPC L Finger01 [LF01]", "NPC L Finger40 [LF40]"},
-      "SHIELD"}},
-};
-static std::unordered_map<Race::Type, std::array<PointName, 2>> handRightMap{
-    {Define::Race::Type::Human,
-     {CentralNodeName{"NPC R Hand [RHnd]", "NPC R Finger01 [RF01]", "NPC R Finger40 [RF40]"},
-      "WEAPON"}},
-};
-
-static std::unordered_map<Race::Type, std::array<PointName, 2>> footLeftMap{
-    {Define::Race::Type::Human, {"NPC L Foot [Lft ]", "NPC L Toe0 [LToe]"}},
-};
-static std::unordered_map<Race::Type, std::array<PointName, 2>> footRightMap{
-    {Define::Race::Type::Human, {"NPC R Foot [Rft ]", "NPC R Toe0 [RToe]"}},
-};
-
-// Per-race schlong bone names: [root, mid, tip]
-// Used for Name::Penis construction
-static std::unordered_map<Race::Type, std::array<PointName, 3>> schlongMap{
-    {Define::Race::Type::Human,
-     {"NPC Genitals01 [Gen01]", "NPC Genitals04 [Gen04]", "NPC Genitals06 [Gen06]"}},
-    {Define::Race::Type::Bear, {"BearD 5", "BearD 7", "BearD 9"}},
-    {Define::Race::Type::Boar, {"BoarDick04", "BoarDick05", "BoarDick06"}},
-    {Define::Race::Type::BoarMounted, {"BoarDick04", "BoarDick05", "BoarDick06"}},
-    {Define::Race::Type::Chaurus, {"CO 4", "CO 7", "CO 9"}},
-    {Define::Race::Type::ChaurusHunter, {"CO 3", "CO 5", "CO 8"}},
-    {Define::Race::Type::ChaurusReaper, {"CO 4", "CO 7", "CO 9"}},
-    {Define::Race::Type::Deer, {"ElkD03", "ElkD05", "ElkD06"}},
-    {Define::Race::Type::Dog, {"CDPenis 3", "CDPenis 5", "CDPenis 7"}},
-    {Define::Race::Type::DragonPriest, {"DD 2", "DD 4", "DD 6"}},
-    {Define::Race::Type::Draugr, {"DD 2", "DD 4", "DD 6"}},
-    {Define::Race::Type::DwarvenCenturion,
-     {"DwarvenBattery01", "DwarvenBattery02", "DwarvenInjectorLid"}},
-    {Define::Race::Type::DwarvenSpider, {"Dildo01", "Dildo02", "Dildo03"}},
-    {Define::Race::Type::Falmer, {"FD 3", "FD 5", "FD 7"}},
-    {Define::Race::Type::Fox, {"CDPenis 3", "CDPenis 5", "CDPenis 7"}},
-    {Define::Race::Type::FrostAtronach, {"NPC IceGenital03", "NPC IcePenis01", "NPC IcePenis02"}},
-    {Define::Race::Type::Gargoyle, {"GD 3", "GD 5", "GD 7"}},
-    {Define::Race::Type::Giant, {"GS 3", "GS 5", "GS 7"}},
-    {Define::Race::Type::GiantSpider, {"CO 5", "CO 7", "CO tip"}},
-    {Define::Race::Type::Horse, {"HS 5", "HS 6", "HorsePenisFlareTop2"}},
-    {Define::Race::Type::LargeSpider, {"CO 5", "CO 7", "CO tip"}},
-    {Define::Race::Type::Lurker, {"GS 3", "GS 5", "GS 7"}},
-    {Define::Race::Type::Riekling, {"RD 2", "RD 4", "RD 5"}},
-    {Define::Race::Type::Sabrecat, {"SCD 3", "SCD 5", "SCD 7"}},
-    {Define::Race::Type::Skeever, {"SkeeverD 03", "SkeeverD 05", "SkeeverD 07"}},
-    {Define::Race::Type::Spider, {"CO 5", "CO 7", "CO tip"}},
-    {Define::Race::Type::StormAtronach, {"", "Torso Rock 2", ""}},
-    {Define::Race::Type::Troll, {"TD 3", "TD 5", "TD 7"}},
-    {Define::Race::Type::VampireLord, {"VLDick03", "VLDick05", "VLDick06"}},
-    {Define::Race::Type::Werebear, {"WWD 5", "WWD 7", "WWD 9"}},
-    {Define::Race::Type::Werewolf, {"WWD 5", "WWD 7", "WWD 9"}},
-    {Define::Race::Type::Wolf, {"CDPenis 3", "CDPenis 5", "CDPenis 7"}},
-};
-
-static std::unordered_map<BodyPart::Name, std::vector<PointName>> humanMap{
-    // from mid into head to neck
-    {BodyPart::Name::Throat, {"NPC Head [Head]", "NPC Neck [Neck]"}},
-    // from base breast to nipple
-    {BodyPart::Name::BreastLeft, {"L Breast02", "L Breast03"}},
-    {BodyPart::Name::BreastRight, {"R Breast02", "R Breast03"}},
-    // normal vector of cleavage plane, facing outward
-    {BodyPart::Name::Cleavage,
-     {MidNodeName{"L Breast02", "R Breast02"}, MidNodeName{"L Breast03", "R Breast03"}}},
-    // use point describes mid finger's tip, better than vector at finger's case
-    {BodyPart::Name::FingerLeft, {"NPC L Finger22 [LF22]"}},
-    {BodyPart::Name::FingerRight, {"NPC R Finger22 [RF22]"}},
-    // from Spine1 to Belly — direction = body-forward normal (3D, follows actor lean)
-    {BodyPart::Name::Belly, {"NPC Spine1 [Spn1]", "NPC Belly"}},
-    // from mid of back thigh to mid of front thigh
-    // not a pricise description of thigh, but can show how close with other part
-    {BodyPart::Name::ThighLeft, {"NPC L RearThigh", "NPC L FrontThigh"}},
-    {BodyPart::Name::ThighRight, {"NPC R RearThigh", "NPC R FrontThigh"}},
-    // form vagina entry to mid of clitoral
-    {BodyPart::Name::ThighCleft, {"VaginaB1", "Clitoral1"}},
-    // single node for butt
-    {BodyPart::Name::ButtLeft, {"NPC L Butt"}},
-    {BodyPart::Name::ButtRight, {"NPC R Butt"}},
-    // form Pelvis to mid of butt as normal vector
-    {BodyPart::Name::GlutealCleft, {"NPC Pelvis [Pelv]", MidNodeName{"NPC L Butt", "NPC R Butt"}}},
-    // entry midpoint -> deep
-    // direction assumption
-    // use clitoral instead entry get more score
-    {BodyPart::Name::Vagina,
-     {// MidNodeName{"NPC L Pussy02", "NPC R Pussy02"},
-      {"Clitoral1"},
-      "VaginaDeep1"}},
-    // from entry to deep
-    {BodyPart::Name::Anus, {"NPC LT Anus2", "NPC Anus Deep2"}},
-};
-
-static std::unordered_map<BodyPart::Name, BodyPart::Type> typeMap{
-    {BodyPart::Name::Mouth, BodyPart::Type::Vector},
-    {BodyPart::Name::Throat, BodyPart::Type::Vector},
-    {BodyPart::Name::BreastLeft, BodyPart::Type::Vector},
-    {BodyPart::Name::BreastRight, BodyPart::Type::Vector},
-    {BodyPart::Name::Cleavage, BodyPart::Type::NormalVectorEnd},
-    {BodyPart::Name::HandLeft, BodyPart::Type::Vector},
-    {BodyPart::Name::HandRight, BodyPart::Type::Vector},
-    {BodyPart::Name::FingerLeft, BodyPart::Type::Point},
-    {BodyPart::Name::FingerRight, BodyPart::Type::Point},
-    {BodyPart::Name::Belly, BodyPart::Type::NormalVectorEnd},
-    {BodyPart::Name::ThighLeft, BodyPart::Type::Vector},
-    {BodyPart::Name::ThighRight, BodyPart::Type::Vector},
-    {BodyPart::Name::ThighCleft, BodyPart::Type::Vector},
-    {BodyPart::Name::ButtLeft, BodyPart::Type::Point},
-    {BodyPart::Name::ButtRight, BodyPart::Type::Point},
-    {BodyPart::Name::GlutealCleft, BodyPart::Type::NormalVectorEnd},
-    {BodyPart::Name::FootLeft, BodyPart::Type::Vector},
-    {BodyPart::Name::FootRight, BodyPart::Type::Vector},
-    {BodyPart::Name::Vagina, BodyPart::Type::Vector},
-    {BodyPart::Name::Anus, BodyPart::Type::Vector},
-    {BodyPart::Name::Penis, BodyPart::Type::FitVector},
-};
-
-Point3f operator~(const Point& point)
+namespace
 {
-  if (std::holds_alternative<Node>(point)) {
-    auto node      = std::get<Node>(point);
-    const auto pos = node->world.translate;
-    return {pos.x, pos.y, pos.z};
-  } else if (std::holds_alternative<MidNode>(point)) {
-    const auto& nodes = std::get<MidNode>(point);
-    const auto lhs    = nodes[0]->world.translate;
-    const auto rhs    = nodes[1]->world.translate;
-    const auto mid    = (lhs + rhs) * 0.5f;
-    return {mid.x, mid.y, mid.z};
-  } else if (std::holds_alternative<CentralNode>(point)) {
-    const auto& nodes = std::get<CentralNode>(point);
-    const auto a      = nodes[0]->world.translate;
-    const auto b      = nodes[1]->world.translate;
-    const auto c      = nodes[2]->world.translate;
-    const auto center = (a + b + c) / 3.0f;
-    return {center.x, center.y, center.z};
-  } else if (std::holds_alternative<OffsetNode>(point)) {
-    const auto& off = std::get<OffsetNode>(point);
-    if (!off.baseNode)
-      return Point3f::Zero();
 
-    // 1. 获取基准骨骼的世界位置和旋转矩阵
-    const auto& baseWorldPos = off.baseNode->world.translate;
-    const auto& baseWorldRot = off.baseNode->world.rotate;  // RE::NiMatrix3
+  struct ColliderSpec
+  {
+    float capsuleRadius          = 0.f;
+    Vector3f entranceHalfExtents = Vector3f::Zero();
+    float entranceOffset         = 0.f;
+    float channelRadius          = 0.f;
+    float channelLengthScale     = 1.f;
+  };
 
-    // 2. NiMatrix3 的 entry 内存布局与 Eigen 默认列主序不一致；这里转置后再使用，
-    //    否则 mouth 这类 offset 点会在世界空间偏移 8-10 个单位。
-    Matrix3f worldRotMat = Eigen::Map<const Matrix3f>(&baseWorldRot.entry[0][0]).transpose();
-
-    // 3. 变换局部偏移：先应用局部附加旋转，再应用世界旋转
-    Vector3f localOffset{off.localTrans.x(), off.localTrans.y(), off.localTrans.z()};
-    Vector3f worldOffset = worldRotMat * (off.localRot * localOffset);
-
-    // 4. 返回世界坐标
-    return Point3f{baseWorldPos.x, baseWorldPos.y, baseWorldPos.z} + worldOffset;
+  Matrix3f MakeEulerRotation(const Vector3f& eulerRot)
+  {
+    return (Eigen::AngleAxisf(eulerRot.x(), Vector3f::UnitX()) *
+            Eigen::AngleAxisf(eulerRot.y(), Vector3f::UnitY()) *
+            Eigen::AngleAxisf(eulerRot.z(), Vector3f::UnitZ()))
+        .toRotationMatrix();
   }
-  return Point3f::Zero();
-}
+
+  Node MakeNode(std::string_view nodeName)
+  {
+    Node node;
+    node.nodeNames.push_back(nodeName);
+    return node;
+  }
+
+  Node MakeNode(std::initializer_list<std::string_view> nodeNames)
+  {
+    Node node;
+    node.nodeNames.assign(nodeNames.begin(), nodeNames.end());
+    return node;
+  }
+
+  Node MakeOffsetNode(std::string_view baseNode, const Vector3f& eulerRot,
+                      const Vector3f& localTrans)
+  {
+    Node node           = MakeNode(baseNode);
+    node.localRot       = MakeEulerRotation(eulerRot);
+    node.localTrans     = localTrans;
+    node.hasLocalOffset = true;
+    return node;
+  }
+
+  std::string RequestedNodeText(std::string_view name)
+  {
+    return name.empty() ? std::string{"<empty>"} : std::string{name};
+  }
+
+  std::string ResolvedNodeText(const RE::NiNode* node)
+  {
+    return node ? std::string{node->name.c_str()} : std::string{};
+  }
+
+  std::string ParentNodeText(const RE::NiNode* node)
+  {
+    return node && node->parent ? std::string{node->parent->name.c_str()} : std::string{};
+  }
+
+  std::string DescribeNode(const Node& node)
+  {
+    if (node.hasLocalOffset)
+      return "offset";
+    return node.nodeNames.size() <= 1 ? "node" : "group";
+  }
+
+  ResolvedNodeInfo BuildResolvedNodeInfo(const Node& node)
+  {
+    ResolvedNodeInfo info;
+    info.description = DescribeNode(node);
+
+    bool hasConcreteRequest = false;
+    bool allResolved        = true;
+    for (std::size_t index = 0; index < node.nodeNames.size(); ++index) {
+      const auto requested   = node.nodeNames[index];
+      const RE::NiNode* bone = index < node.nodes.size() ? node.nodes[index].get() : nullptr;
+      info.requestedNodes.push_back(RequestedNodeText(requested));
+      info.resolvedNodes.push_back(ResolvedNodeText(bone));
+      info.parentNodes.push_back(ParentNodeText(bone));
+      if (!requested.empty()) {
+        hasConcreteRequest = true;
+        allResolved        = allResolved && bone != nullptr;
+      }
+    }
+
+    info.valid = hasConcreteRequest && allResolved;
+    return info;
+  }
+
+  bool HasEntranceBox(const ColliderSpec& spec)
+  {
+    return spec.entranceHalfExtents.maxCoeff() > 0.f;
+  }
+
+  const ColliderSpec& GetColliderSpec(BodyPart::Name name)
+  {
+    static const std::unordered_map<BodyPart::Name, ColliderSpec> colliderMap{
+        {BodyPart::Name::Mouth, {0.90f}},
+        {BodyPart::Name::Throat, {1.10f}},
+        {BodyPart::Name::BreastLeft, {1.70f}},
+        {BodyPart::Name::BreastRight, {1.70f}},
+        {BodyPart::Name::Cleavage, {1.20f}},
+        {BodyPart::Name::HandLeft, {0.90f}},
+        {BodyPart::Name::HandRight, {0.90f}},
+        {BodyPart::Name::FingerLeft, {0.45f}},
+        {BodyPart::Name::FingerRight, {0.45f}},
+        {BodyPart::Name::Belly, {1.90f}},
+        {BodyPart::Name::ThighLeft, {1.80f}},
+        {BodyPart::Name::ThighRight, {1.80f}},
+        {BodyPart::Name::ThighCleft, {1.00f}},
+        {BodyPart::Name::ButtLeft, {1.60f}},
+        {BodyPart::Name::ButtRight, {1.60f}},
+        {BodyPart::Name::GlutealCleft, {1.10f}},
+        {BodyPart::Name::FootLeft, {0.90f}},
+        {BodyPart::Name::FootRight, {0.90f}},
+        {BodyPart::Name::Vagina, {0.f, {1.25f, 1.00f, 0.60f}, 0.10f, 0.70f, 0.70f}},
+        {BodyPart::Name::Anus, {0.f, {0.95f, 0.85f, 0.50f}, 0.08f, 0.60f, 0.65f}},
+        {BodyPart::Name::Penis, {0.55f}},
+    };
+    static const ColliderSpec fallback{};
+    if (const auto it = colliderMap.find(name); it != colliderMap.end())
+      return it->second;
+    return fallback;
+  }
+
+}  // namespace
+
+static std::unordered_map<Race::Type, std::array<Node, 2>> mouthMap{
+    {Define::Race::Type::Human,
+     {MakeOffsetNode("NPC Head [Head]", {0.054f, 0.067f, 0.608f}, {-0.061f, 5.487f, -2.266f}),
+      MakeNode("NPC Head [Head]")}},
+};
+
+static std::unordered_map<Race::Type, std::array<Node, 2>> handLeftMap{
+    {Define::Race::Type::Human,
+     {MakeNode({"NPC L Hand [LHnd]", "NPC L Finger01 [LF01]", "NPC L Finger40 [LF40]"}),
+      MakeNode("SHIELD")}},
+};
+static std::unordered_map<Race::Type, std::array<Node, 2>> handRightMap{
+    {Define::Race::Type::Human,
+     {MakeNode({"NPC R Hand [RHnd]", "NPC R Finger01 [RF01]", "NPC R Finger40 [RF40]"}),
+      MakeNode("WEAPON")}},
+};
+
+static std::unordered_map<Race::Type, std::array<Node, 2>> footLeftMap{
+    {Define::Race::Type::Human, {MakeNode("NPC L Foot [Lft ]"), MakeNode("NPC L Toe0 [LToe]")}},
+};
+static std::unordered_map<Race::Type, std::array<Node, 2>> footRightMap{
+    {Define::Race::Type::Human, {MakeNode("NPC R Foot [Rft ]"), MakeNode("NPC R Toe0 [RToe]")}},
+};
+
+static std::unordered_map<Race::Type, std::array<Node, 3>> schlongMap{
+    {Define::Race::Type::Human,
+     {MakeNode("NPC Genitals01 [Gen01]"), MakeNode("NPC Genitals04 [Gen04]"),
+      MakeNode("NPC Genitals06 [Gen06]")}},
+    {Define::Race::Type::Bear, {MakeNode("BearD 5"), MakeNode("BearD 7"), MakeNode("BearD 9")}},
+    {Define::Race::Type::Boar,
+     {MakeNode("BoarDick04"), MakeNode("BoarDick05"), MakeNode("BoarDick06")}},
+    {Define::Race::Type::BoarMounted,
+     {MakeNode("BoarDick04"), MakeNode("BoarDick05"), MakeNode("BoarDick06")}},
+    {Define::Race::Type::Chaurus, {MakeNode("CO 4"), MakeNode("CO 7"), MakeNode("CO 9")}},
+    {Define::Race::Type::ChaurusHunter, {MakeNode("CO 3"), MakeNode("CO 5"), MakeNode("CO 8")}},
+    {Define::Race::Type::ChaurusReaper, {MakeNode("CO 4"), MakeNode("CO 7"), MakeNode("CO 9")}},
+    {Define::Race::Type::Deer, {MakeNode("ElkD03"), MakeNode("ElkD05"), MakeNode("ElkD06")}},
+    {Define::Race::Type::Dog,
+     {MakeNode("CDPenis 3"), MakeNode("CDPenis 5"), MakeNode("CDPenis 7")}},
+    {Define::Race::Type::DragonPriest, {MakeNode("DD 2"), MakeNode("DD 4"), MakeNode("DD 6")}},
+    {Define::Race::Type::Draugr, {MakeNode("DD 2"), MakeNode("DD 4"), MakeNode("DD 6")}},
+    {Define::Race::Type::DwarvenCenturion,
+     {MakeNode("DwarvenBattery01"), MakeNode("DwarvenBattery02"), MakeNode("DwarvenInjectorLid")}},
+    {Define::Race::Type::DwarvenSpider,
+     {MakeNode("Dildo01"), MakeNode("Dildo02"), MakeNode("Dildo03")}},
+    {Define::Race::Type::Falmer, {MakeNode("FD 3"), MakeNode("FD 5"), MakeNode("FD 7")}},
+    {Define::Race::Type::Fox,
+     {MakeNode("CDPenis 3"), MakeNode("CDPenis 5"), MakeNode("CDPenis 7")}},
+    {Define::Race::Type::FrostAtronach,
+     {MakeNode("NPC IceGenital03"), MakeNode("NPC IcePenis01"), MakeNode("NPC IcePenis02")}},
+    {Define::Race::Type::Gargoyle, {MakeNode("GD 3"), MakeNode("GD 5"), MakeNode("GD 7")}},
+    {Define::Race::Type::Giant, {MakeNode("GS 3"), MakeNode("GS 5"), MakeNode("GS 7")}},
+    {Define::Race::Type::GiantSpider, {MakeNode("CO 5"), MakeNode("CO 7"), MakeNode("CO tip")}},
+    {Define::Race::Type::Horse,
+     {MakeNode("HS 5"), MakeNode("HS 6"), MakeNode("HorsePenisFlareTop2")}},
+    {Define::Race::Type::LargeSpider, {MakeNode("CO 5"), MakeNode("CO 7"), MakeNode("CO tip")}},
+    {Define::Race::Type::Lurker, {MakeNode("GS 3"), MakeNode("GS 5"), MakeNode("GS 7")}},
+    {Define::Race::Type::Riekling, {MakeNode("RD 2"), MakeNode("RD 4"), MakeNode("RD 5")}},
+    {Define::Race::Type::Sabrecat, {MakeNode("SCD 3"), MakeNode("SCD 5"), MakeNode("SCD 7")}},
+    {Define::Race::Type::Skeever,
+     {MakeNode("SkeeverD 03"), MakeNode("SkeeverD 05"), MakeNode("SkeeverD 07")}},
+    {Define::Race::Type::Spider, {MakeNode("CO 5"), MakeNode("CO 7"), MakeNode("CO tip")}},
+    {Define::Race::Type::StormAtronach, {MakeNode(""), MakeNode("Torso Rock 2"), MakeNode("")}},
+    {Define::Race::Type::Troll, {MakeNode("TD 3"), MakeNode("TD 5"), MakeNode("TD 7")}},
+    {Define::Race::Type::VampireLord,
+     {MakeNode("VLDick03"), MakeNode("VLDick05"), MakeNode("VLDick06")}},
+    {Define::Race::Type::Werebear, {MakeNode("WWD 5"), MakeNode("WWD 7"), MakeNode("WWD 9")}},
+    {Define::Race::Type::Werewolf, {MakeNode("WWD 5"), MakeNode("WWD 7"), MakeNode("WWD 9")}},
+    {Define::Race::Type::Wolf,
+     {MakeNode("CDPenis 3"), MakeNode("CDPenis 5"), MakeNode("CDPenis 7")}},
+};
+
+static std::unordered_map<BodyPart::Name, std::vector<Node>> humanMap{
+    {BodyPart::Name::Throat, {MakeNode("NPC Head [Head]"), MakeNode("NPC Neck [Neck]")}},
+    {BodyPart::Name::BreastLeft, {MakeNode("L Breast02"), MakeNode("L Breast03")}},
+    {BodyPart::Name::BreastRight, {MakeNode("R Breast02"), MakeNode("R Breast03")}},
+    {BodyPart::Name::Cleavage,
+     {MakeNode({"L Breast02", "R Breast02"}), MakeNode({"L Breast03", "R Breast03"})}},
+    {BodyPart::Name::FingerLeft, {MakeNode("NPC L Finger22 [LF22]")}},
+    {BodyPart::Name::FingerRight, {MakeNode("NPC R Finger22 [RF22]")}},
+    {BodyPart::Name::Belly, {MakeNode("NPC Spine1 [Spn1]"), MakeNode("NPC Belly")}},
+    {BodyPart::Name::ThighLeft, {MakeNode("NPC L RearThigh"), MakeNode("NPC L FrontThigh")}},
+    {BodyPart::Name::ThighRight, {MakeNode("NPC R RearThigh"), MakeNode("NPC R FrontThigh")}},
+    {BodyPart::Name::ThighCleft, {MakeNode("VaginaB1"), MakeNode("Clitoral1")}},
+    {BodyPart::Name::ButtLeft, {MakeNode("NPC L Butt")}},
+    {BodyPart::Name::ButtRight, {MakeNode("NPC R Butt")}},
+    {BodyPart::Name::GlutealCleft,
+     {MakeNode("NPC Spine1 [Spn1]"), MakeNode({"NPC L Butt", "NPC R Butt"})}},
+    {BodyPart::Name::Vagina,
+     {MakeNode({"NPC L Pussy02", "NPC R Pussy02", "VaginaB1"}), MakeNode("VaginaDeep1")}},
+    {BodyPart::Name::Anus,
+     {MakeNode({"NPC RT Anus2", "NPC LT Anus2", "NPC LB Anus2", "NPC RB Anus2"}),
+      MakeNode({"NPC Anus Deep1", "NPC Anus Deep2"})}},
+};
+
+static std::unordered_map<BodyPart::Name, BodyPart::Shape> shapeMap{
+    {BodyPart::Name::Mouth, BodyPart::Shape::Vector},
+    {BodyPart::Name::Throat, BodyPart::Shape::Vector},
+    {BodyPart::Name::BreastLeft, BodyPart::Shape::Vector},
+    {BodyPart::Name::BreastRight, BodyPart::Shape::Vector},
+    {BodyPart::Name::Cleavage, BodyPart::Shape::NormalVectorEnd},
+    {BodyPart::Name::HandLeft, BodyPart::Shape::Vector},
+    {BodyPart::Name::HandRight, BodyPart::Shape::Vector},
+    {BodyPart::Name::FingerLeft, BodyPart::Shape::Point},
+    {BodyPart::Name::FingerRight, BodyPart::Shape::Point},
+    {BodyPart::Name::Belly, BodyPart::Shape::NormalVectorEnd},
+    {BodyPart::Name::ThighLeft, BodyPart::Shape::Vector},
+    {BodyPart::Name::ThighRight, BodyPart::Shape::Vector},
+    {BodyPart::Name::ThighCleft, BodyPart::Shape::Vector},
+    {BodyPart::Name::ButtLeft, BodyPart::Shape::Point},
+    {BodyPart::Name::ButtRight, BodyPart::Shape::Point},
+    {BodyPart::Name::GlutealCleft, BodyPart::Shape::NormalVectorEnd},
+    {BodyPart::Name::FootLeft, BodyPart::Shape::Vector},
+    {BodyPart::Name::FootRight, BodyPart::Shape::Vector},
+    {BodyPart::Name::Vagina, BodyPart::Shape::Vector},
+    {BodyPart::Name::Anus, BodyPart::Shape::Vector},
+    {BodyPart::Name::Penis, BodyPart::Shape::FitVector},
+};
 
 bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
 {
@@ -204,53 +290,48 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
   }
 }
 
-BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name)
-    : actor(a_actor), name(a_name), type(typeMap[a_name])
+BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name) : actor(a_actor), name(a_name)
 {
-  nodeNames.clear();
-  nodes.clear();
+  if (const auto it = shapeMap.find(a_name); it != shapeMap.end())
+    shape = it->second;
+
+  info.vector.emplace();
+  info.collider.reset();
+  nodeInfos.clear();
+
+  auto& vectorInfo       = info.vector.value();
+  const auto appendNodes = [&](const auto& definitions) {
+    for (const auto& definition : definitions)
+      vectorInfo.nodes.push_back(definition);
+  };
 
   switch (a_name) {
-  // ── Per-race lookups ──────────────────────────────────────────────────────
   case Name::Mouth:
     if (auto it = mouthMap.find(a_race.GetType()); it != mouthMap.end())
-      for (auto& n : it->second)
-        nodeNames.push_back(&n);
+      appendNodes(it->second);
     break;
-
   case Name::HandLeft:
     if (auto it = handLeftMap.find(a_race.GetType()); it != handLeftMap.end())
-      for (auto& n : it->second)
-        nodeNames.push_back(&n);
+      appendNodes(it->second);
     break;
-
   case Name::HandRight:
     if (auto it = handRightMap.find(a_race.GetType()); it != handRightMap.end())
-      for (auto& n : it->second)
-        nodeNames.push_back(&n);
+      appendNodes(it->second);
     break;
-
   case Name::FootLeft:
     if (auto it = footLeftMap.find(a_race.GetType()); it != footLeftMap.end())
-      for (auto& n : it->second)
-        nodeNames.push_back(&n);
+      appendNodes(it->second);
     break;
-
   case Name::FootRight:
     if (auto it = footRightMap.find(a_race.GetType()); it != footRightMap.end())
-      for (auto& n : it->second)
-        nodeNames.push_back(&n);
+      appendNodes(it->second);
     break;
-
   case Name::Penis:
     if (auto it = schlongMap.find(a_race.GetType()); it != schlongMap.end())
-      for (auto& n : it->second)
-        nodeNames.push_back(&n);
+      appendNodes(it->second);
     else
       logger::warn("No schlong mapping for race: {}", magic_enum::enum_name(a_race.GetType()));
     break;
-
-  // ── Human-only fixed lookups ─────────────────────────────────────────────
   case Name::Throat:
   case Name::BreastLeft:
   case Name::BreastRight:
@@ -267,21 +348,19 @@ BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name)
   case Name::Vagina:
   case Name::Anus:
     if (auto it = humanMap.find(a_name); it != humanMap.end())
-      for (auto& n : it->second)
-        nodeNames.push_back(&n);
+      appendNodes(it->second);
     break;
-
   default:
     break;
   }
 
-  if (nodeNames.empty())
+  if (vectorInfo.nodes.empty())
     logger::warn("BodyPart not found for race: {} and name: {}",
                  magic_enum::enum_name(a_race.GetType()), magic_enum::enum_name(a_name));
 
   UpdateNodes();
 
-  if (nodes.empty() || nodeNames.size() != nodes.size())
+  if (!IsValid())
     logger::warn("No valid nodes found for BodyPart with name: {}", magic_enum::enum_name(a_name));
 
   UpdatePosition();
@@ -289,138 +368,285 @@ BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name)
 
 void BodyPart::UpdateNodes()
 {
-  nodes.clear();
-  for (auto* variant : nodeNames) {
-    if (std::holds_alternative<NodeName>(*variant)) {
-      const auto& boneName = std::get<NodeName>(*variant);
-      // Empty bone name is a deliberate placeholder (e.g. StormAtronach schlong root/tip)
-      if (boneName.empty()) {
-        nodes.push_back(static_cast<RE::NiPointer<RE::NiNode>>(nullptr));
+  nodeInfos.clear();
+  if (!actor || !info.vector)
+    return;
+
+  for (auto& node : info.vector->nodes) {
+    node.nodes.clear();
+    node.nodes.reserve(node.nodeNames.size());
+
+    for (std::string_view nodeName : node.nodeNames) {
+      if (nodeName.empty()) {
+        node.nodes.push_back(nullptr);
         continue;
       }
-      auto* obj = actor->GetNodeByName(boneName);
-      if (!obj)
-        logger::warn("Node not found: {}", boneName);
-      auto ptr = obj ? obj->AsNode() : nullptr;
-      nodes.push_back(RE::NiPointer<RE::NiNode>(ptr));
 
-    } else if (std::holds_alternative<MidNodeName>(*variant)) {
-      const auto& midName = std::get<MidNodeName>(*variant);
-      std::array<RE::NiPointer<RE::NiNode>, 2> midNodes{};
-      for (std::size_t i = 0; i < 2; ++i) {
-        auto* obj = actor->GetNodeByName(midName[i]);
-        if (!obj)
-          logger::warn("Mid-node not found: {}", midName[i]);
-        auto ptr    = obj ? obj->AsNode() : nullptr;
-        midNodes[i] = RE::NiPointer<RE::NiNode>(ptr);
-      }
-      nodes.push_back(midNodes);
-    } else if (std::holds_alternative<CentralNodeName>(*variant)) {
-      const auto& centralName = std::get<CentralNodeName>(*variant);
-      std::array<RE::NiPointer<RE::NiNode>, 3> centralNodes{};
-      for (std::size_t i = 0; i < 3; ++i) {
-        auto* obj = actor->GetNodeByName(centralName[i]);
-        if (!obj)
-          logger::warn("Central node not found: {}", centralName[i]);
-        auto ptr        = obj ? obj->AsNode() : nullptr;
-        centralNodes[i] = RE::NiPointer<RE::NiNode>(ptr);
-      }
-      nodes.push_back(centralNodes);
-    } else if (std::holds_alternative<OffsetNodeName>(*variant)) {
-      const auto& offsetNode = std::get<OffsetNodeName>(*variant);
-      auto* baseObj          = actor->GetNodeByName(offsetNode.baseNode);
-      if (!baseObj)
-        logger::warn("Offset node base not found: {}", offsetNode.baseNode);
-      Matrix3f localRot = (Eigen::AngleAxisf(offsetNode.eulerRot.x(), Vector3f::UnitX()) *
-                           Eigen::AngleAxisf(offsetNode.eulerRot.y(), Vector3f::UnitY()) *
-                           Eigen::AngleAxisf(offsetNode.eulerRot.z(), Vector3f::UnitZ()))
-                              .toRotationMatrix();
-      auto ptr          = baseObj ? baseObj->AsNode() : nullptr;
-      nodes.push_back(OffsetNode{RE::NiPointer<RE::NiNode>(ptr), localRot, offsetNode.localTrans});
+      auto* obj = actor->GetNodeByName(nodeName);
+      if (!obj)
+        logger::warn("Node not found for {}: {}", magic_enum::enum_name(name), nodeName);
+
+      auto ptr = obj ? obj->AsNode() : nullptr;
+      node.nodes.push_back(RE::NiPointer<RE::NiNode>(ptr));
     }
+
+    UpdateNodePosition(node);
+    nodeInfos.push_back(BuildResolvedNodeInfo(node));
   }
+}
+
+bool BodyPart::IsNodeResolved(const Node& node) const
+{
+  bool hasConcreteRequest = false;
+  for (std::size_t index = 0; index < node.nodeNames.size(); ++index) {
+    if (node.nodeNames[index].empty())
+      continue;
+    hasConcreteRequest = true;
+    if (index >= node.nodes.size() || !node.nodes[index])
+      return false;
+  }
+  return hasConcreteRequest;
+}
+
+std::vector<Point3f> BodyPart::CollectResolvedNodePositions(const Node& node) const
+{
+  std::vector<Point3f> positions;
+  positions.reserve(node.nodes.size());
+  for (const auto& resolvedNode : node.nodes) {
+    if (!resolvedNode)
+      continue;
+    const auto pos = resolvedNode->world.translate;
+    positions.push_back(Point3f{pos.x, pos.y, pos.z});
+  }
+  return positions;
+}
+
+void BodyPart::UpdateNodePosition(Node& node)
+{
+  node.position = Point3f::Zero();
+  if (!IsNodeResolved(node))
+    return;
+
+  if (node.hasLocalOffset) {
+    const auto& baseNode = node.nodes.front();
+    if (!baseNode)
+      return;
+
+    const auto& baseWorldPos = baseNode->world.translate;
+    const auto& baseWorldRot = baseNode->world.rotate;
+    Matrix3f worldRotMat     = Eigen::Map<const Matrix3f>(&baseWorldRot.entry[0][0]).transpose();
+    Vector3f worldOffset     = worldRotMat * (node.localRot * node.localTrans);
+    node.position = Point3f{baseWorldPos.x, baseWorldPos.y, baseWorldPos.z} + worldOffset;
+    return;
+  }
+
+  const auto positions = CollectResolvedNodePositions(node);
+  if (positions.empty())
+    return;
+
+  Point3f center = Point3f::Zero();
+  for (const auto& position : positions)
+    center += position;
+  node.position = center / static_cast<float>(positions.size());
+}
+
+std::vector<Point3f> BodyPart::CollectValidNodePositions(const Vector& vectorInfo) const
+{
+  std::vector<Point3f> positions;
+  positions.reserve(vectorInfo.nodes.size());
+  for (const auto& node : vectorInfo.nodes) {
+    if (!IsNodeResolved(node))
+      continue;
+    positions.push_back(node.position);
+  }
+  return positions;
+}
+
+Vector3f BodyPart::BuildNodeSpanAxis(const Node& node) const
+{
+  const auto positions = CollectResolvedNodePositions(node);
+  if (positions.size() >= 4)
+    return (positions[0] + positions[3]) - (positions[1] + positions[2]);
+  if (positions.size() >= 2)
+    return positions[1] - positions[0];
+  return Vector3f::Zero();
+}
+
+Matrix3f BodyPart::BuildBasis(const Vector3f& primaryAxis, const Node* referenceNode) const
+{
+  Vector3f forward = primaryAxis;
+  if (forward.squaredNorm() <= 1e-6f)
+    forward = Vector3f::UnitZ();
+  else
+    forward.normalize();
+
+  Vector3f lateral = Vector3f::Zero();
+  if (referenceNode)
+    lateral = BuildNodeSpanAxis(*referenceNode);
+  lateral -= forward * lateral.dot(forward);
+  if (lateral.squaredNorm() <= 1e-6f) {
+    const Vector3f fallback = std::abs(forward.z()) < 0.85f ? Vector3f::UnitZ() : Vector3f::UnitX();
+    lateral                 = forward.cross(fallback);
+  }
+  if (lateral.squaredNorm() <= 1e-6f)
+    lateral = Vector3f::UnitY();
+  lateral.normalize();
+
+  Vector3f up = forward.cross(lateral);
+  if (up.squaredNorm() <= 1e-6f)
+    up = Vector3f::UnitZ();
+  else
+    up.normalize();
+
+  lateral = up.cross(forward);
+  if (lateral.squaredNorm() <= 1e-6f)
+    lateral = Vector3f::UnitX();
+  else
+    lateral.normalize();
+
+  Matrix3f basis;
+  basis.col(0) = lateral;
+  basis.col(1) = up;
+  basis.col(2) = forward;
+  return basis;
 }
 
 bool BodyPart::IsValid() const
 {
-  if (nodes.empty())
+  if (!info.vector || info.vector->nodes.empty())
     return false;
-  for (const auto& p : nodes) {
-    if (std::holds_alternative<Node>(p)) {
-      if (!std::get<Node>(p))
-        return false;
-    } else if (std::holds_alternative<MidNode>(p)) {
-      const auto& m = std::get<MidNode>(p);
-      if (!m[0] || !m[1])
-        return false;
-    } else if (std::holds_alternative<CentralNode>(p)) {
-      const auto& c = std::get<CentralNode>(p);
-      if (!c[0] || !c[1] || !c[2])
-        return false;
-    } else if (std::holds_alternative<OffsetNode>(p)) {
-      if (!std::get<OffsetNode>(p).baseNode)
-        return false;
+
+  switch (shape) {
+  case Shape::Point:
+    return info.vector->nodes.size() >= 1 && IsNodeResolved(info.vector->nodes[0]);
+  case Shape::Vector:
+  case Shape::NormalVectorStart:
+  case Shape::NormalVectorEnd:
+    return info.vector->nodes.size() >= 2 && IsNodeResolved(info.vector->nodes[0]) &&
+           IsNodeResolved(info.vector->nodes[1]);
+  case Shape::FitVector: {
+    std::size_t validCount = 0;
+    for (const auto& node : info.vector->nodes) {
+      if (IsNodeResolved(node))
+        ++validCount;
     }
+    return validCount >= 2;
   }
-  return true;
+  default:
+    return false;
+  }
 }
 
-void BodyPart::UpdatePosition()
+void BodyPart::UpdateVectorInfo()
 {
-  start     = Point3f::Zero();
-  end       = Point3f::Zero();
-  direction = Vector3f::Zero();
-  length    = 0.f;
-
-  if (!IsValid()) {
-    logger::warn("Cannot update position for invalid BodyPart: {}", magic_enum::enum_name(name));
+  if (!info.vector)
     return;
+
+  auto& vectorInfo     = info.vector.value();
+  vectorInfo.start     = Point3f::Zero();
+  vectorInfo.end       = Point3f::Zero();
+  vectorInfo.direction = Vector3f::Zero();
+  vectorInfo.length    = 0.f;
+
+  for (auto& node : vectorInfo.nodes)
+    UpdateNodePosition(node);
+
+  if (!IsValid())
+    return;
+
+  switch (shape) {
+  case Shape::Point:
+    vectorInfo.start = vectorInfo.nodes[0].position;
+    vectorInfo.end   = vectorInfo.start;
+    break;
+  case Shape::Vector:
+  case Shape::NormalVectorStart:
+  case Shape::NormalVectorEnd:
+    vectorInfo.start     = vectorInfo.nodes[0].position;
+    vectorInfo.end       = vectorInfo.nodes[1].position;
+    vectorInfo.direction = vectorInfo.end - vectorInfo.start;
+    vectorInfo.length    = vectorInfo.direction.norm();
+    if (vectorInfo.length > 1e-6f)
+      vectorInfo.direction /= vectorInfo.length;
+    break;
+  case Shape::FitVector: {
+    const auto validPositions = CollectValidNodePositions(vectorInfo);
+    vectorInfo.start          = validPositions.front();
+    vectorInfo.end            = validPositions.back();
+    const Vector3f fit        = FitVector(vectorInfo);
+    vectorInfo.length         = fit.norm();
+    if (vectorInfo.length > 1e-6f)
+      vectorInfo.direction = fit / vectorInfo.length;
+    break;
   }
-
-  switch (type) {
-
-  // Point: only start matters; no direction
-  case Type::Point:
-    start = ~nodes[0];
-    end   = start;
-    break;
-
-  // Vector / NormalVectorStart / NormalVectorEnd:
-  //   direction = end - start
-  case Type::Vector:
-  case Type::NormalVectorStart:
-  case Type::NormalVectorEnd:
-    start     = ~nodes[0];
-    end       = ~nodes[1];
-    direction = end - start;
-    length    = direction.norm();
-    if (length > 1e-6f)  // normalize direction for consistent distance calculations; length is
-                         // stored separately
-      direction /= length;
-    break;
-
-  // FitVector: SVD principal axis through all valid points
-  case Type::FitVector:
-    start     = ~nodes[0];
-    end       = ~nodes[nodes.size() - 1];
-    direction = FitVector();  // returns a fit vector with fit length
-    length    = direction.norm();
-    if (length > 1e-6f)
-      direction /= length;
-    break;
   default:
     break;
   }
 }
 
-Vector3f BodyPart::FitVector()
+void BodyPart::UpdateColliderInfo()
 {
-  // Collect valid points (skip nullptr entries from StormAtronach-style gaps)
-  std::vector<Vector3f> pts;
-  for (const auto& node : nodes)
-    if (auto p = ~node; p != Point3f::Zero())  // treat (0,0,0) as invalid to handle missing nodes
-      pts.push_back(p);
+  info.collider.reset();
+  if (!info.vector || !IsValid())
+    return;
 
+  const auto& vectorInfo = info.vector.value();
+  const auto& spec       = GetColliderSpec(name);
+  const bool isAperture  = name == Name::Vagina || name == Name::Anus;
+
+  Collider collider;
+  collider.center    = (vectorInfo.start + vectorInfo.end) * 0.5f;
+  collider.direction = vectorInfo.direction;
+  collider.length    = vectorInfo.length;
+
+  const auto addCapsule = [&](const Point3f& start, const Point3f& end, float radius) {
+    if (radius <= 0.f)
+      return;
+    collider.capsules.push_back(CapsuleCollider{start, end, radius});
+  };
+  const auto addBox = [&](const Point3f& center, const Matrix3f& basis,
+                          const Vector3f& halfExtents) {
+    if (halfExtents.maxCoeff() <= 0.f)
+      return;
+    collider.boxes.push_back(BoxCollider{center, basis, halfExtents});
+  };
+
+  if (isAperture && vectorInfo.length > 1e-6f) {
+    const Matrix3f basis = BuildBasis(
+        vectorInfo.direction, vectorInfo.nodes.empty() ? nullptr : &vectorInfo.nodes.front());
+    if (HasEntranceBox(spec)) {
+      addBox(vectorInfo.start + vectorInfo.direction * spec.entranceOffset, basis,
+             spec.entranceHalfExtents);
+    }
+    if (spec.channelRadius > 0.f) {
+      const float channelLength =
+          std::clamp(vectorInfo.length * spec.channelLengthScale, 0.f, vectorInfo.length);
+      addCapsule(vectorInfo.start, vectorInfo.start + vectorInfo.direction * channelLength,
+                 spec.channelRadius);
+    }
+  }
+
+  if (!isAperture && spec.capsuleRadius > 0.f) {
+    const Point3f capsuleEnd = shape == Shape::Point ? vectorInfo.start : vectorInfo.end;
+    addCapsule(vectorInfo.start, capsuleEnd, spec.capsuleRadius);
+  }
+
+  if (!collider.capsules.empty() || !collider.boxes.empty())
+    info.collider = collider;
+}
+
+void BodyPart::UpdatePosition()
+{
+  UpdateVectorInfo();
+  UpdateColliderInfo();
+
+  if (!IsValid())
+    logger::warn("Cannot update position for invalid BodyPart: {}", magic_enum::enum_name(name));
+}
+
+Vector3f BodyPart::FitVector(const Vector& vectorInfo) const
+{
+  const auto pts = CollectValidNodePositions(vectorInfo);
   if (pts.size() < 2) {
     logger::warn("FitVector: fewer than 2 valid nodes");
     return Vector3f::Zero();
@@ -428,36 +654,30 @@ Vector3f BodyPart::FitVector()
   if (pts.size() == 2)
     return pts[1] - pts[0];
 
-  // Centroid
   Vector3f centroid = Vector3f::Zero();
-  for (const auto& p : pts)
-    centroid += p;
+  for (const auto& point : pts)
+    centroid += point;
   centroid /= static_cast<float>(pts.size());
 
-  // Covariance matrix
   Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
-  for (const auto& p : pts) {
-    Vector3f diff = p - centroid;
+  for (const auto& point : pts) {
+    Vector3f diff = point - centroid;
     cov += diff * diff.transpose();
   }
 
-  // Largest eigenvector = principal axis
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(cov);
   Vector3f axis = solver.eigenvectors().col(2);
-
-  // Orient from first valid point toward last valid point
   if ((pts.back() - pts.front()).dot(axis) < 0.f)
     axis = -axis;
 
-  // Fit Length: project points onto axis, take range
   std::vector<float> tVals;
-  for (const auto& p : pts) {
-    float t = (p - centroid).dot(axis);
-    tVals.push_back(t);
-  }
-  auto [minIt, maxIt] = std::minmax_element(tVals.begin(), tVals.end());
-  Point3f startProj   = centroid + (*minIt) * axis;
-  Point3f endProj     = centroid + (*maxIt) * axis;
+  tVals.reserve(pts.size());
+  for (const auto& point : pts)
+    tVals.push_back((point - centroid).dot(axis));
+
+  const auto [minIt, maxIt] = std::minmax_element(tVals.begin(), tVals.end());
+  const Point3f startProj   = centroid + (*minIt) * axis;
+  const Point3f endProj     = centroid + (*maxIt) * axis;
   return endProj - startProj;
 }
 

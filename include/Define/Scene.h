@@ -9,18 +9,20 @@ namespace Define
 class Scene
 {
 public:
-  Scene(const std::string& name, const std::string& event_prefix, const Furniture& furniture,
+  Scene(const std::string& name, const std::size_t& totalStages, const Furniture& furniture,
         const Race& races, const SceneTags& tags, std::vector<Position> positions)
-      : name(name), furniture(furniture), races(races), tags(tags), positions(std::move(positions))
+      : name(name), totalStages(totalStages), furniture(furniture), races(races), tags(tags),
+        positions(std::move(positions))
   {}
 
-  Scene(std::string&& name, std::string&& event_prefix, Furniture&& furniture, Race&& races,
+  Scene(std::string&& name, std::size_t&& totalStages, Furniture&& furniture, Race&& races,
         SceneTags&& tags, std::vector<Position>&& positions)
-      : name(std::move(name)), furniture(std::move(furniture)), races(std::move(races)),
-        tags(std::move(tags)), positions(std::move(positions))
+      : name(std::move(name)), totalStages(std::move(totalStages)), furniture(std::move(furniture)),
+        races(std::move(races)), tags(std::move(tags)), positions(std::move(positions))
   {}
 
   [[nodiscard]] const std::string& GetName() const { return name; }
+  [[nodiscard]] const std::size_t GetTotalStages() const { return totalStages; }
   [[nodiscard]] const Furniture& GetFurniture() const { return furniture; }
   [[nodiscard]] const Race& GetRaces() const { return races; }
   [[nodiscard]] const SceneTags& GetTags() const { return tags; }
@@ -42,6 +44,7 @@ public:
 private:
   std::string name;
   Furniture furniture;
+  std::size_t totalStages;
   Race races;
   SceneTags tags;
   std::vector<Position> positions;

@@ -27,6 +27,7 @@ public:
 
   // 从 JS 侧接收的拖拽位置保存
   void OnPositionChanged(float x, float y);
+  void OnSceneSelected(std::uintptr_t scenePtr);
 
 private:
   bool isActive  = false;

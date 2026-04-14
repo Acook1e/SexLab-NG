@@ -109,6 +109,8 @@ void Menu::Debug()
     logger::warn("{}", e.what());
   }
 
+  ImGui::Checkbox("DebugMode"_h, &Settings::bDebugMode);
+
   // only for runtime testing, will be removed in the future
   ImGui::Text("CurrentTarget"_h, target ? target->GetDisplayFullName() : "");
   ImGui::Text("CurrentSceneID"_h, std::format("{}", debugSceneId).data());

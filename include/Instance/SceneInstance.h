@@ -3,6 +3,7 @@
 #include "Define/Enjoyment.h"
 #include "Define/Scene.h"
 #include "Instance/Interact.h"
+#include "Utils/Settings.h"
 
 namespace Instance
 {
@@ -29,6 +30,7 @@ public:
                     // directly set to Ready
     SceneReady,     // Include lock strip and ready
     ScenePlay,
+    SceneChange,
     // TODO(API): When reaching SceneEnd, allow injecting a new SceneSearchResult and restart
     // ScenePlay without recreating SceneInstance.
     SceneEnd,
@@ -48,11 +50,13 @@ public:
   void DressActors();
   void UnlockActors();
 
+  bool SetScene(Define::Scene* scene);
   Define::Scene* RandomScene();
   bool SetPositions();
   bool SetStage(std::uint32_t stage);
 
   Define::Scene* GetCurrentScene() const { return currentScene; }
+  const SceneSearchResult& GetAvailableScenes() const { return availableScenes; }
   const std::vector<RE::Actor*>& GetActors() const { return actors; }
   const SceneActorInfo& GetActorInfo(RE::Actor* actor) const { return actorInfoMap.at(actor); }
   const Interact& GetInteract() const { return interact; }

@@ -144,15 +144,9 @@ void InputEvent::ProcessEvent(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher,
     if (event->eventType == RE::INPUT_EVENT_TYPE::kButton) {
       auto buttonEvent = event->AsButtonEvent();
       // Left Alt key code
-      if (buttonEvent && buttonEvent->GetIDCode() == 56) {
-        if (buttonEvent->IsDown())
-          UI::GetSingleton().SetFocus(true);
-        else if (buttonEvent->IsUp())
-          UI::GetSingleton().SetFocus(false);
-      }
+      if (buttonEvent && buttonEvent->GetIDCode() == 56 && buttonEvent->IsDown())
+        UI::GetSingleton().SetFocus(!UI::GetSingleton().HasFocus());
     }
-    // constexpr RE::InputEvent* const dummy[] = {nullptr};
-    // return _ProcessEvent(a_dispatcher, dummy);
   }
   _ProcessEvent(a_dispatcher, a_events);
 }

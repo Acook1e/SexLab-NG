@@ -19,6 +19,10 @@
         "label": "Debug",
         "desc": ""
     },
+    "DebugMode": {
+        "label": "Debug Mode",
+        "desc": "Enable debug mode to show more logs and UI options"
+    },
     "CurrentTarget": {
         "label": "Current Target: {}",
         "desc": ""

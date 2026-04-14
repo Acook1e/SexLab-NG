@@ -4,15 +4,46 @@
 
 let hudContainer = null;
 let actorListEl = null;
+let sceneBarEl = null;
+let sceneSelectEl = null;
 let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
+let isUpdatingScenePicker = false;
+const interactionSlotsByActor = new Map();
+
+const MIN_INTERACTION_SLOTS = 3;
+const INTERACTION_PRIORITY = Object.freeze({
+  Mouth: 0,
+  Throat: 1,
+  BreastLeft: 2,
+  BreastRight: 3,
+  HandLeft: 4,
+  HandRight: 5,
+  FingerLeft: 6,
+  FingerRight: 7,
+  Belly: 8,
+  ThighLeft: 9,
+  ThighRight: 10,
+  ThighCleft: 11,
+  ButtLeft: 12,
+  ButtRight: 13,
+  GlutealCleft: 14,
+  FootLeft: 15,
+  FootRight: 16,
+  Vagina: 17,
+  Anus: 18,
+  Penis: 19,
+});
 
 // ── DOM Ready ─────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   hudContainer = document.getElementById('hud-container');
   actorListEl = document.getElementById('actor-list');
+  sceneBarEl = document.getElementById('scene-bar');
+  sceneSelectEl = document.getElementById('scene-select');
   setupDrag();
+  setupScenePicker();
 });
 
 // ═══════════════════════════════════════════════════
@@ -25,6 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function initHud(jsonStr) {
   const data = JSON.parse(jsonStr);
+  interactionSlotsByActor.clear();
+  syncScenePicker(data.sceneSelection);
 
   // 恢复保存的位置
   if (data.position && data.position.x >= 0) {
@@ -46,8 +79,56 @@ function initHud(jsonStr) {
  */
 function updateHud(jsonStr) {
   const data = JSON.parse(jsonStr);
+  syncScenePicker(data.sceneSelection);
   for (const actor of data.actors) {
     updateActorFragment(actor);
+  }
+}
+
+function setupScenePicker() {
+  if (!sceneSelectEl) return;
+
+  sceneSelectEl.addEventListener('change', function () {
+    if (isUpdatingScenePicker) return;
+    if (window.onHudSceneSelected) {
+      window.onHudSceneSelected(sceneSelectEl.value);
+    }
+  });
+}
+
+function syncScenePicker(sceneSelection) {
+  if (!sceneBarEl || !sceneSelectEl) return;
+
+  const options = sceneSelection?.options || [];
+  if (options.length <= 1) {
+    sceneBarEl.classList.add('is-hidden');
+    sceneSelectEl.innerHTML = '';
+    return;
+  }
+
+  sceneBarEl.classList.remove('is-hidden');
+
+  const currentSignature = JSON.stringify(options.map(option => [option.ptr, option.name]));
+  if (sceneSelectEl.dataset.signature !== currentSignature) {
+    isUpdatingScenePicker = true;
+    sceneSelectEl.innerHTML = '';
+
+    for (const option of options) {
+      const optionEl = document.createElement('option');
+      optionEl.value = option.ptr;
+      optionEl.textContent = option.name;
+      sceneSelectEl.appendChild(optionEl);
+    }
+
+    sceneSelectEl.dataset.signature = currentSignature;
+    isUpdatingScenePicker = false;
+  }
+
+  const selectedPtr = sceneSelection?.selectedPtr;
+  if (selectedPtr) {
+    isUpdatingScenePicker = true;
+    sceneSelectEl.value = String(selectedPtr);
+    isUpdatingScenePicker = false;
   }
 }
 
@@ -150,65 +231,146 @@ function updateInteractList(index, interactions) {
 
   listEl.innerHTML = '';
 
-  if (!interactions || interactions.length === 0) return;
+  const slots = buildInteractionSlots(index, interactions);
+  if (slots.length === 0) return;
 
-  for (const inter of interactions) {
-    const row = document.createElement('div');
-    row.className = 'interact-row';
+  for (const inter of slots) {
+    if (!inter) {
+      listEl.appendChild(createInteractionPlaceholder());
+      continue;
+    }
 
-    const content = document.createElement('div');
-    content.className = 'interact-content';
-
-    const meta = document.createElement('div');
-    meta.className = 'interact-meta';
-
-    const partSpan = document.createElement('span');
-    partSpan.className = 'interact-self-part';
-    partSpan.textContent = inter.part;
-
-    const separator = document.createElement('span');
-    separator.className = 'interact-separator';
-    separator.textContent = '·';
-
-    const typeSpan = document.createElement('span');
-    typeSpan.className = 'interact-type';
-    typeSpan.textContent = inter.type;
-
-    meta.appendChild(partSpan);
-    meta.appendChild(separator);
-    meta.appendChild(typeSpan);
-
-    const partnerLine = document.createElement('div');
-    partnerLine.className = 'interact-partner-line';
-
-    const arrow = document.createElement('span');
-    arrow.className = 'interact-arrow';
-    arrow.textContent = '↔';
-
-    const partner = document.createElement('span');
-    partner.className = 'interact-partner';
-    partner.textContent = inter.partner;
-
-    partnerLine.appendChild(arrow);
-    partnerLine.appendChild(partner);
-
-    content.appendChild(meta);
-    content.appendChild(partnerLine);
-
-    // velocity 指示点
-    const velDot = document.createElement('span');
-    velDot.className = 'interact-velocity';
-    if (inter.velocity < -0.01)
-      velDot.classList.add('vel-approaching');
-    else if (inter.velocity > 0.01)
-      velDot.classList.add('vel-retreating');
-    else
-      velDot.classList.add('vel-static');
-
-    row.appendChild(content);
-    row.appendChild(velDot);
-    listEl.appendChild(row);
+    listEl.appendChild(createInteractionRow(inter));
   }
+}
+
+function createInteractionRow(inter) {
+  const row = document.createElement('div');
+  row.className = 'interact-row';
+
+  const content = document.createElement('div');
+  content.className = 'interact-content';
+
+  const meta = document.createElement('div');
+  meta.className = 'interact-meta';
+
+  const partSpan = document.createElement('span');
+  partSpan.className = 'interact-self-part';
+  partSpan.textContent = inter.part;
+
+  const separator = document.createElement('span');
+  separator.className = 'interact-separator';
+  separator.textContent = '·';
+
+  const typeSpan = document.createElement('span');
+  typeSpan.className = 'interact-type';
+  typeSpan.textContent = inter.type;
+
+  meta.appendChild(partSpan);
+  meta.appendChild(separator);
+  meta.appendChild(typeSpan);
+
+  const partnerLine = document.createElement('div');
+  partnerLine.className = 'interact-partner-line';
+
+  const arrow = document.createElement('span');
+  arrow.className = 'interact-arrow';
+  arrow.textContent = '↔';
+
+  const partner = document.createElement('span');
+  partner.className = 'interact-partner';
+  partner.textContent = inter.partner;
+
+  partnerLine.appendChild(arrow);
+  partnerLine.appendChild(partner);
+
+  content.appendChild(meta);
+  content.appendChild(partnerLine);
+
+  // velocity 指示点
+  const velDot = document.createElement('span');
+  velDot.className = 'interact-velocity';
+  if (inter.velocity < -0.01)
+    velDot.classList.add('vel-approaching');
+  else if (inter.velocity > 0.01)
+    velDot.classList.add('vel-retreating');
+  else
+    velDot.classList.add('vel-static');
+
+  row.appendChild(content);
+  row.appendChild(velDot);
+  return row;
+}
+
+function createInteractionPlaceholder() {
+  const row = document.createElement('div');
+  row.className = 'interact-row is-empty';
+
+  const content = document.createElement('div');
+  content.className = 'interact-content';
+
+  const placeholder = document.createElement('div');
+  placeholder.className = 'interact-placeholder';
+  placeholder.textContent = ' ';
+
+  const velDot = document.createElement('span');
+  velDot.className = 'interact-velocity';
+
+  content.appendChild(placeholder);
+  row.appendChild(content);
+  row.appendChild(velDot);
+  return row;
+}
+
+function buildInteractionSlots(index, interactions) {
+  const normalized = [...(interactions || [])].sort(compareInteractions);
+  const activeByKey = new Map();
+  for (const inter of normalized) {
+    activeByKey.set(getInteractionKey(inter), inter);
+  }
+
+  const slotKeys = interactionSlotsByActor.get(index) || [];
+  for (const inter of normalized) {
+    const key = getInteractionKey(inter);
+    if (!slotKeys.includes(key)) {
+      slotKeys.push(key);
+    }
+  }
+
+  interactionSlotsByActor.set(index, slotKeys);
+
+  const slots = slotKeys.map(key => activeByKey.get(key) || null);
+  if (slotKeys.length === 0) {
+    return slots;
+  }
+
+  while (slots.length < Math.max(MIN_INTERACTION_SLOTS, slotKeys.length)) {
+    slots.push(null);
+  }
+
+  return slots;
+}
+
+function getInteractionKey(inter) {
+  return inter.part || (inter.type + ':' + (inter.partner || ''));
+}
+
+function compareInteractions(lhs, rhs) {
+  const lhsPriority = INTERACTION_PRIORITY[lhs.part] ?? 999;
+  const rhsPriority = INTERACTION_PRIORITY[rhs.part] ?? 999;
+  if (lhsPriority !== rhsPriority) {
+    return lhsPriority - rhsPriority;
+  }
+
+  if (lhs.part !== rhs.part) {
+    return lhs.part.localeCompare(rhs.part);
+  }
+
+  if (lhs.type !== rhs.type) {
+    return lhs.type.localeCompare(rhs.type);
+  }
+
+  return (lhs.partner || '').localeCompare(rhs.partner || '');
 }
 
 // ═══════════════════════════════════════════════════
@@ -216,10 +378,10 @@ function updateInteractList(index, interactions) {
 // ═══════════════════════════════════════════════════
 
 function setupDrag() {
-  const header = document.getElementById('hud-header');
-  if (!header) return;
+  const handle = document.querySelector('#hud-header .drag-handle');
+  if (!handle) return;
 
-  header.addEventListener('mousedown', function (e) {
+  handle.addEventListener('mousedown', function (e) {
     isDragging = true;
     dragOffsetX = e.clientX - hudContainer.offsetLeft;
     dragOffsetY = e.clientY - hudContainer.offsetTop;

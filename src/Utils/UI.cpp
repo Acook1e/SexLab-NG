@@ -10,6 +10,9 @@
 #include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
+#include <algorithm>
+#include <cstdlib>
+
 static PRISMA_UI_API::IVPrismaUI2* prisma = nullptr;
 static PrismaView view                    = 0;
 
@@ -24,6 +27,45 @@ nlohmann::json BuildInteractionJson(Define::BodyPart::Name partName,
   ij["partner"]  = bpInfo.actor ? bpInfo.actor->GetDisplayFullName() : "";
   ij["velocity"] = bpInfo.velocity;
   return ij;
+}
+
+nlohmann::json BuildSceneSelectionJson(const Instance::SceneInstance& scene)
+{
+  nlohmann::json selection;
+  selection["options"]     = nlohmann::json::array();
+  selection["selectedPtr"] = "";
+
+  const auto& availableScenes = scene.GetAvailableScenes();
+  Define::Scene* current      = scene.GetCurrentScene();
+  std::vector<Define::Scene*> orderedScenes;
+  orderedScenes.reserve(availableScenes.size());
+  for (const auto& [ptr, _] : availableScenes) {
+    if (ptr)
+      orderedScenes.push_back(ptr);
+  }
+
+  std::sort(orderedScenes.begin(), orderedScenes.end(),
+            [](const Define::Scene* lhs, const Define::Scene* rhs) {
+              if (lhs->GetName() != rhs->GetName())
+                return lhs->GetName() < rhs->GetName();
+              return lhs < rhs;
+            });
+
+  for (auto* ptr : orderedScenes) {
+    if (!ptr)
+      continue;
+
+    nlohmann::json item;
+    item["ptr"]  = std::to_string(reinterpret_cast<std::uintptr_t>(ptr));
+    item["name"] = ptr->GetName();
+    selection["options"].push_back(std::move(item));
+
+    if (ptr == current)
+      selection["selectedPtr"] = std::to_string(reinterpret_cast<std::uintptr_t>(ptr));
+  }
+
+  selection["currentName"] = current ? current->GetName() : "";
+  return selection;
 }
 }  // namespace
 
@@ -65,6 +107,17 @@ void UI::CreateView()
     float x = 0, y = 0;
     if (std::sscanf(arg, "%f,%f", &x, &y) == 2)
       UI::GetSingleton().OnPositionChanged(x, y);
+  });
+
+  prisma->RegisterJSListener(view, "onHudSceneSelected", [](const char* arg) {
+    if (!arg || !*arg)
+      return;
+
+    char* end                         = nullptr;
+    const unsigned long long selected = std::strtoull(arg, &end, 10);
+    if (end == arg)
+      return;
+    UI::GetSingleton().OnSceneSelected(static_cast<std::uintptr_t>(selected));
   });
 
   prisma->Hide(view);
@@ -148,12 +201,27 @@ void UI::OnPositionChanged(float x, float y)
   posY = y;
 }
 
+void UI::OnSceneSelected(std::uintptr_t scenePtr)
+{
+  if (!currentScene)
+    return;
+
+  auto* scene = reinterpret_cast<Define::Scene*>(scenePtr);
+  if (!currentScene->SetScene(scene)) {
+    logger::warn("[SexLab NG] UI: failed to switch scene ptr={}", scenePtr);
+    return;
+  }
+
+  SendInitData(currentScene);
+}
+
 // ── JSON 构建 ─────────────────────────────────────────────
 
 void UI::SendInitData(Instance::SceneInstance* scene)
 {
   nlohmann::json j;
-  j["actors"] = nlohmann::json::array();
+  j["actors"]         = nlohmann::json::array();
+  j["sceneSelection"] = BuildSceneSelectionJson(*scene);
 
   const auto& actors   = scene->GetActors();
   const auto& interact = scene->GetInteract();
@@ -195,7 +263,8 @@ void UI::SendInitData(Instance::SceneInstance* scene)
 void UI::SendUpdateData(Instance::SceneInstance* scene)
 {
   nlohmann::json j;
-  j["actors"] = nlohmann::json::array();
+  j["actors"]         = nlohmann::json::array();
+  j["sceneSelection"] = BuildSceneSelectionJson(*scene);
 
   const auto& actors   = scene->GetActors();
   const auto& interact = scene->GetInteract();

@@ -87,7 +87,7 @@ bool LoadFromJson(const std::filesystem::path& path)
       continue;
     }
     Define::Scene scene =
-        Define::Scene(std::move(scene_name), std::move(event_prefix), std::move(furniture),
+        Define::Scene(std::move(scene_name), std::move(total_stages), std::move(furniture),
                       std::move(races), std::move(sceneTags), std::move(positions));
     // logger::info("{}", scene.verbose());
     scenes.push_back(std::move(scene));

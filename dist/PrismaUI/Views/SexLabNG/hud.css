@@ -22,7 +22,8 @@ body {
     position: absolute;
     top: 60px;
     right: 40px;
-    width: 320px;
+    width: min(960px, calc(100vw - 48px));
+    min-width: 320px;
     background: rgba(10, 10, 15, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
@@ -36,30 +37,75 @@ body {
     align-items: center;
     padding: 8px 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    cursor: grab;
 }
 
-#hud-header:active {
-    cursor: grabbing;
+#scene-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px 0 12px;
+}
+
+#scene-bar.is-hidden {
+    display: none;
+}
+
+.scene-bar-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.46);
+}
+
+#scene-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.86);
+    outline: none;
+}
+
+#scene-select:focus {
+    border-color: rgba(52, 152, 219, 0.7);
 }
 
 .drag-handle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 1px;
     color: rgba(255, 255, 255, 0.5);
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+#actor-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
 }
 
 /* ═══════════════════════════════════════════════════
    Actor Fragment
    ═══════════════════════════════════════════════════ */
 .actor-fragment {
+    flex: 1 1 290px;
+    min-width: 280px;
     padding: 10px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.actor-fragment:last-child {
-    border-bottom: none;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .actor-name {
@@ -165,21 +211,40 @@ body {
    交互列表
    ═══════════════════════════════════════════════════ */
 .interact-list {
-    margin-top: 6px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+    min-height: 92px;
+    align-content: start;
 }
 
 .interact-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     font-size: 12px;
-    padding: 3px 0;
+    min-height: 54px;
+    padding: 6px 8px;
     color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.interact-row.is-empty {
+    opacity: 0.24;
+    border-style: dashed;
+    background: rgba(255, 255, 255, 0.015);
 }
 
 .interact-content {
     flex: 1;
     min-width: 0;
+}
+
+.interact-placeholder {
+    min-height: 100%;
 }
 
 .interact-meta {
@@ -231,8 +296,8 @@ body {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    margin-left: auto;
-    margin-right: 4px;
+    margin-top: 6px;
+    flex: 0 0 auto;
 }
 
 .vel-approaching {
@@ -245,4 +310,25 @@ body {
 
 .vel-retreating {
     background: #e74c3c;
+}
+
+@media (max-width: 720px) {
+    #hud-container {
+        top: 12px;
+        right: 12px;
+        width: min(420px, calc(100vw - 24px));
+    }
+
+    #actor-list {
+        padding: 8px;
+    }
+
+    .actor-fragment {
+        min-width: 100%;
+    }
+
+    .interact-list {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
 }

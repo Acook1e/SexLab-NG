@@ -85,6 +85,7 @@ namespace
       begin = end;
     }
   }
+
 }  // namespace
 
 SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> participants,
@@ -123,6 +124,12 @@ SceneInstance::SceneInstance(RE::Actor* central, std::vector<RE::Actor*> partici
       continue;
     Collision::GetSingleton().AddActor(actor);
   }
+
+  if (Settings::bEnableActorWalkToCenter) {
+    state = InstanceState::ActorApproach;
+  } else {
+    state = InstanceState::SceneReady;
+  }
 }
 
 SceneInstance::~SceneInstance()
@@ -131,6 +138,7 @@ SceneInstance::~SceneInstance()
 
   UI::GetSingleton().Hide(this);
 
+  // TODO: 在交互识别稳定后，基于 interact.GetObservedInteractTags(actor) 做场景/位置 tag 纠正。
   // ── 场景结束: 收集 enjoyment 记录并更新 stat ──────────────
   Registry::ActorStat::GetSingleton().UpdateStat(currentScene, actorInfoMap);
 
@@ -147,9 +155,13 @@ SceneInstance::~SceneInstance()
 
 bool SceneInstance::Update()
 {
-  constexpr std::uint64_t UPDATE_INTERVAL = 100;        // Update every 100 milliseconds
-  constexpr std::uint64_t STAGE_LENGTH    = 10 * 1000;  // Update every 10 seconds
-  constexpr std::uint64_t SOS_READY       = 1000;       // 1 second to prepare for SOSBend
+  constexpr std::uint64_t UPDATE_INTERVAL = 100;  // ScenePlay阶段每100ms更新一次
+  constexpr std::uint64_t BASE_STAGE_LENGTH =
+      10 * 1000;  // 每个阶段基础长度为10秒，实际长度会根据场景定义和当前阶段进行调整
+  constexpr std::uint64_t MAX_STAGE_LENGTH =
+      40 * 1000;  // 每个阶段的最大长度为40秒，防止某些阶段过长导致游戏体验变差
+  constexpr std::uint64_t SOS_READY =
+      1000;  // 因为TNG行为图性能较差，给SOS准备阶段额外增加1秒的时间
 
   const auto Now =
       static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -157,16 +169,18 @@ bool SceneInstance::Update()
                                      .count());
 
   auto now = Now;
-  if (now - lastUpdateTime < UPDATE_INTERVAL)
-    return true;
 
-  // If the scene hasn't started yet, start it
-  // Process only once
-  if (!currentStage) {
+  if (state == InstanceState::ActorApproach) {
+    // TODO: 允许在 ActorApproach 阶段启用 Actor Walk to Center 功能，暂时先直接跳过此阶段
+    state = InstanceState::SceneReady;
+    return true;
+  }
+
+  // 场景准备阶段，锁定、脱衣、准备，并显示 UI
+  if (state == InstanceState::SceneReady) {
+
     if (actorInfoMap.empty() || !currentScene)
       return false;
-
-    state = InstanceState::SceneReady;
 
     LockActors();
     StripActors();
@@ -179,29 +193,65 @@ bool SceneInstance::Update()
       }
 
     currentStage        = 1;
-    lastStageUpdateTime = now - STAGE_LENGTH + SOS_READY;  // Schedule the first stage update
+    lastStageUpdateTime = now - BASE_STAGE_LENGTH + SOS_READY;  // Schedule the first stage update
     state               = InstanceState::ScenePlay;
     interact.FlashNodeData();
+
+    return true;
   }
 
-  // Real Update start from here
-  lastUpdateTime = now;
+  // 处于场景切换阶段时，暂停更新
+  // 设置上次推进阶段的时间为最大，确保切换完成后能立即推进到下一阶段
+  if (state == InstanceState::SceneChange) {
+    lastStageUpdateTime = now - MAX_STAGE_LENGTH;
+    return true;
+  }
 
-  interact.Update();
-  Registry::ActorStat::GetSingleton().UpdateEnjoyment(currentScene, actorInfoMap, interact);
+  if (state == InstanceState::ScenePlay) {
 
-  // 总是最后更新 UI，确保数据同步
-  UI::GetSingleton().Update(this);
+    // 对于其他阶段不需要更新间隔
+    if (now - lastUpdateTime < UPDATE_INTERVAL)
+      return true;
 
-  if (now - lastStageUpdateTime > STAGE_LENGTH) {
-    lastStageUpdateTime = now;
-    if (SetStage(currentStage))
-      return currentStage++;
+    lastUpdateTime = now;
 
-    state = InstanceState::SceneEnd;
+    interact.Update();
+    Registry::ActorStat::GetSingleton().UpdateEnjoyment(currentScene, actorInfoMap, interact);
+
+    // 总是最后更新 UI，确保数据同步
+    UI::GetSingleton().Update(this);
+
+    auto res = true;
+    if (now - lastStageUpdateTime > BASE_STAGE_LENGTH) {
+      lastStageUpdateTime = now;
+      res                 = SetStage(currentStage);
+      if (res)
+        ++currentStage;
+      if (currentStage > currentScene->GetTotalStages())
+        state = InstanceState::SceneEnd;
+    }
+
+    // 当 res 为 false 时，表示场景遭遇某些错误必须提前结束
+    if (!res) {
+      logger::warn("[SexLab NG] Scene '{}' ended prematurely at stage {} due to an error.",
+                   currentScene ? currentScene->GetName() : "null", currentStage);
+      return false;
+    }
+
+    return true;
+  }
+
+  // 当进入场景结束阶段，进行一次事件分发
+  // 假如此时收到新的场景列表或者设置为新场景
+  // 那保留此实例并play新场景，否则销毁此实例
+  if (state == InstanceState::SceneEnd) {
+    // TODO: 允许在SceneEnd阶段注入新场景并重置状态而不销毁实例
     return false;
   }
 
+  // 你为什么会执行到这
+  logger::error("[SexLab NG] SceneInstance in unexpected state: {}",
+                static_cast<std::uint8_t>(state));
   return true;
 }
 
@@ -343,6 +393,40 @@ void SceneInstance::ResetActors()
     //  actor->NotifyAnimationGraph("ForceFurnExit");
     // actor->NotifyAnimationGraph("Reset");
   }
+}
+
+bool SceneInstance::SetScene(Define::Scene* scene)
+{
+  if (!scene)
+    return false;
+
+  if (scene == currentScene)
+    return true;
+
+  if (availableScenes.find(scene) == availableScenes.end())
+    return false;
+
+  Define::Scene* previousScene      = currentScene;
+  const std::uint32_t previousStage = currentStage;
+  const InstanceState previousState = state;
+
+  state = InstanceState::SceneChange;
+
+  currentScene = scene;
+  currentStage = 1;
+
+  if (!SetPositions()) {
+    currentScene = previousScene;
+    currentStage = previousStage;
+    state        = previousState;
+    return false;
+  }
+
+  ReadyActors();
+  interact.FlashNodeData();
+
+  state = InstanceState::ScenePlay;
+  return true;
 }
 
 Define::Scene* SceneInstance::RandomScene()
