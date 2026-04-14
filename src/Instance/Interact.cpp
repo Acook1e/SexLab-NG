@@ -4,8 +4,6 @@
 
 #include "magic_enum/magic_enum.hpp"
 
-#include <numbers>
-
 namespace Instance::Detail
 {
 
@@ -38,6 +36,7 @@ namespace
     AssignSkipped,
     Assigned,
     FinalState,
+    Calibration,
   };
 
   enum class AngleModel : std::uint8_t
@@ -373,6 +372,108 @@ namespace
     return Settings::bDebugMode;
   }
 
+  bool ShouldCalibrateBodyPart(Name name)
+  {
+    return name == Name::Vagina || name == Name::Anus || name == Name::Penis;
+  }
+
+  template <class Container>
+  std::string JoinText(const Container& values)
+  {
+    std::string result;
+    for (std::size_t index = 0; index < values.size(); ++index) {
+      if (index > 0)
+        result += "|";
+      result += std::string_view(values[index]);
+    }
+    return result;
+  }
+
+  void EmitBodyPartCalibration(RE::Actor* actor, Name name, const BP& bodypart)
+  {
+    if (!IsDebugEnabled() || !ShouldCalibrateBodyPart(name))
+      return;
+
+    static std::unordered_map<std::uint64_t, float> s_lastCalibrationLogTimes;
+    const std::uint64_t key =
+        (static_cast<std::uint64_t>(GetActorFormID(actor)) << 8) | static_cast<std::uint8_t>(name);
+    const float nowMs   = GetSteadyNowMs();
+    auto [it, inserted] = s_lastCalibrationLogTimes.try_emplace(key, nowMs);
+    if (!inserted && nowMs - it->second < 1200.f)
+      return;
+    it->second = nowMs;
+
+    const auto& shapeInfo       = bodypart.GetShapeInfo();
+    const auto* vectorInfo      = shapeInfo.vector ? &*shapeInfo.vector : nullptr;
+    const auto* collider        = shapeInfo.collider ? &*shapeInfo.collider : nullptr;
+    const Define::Point3f start = vectorInfo ? vectorInfo->start : Define::Point3f::Zero();
+    const Define::Point3f end   = vectorInfo ? vectorInfo->end : Define::Point3f::Zero();
+    const Define::Vector3f dir  = vectorInfo ? vectorInfo->direction : Define::Vector3f::Zero();
+    const float len             = vectorInfo ? vectorInfo->length : 0.f;
+
+    logger::info("[SexLab NG] BodyPartDebug actor={:08X} part={} shape={} valid={} "
+                 "start=({:.2f},{:.2f},{:.2f}) end=({:.2f},{:.2f},{:.2f}) "
+                 "dir=({:.3f},{:.3f},{:.3f}) len={:.2f} nodes={} boxes={} capsules={}",
+                 GetActorFormID(actor), magic_enum::enum_name(name),
+                 magic_enum::enum_name(bodypart.GetShape()), bodypart.IsValid(), start.x(),
+                 start.y(), start.z(), end.x(), end.y(), end.z(), dir.x(), dir.y(), dir.z(), len,
+                 vectorInfo ? vectorInfo->nodes.size() : 0, collider ? collider->boxes.size() : 0,
+                 collider ? collider->capsules.size() : 0);
+
+    if (vectorInfo) {
+      for (std::size_t index = 0; index < vectorInfo->nodes.size(); ++index) {
+        const auto& node = vectorInfo->nodes[index];
+
+        std::vector<std::string> resolvedNames, parentNames;
+        bool hasConcrete = false, allResolved = true;
+        for (std::size_t i = 0; i < node.requestedNodeNames.size(); ++i) {
+          const auto* n = i < node.resolvedNodes.size() ? node.resolvedNodes[i].get() : nullptr;
+          resolvedNames.push_back(n ? std::string{n->name.c_str()} : std::string{});
+          parentNames.push_back(n && n->parent ? std::string{n->parent->name.c_str()}
+                                               : std::string{});
+          if (!node.requestedNodeNames[i].empty()) {
+            hasConcrete = true;
+            if (!n)
+              allResolved = false;
+          }
+        }
+
+        logger::info("[SexLab NG] BodyPartDebug Node actor={:08X} part={} index={} "
+                     "pos=({:.2f},{:.2f},{:.2f}) "
+                     "requested=[{}] resolved=[{}] parents=[{}] valid={}",
+                     GetActorFormID(actor), magic_enum::enum_name(name), index, node.position.x(),
+                     node.position.y(), node.position.z(), JoinText(node.requestedNodeNames),
+                     JoinText(resolvedNames), JoinText(parentNames), hasConcrete && allResolved);
+      }
+    }
+
+    if (collider) {
+      for (std::size_t index = 0; index < collider->boxes.size(); ++index) {
+        const auto& box    = collider->boxes[index];
+        const auto lateral = box.basis.col(0);
+        const auto up      = box.basis.col(1);
+        const auto forward = box.basis.col(2);
+        logger::info("[SexLab NG] BodyPartDebug Box actor={:08X} part={} index={} "
+                     "center=({:.2f},{:.2f},{:.2f}) "
+                     "ext=({:.2f},{:.2f},{:.2f}) right=({:.3f},{:.3f},{:.3f}) "
+                     "up=({:.3f},{:.3f},{:.3f}) forward=({:.3f},{:.3f},{:.3f})",
+                     GetActorFormID(actor), magic_enum::enum_name(name), index, box.center.x(),
+                     box.center.y(), box.center.z(), box.halfExtents.x(), box.halfExtents.y(),
+                     box.halfExtents.z(), lateral.x(), lateral.y(), lateral.z(), up.x(), up.y(),
+                     up.z(), forward.x(), forward.y(), forward.z());
+      }
+
+      for (std::size_t index = 0; index < collider->capsules.size(); ++index) {
+        const auto& capsule = collider->capsules[index];
+        logger::info("[SexLab NG] BodyPartDebug Capsule actor={:08X} part={} index={} "
+                     "start=({:.2f},{:.2f},{:.2f}) end=({:.2f},{:.2f},{:.2f}) radius={:.2f}",
+                     GetActorFormID(actor), magic_enum::enum_name(name), index, capsule.start.x(),
+                     capsule.start.y(), capsule.start.z(), capsule.end.x(), capsule.end.y(),
+                     capsule.end.z(), capsule.radius);
+      }
+    }
+  }
+
   bool ShouldEmitDebug(RE::Actor* sourceActor, RE::Actor* targetActor, Type type, DebugEvent event,
                        float minIntervalMs = 350.f)
   {
@@ -433,13 +534,20 @@ namespace
   MotionSnapshot BuildSnapshot(const BP& bodypart, float nowMs)
   {
     MotionSnapshot snapshot;
-    snapshot.start       = bodypart.GetStart();
-    snapshot.end         = bodypart.GetEnd();
-    snapshot.direction   = bodypart.GetDirection();
-    snapshot.length      = bodypart.GetLength();
+    const auto& shapeInfo = bodypart.GetShapeInfo();
+    if (!shapeInfo.vector)
+      return snapshot;
+    snapshot.start       = shapeInfo.vector->start;
+    snapshot.end         = shapeInfo.vector->end;
+    snapshot.direction   = shapeInfo.vector->direction;
+    snapshot.length      = shapeInfo.vector->length;
     snapshot.timeMs      = nowMs;
     snapshot.valid       = bodypart.IsValid();
     snapshot.directional = bodypart.GetShape() != BP::Shape::Point && snapshot.length >= 1e-6f;
+    if (shapeInfo.collider) {
+      snapshot.capsules = shapeInfo.collider->capsules;
+      snapshot.boxes    = shapeInfo.collider->boxes;
+    }
     return snapshot;
   }
 
@@ -702,6 +810,151 @@ namespace
       }
     }
 
+    // ── Collider geometry primitives ──────────────────────────────────────
+
+    float DistancePointToCapsule(const Define::Point3f& point,
+                                 const Define::CapsuleCollider& capsule)
+    {
+      const float segDist = DistancePointToSegment(point, capsule.start, capsule.end);
+      return (std::max)(0.f, segDist - capsule.radius);
+    }
+
+    float DistancePointToBox(const Define::Point3f& point, const Define::BoxCollider& box)
+    {
+      const Define::Vector3f local = point - box.center;
+      float sqDist                 = 0.f;
+      for (int axis = 0; axis < 3; ++axis) {
+        const float proj   = local.dot(box.basis.col(axis));
+        const float half   = box.halfExtents[axis];
+        const float excess = std::abs(proj) - half;
+        if (excess > 0.f)
+          sqDist += excess * excess;
+      }
+      return std::sqrt(sqDist);
+    }
+
+    bool IsPointInsideBox(const Define::Point3f& point, const Define::BoxCollider& box)
+    {
+      const Define::Vector3f local = point - box.center;
+      for (int axis = 0; axis < 3; ++axis) {
+        if (std::abs(local.dot(box.basis.col(axis))) > box.halfExtents[axis])
+          return false;
+      }
+      return true;
+    }
+
+    float DistanceCapsuleToCapsule(const Define::CapsuleCollider& a,
+                                   const Define::CapsuleCollider& b)
+    {
+      // Reuse segment-segment closest distance via MeasurePartDistance logic
+      MotionSnapshot segA;
+      segA.start       = a.start;
+      segA.end         = a.end;
+      segA.direction   = (a.end - a.start);
+      segA.length      = segA.direction.norm();
+      segA.valid       = true;
+      segA.directional = segA.length >= 1e-6f;
+      if (segA.directional)
+        segA.direction /= segA.length;
+
+      MotionSnapshot segB;
+      segB.start       = b.start;
+      segB.end         = b.end;
+      segB.direction   = (b.end - b.start);
+      segB.length      = segB.direction.norm();
+      segB.valid       = true;
+      segB.directional = segB.length >= 1e-6f;
+      if (segB.directional)
+        segB.direction /= segB.length;
+
+      const float axisDist = MeasurePartDistance(segA, segB);
+      return (std::max)(0.f, axisDist - a.radius - b.radius);
+    }
+
+    float DistanceCapsuleToBox(const Define::CapsuleCollider& capsule,
+                               const Define::BoxCollider& box)
+    {
+      // Sample capsule axis at start, mid, end and take best box distance minus radius
+      const Define::Point3f mid = (capsule.start + capsule.end) * 0.5f;
+      float best                = DistancePointToBox(capsule.start, box);
+      best                      = (std::min)(best, DistancePointToBox(mid, box));
+      best                      = (std::min)(best, DistancePointToBox(capsule.end, box));
+      return (std::max)(0.f, best - capsule.radius);
+    }
+
+    float DistanceColliderToCollider(const MotionSnapshot& a, const MotionSnapshot& b)
+    {
+      float best = std::numeric_limits<float>::infinity();
+
+      for (const auto& ca : a.capsules) {
+        for (const auto& cb : b.capsules)
+          best = (std::min)(best, DistanceCapsuleToCapsule(ca, cb));
+        for (const auto& bb : b.boxes)
+          best = (std::min)(best, DistanceCapsuleToBox(ca, bb));
+      }
+
+      for (const auto& ba : a.boxes) {
+        for (const auto& cb : b.capsules)
+          best = (std::min)(best, DistanceCapsuleToBox(cb, ba));
+        // Box-box: sample centers cross-checked
+        for (const auto& bb : b.boxes) {
+          best = (std::min)(best, DistancePointToBox(ba.center, bb));
+          best = (std::min)(best, DistancePointToBox(bb.center, ba));
+        }
+      }
+
+      return best;
+    }
+
+    float DistancePointToCollider(const Define::Point3f& point, const MotionSnapshot& collider)
+    {
+      float best = std::numeric_limits<float>::infinity();
+      for (const auto& capsule : collider.capsules)
+        best = (std::min)(best, DistancePointToCapsule(point, capsule));
+      for (const auto& box : collider.boxes)
+        best = (std::min)(best, DistancePointToBox(point, box));
+      return best;
+    }
+
+    float DistanceSegmentToCollider(const Define::Point3f& segStart, const Define::Point3f& segEnd,
+                                    const MotionSnapshot& collider)
+    {
+      // Sample segment at start, mid, end for practical approximation
+      const Define::Point3f mid = (segStart + segEnd) * 0.5f;
+      float best                = DistancePointToCollider(segStart, collider);
+      best                      = (std::min)(best, DistancePointToCollider(mid, collider));
+      best                      = (std::min)(best, DistancePointToCollider(segEnd, collider));
+      return best;
+    }
+
+    bool HasCollider(const MotionSnapshot& part)
+    {
+      return part.HasCollider();
+    }
+
+    float MeasureColliderDistance(const MotionSnapshot& lhs, const MotionSnapshot& rhs)
+    {
+      const bool lhsHas = HasCollider(lhs);
+      const bool rhsHas = HasCollider(rhs);
+
+      if (lhsHas && rhsHas)
+        return DistanceColliderToCollider(lhs, rhs);
+
+      if (lhsHas && !rhsHas) {
+        if (HasDirectionalAxis(rhs))
+          return DistanceSegmentToCollider(rhs.start, rhs.end, lhs);
+        return DistancePointToCollider(rhs.start, lhs);
+      }
+
+      if (!lhsHas && rhsHas) {
+        if (HasDirectionalAxis(lhs))
+          return DistanceSegmentToCollider(lhs.start, lhs.end, rhs);
+        return DistancePointToCollider(lhs.start, rhs);
+      }
+
+      return MeasurePartDistance(lhs, rhs);
+    }
+
   }  // namespace Geometry
 
   bool IsAngleUnconstrained(AngleRange range)
@@ -805,16 +1058,6 @@ namespace
     return info && predicate(info->prevType);
   }
 
-  bool HasPreviousVaginalContext(const ActorData& data)
-  {
-    return HasPreviousPartContext(data, Name::Vagina, IncludesVaginal);
-  }
-
-  bool HasPreviousAnalContext(const ActorData& data)
-  {
-    return HasPreviousPartContext(data, Name::Anus, IncludesAnal);
-  }
-
   bool HadPreviousPenetrationWithPartner(const ActorData& data, Name part, RE::Actor* partner)
   {
     const Info* info = TryGetInfo(data, part);
@@ -916,6 +1159,62 @@ namespace
     return std::clamp(bias, -kTotalMaxBias, kTotalMaxBias);
   }
 
+  float ComputeAnalAngleAllowance(const PenisContextMetrics& metrics, float rootEntryDistance,
+                                  float shaftDistance)
+  {
+    float allowance = 0.f;
+
+    if (std::isfinite(metrics.analSupport)) {
+      if (metrics.analSupport <= 6.0f)
+        allowance += 3.0f;
+      if (metrics.analSupport <= 5.0f)
+        allowance += 3.0f;
+      if (metrics.analSupport <= 4.0f)
+        allowance += 2.0f;
+    }
+
+    if (std::isfinite(metrics.analEntryDistance)) {
+      if (metrics.analEntryDistance <= 5.0f)
+        allowance += 1.5f;
+      if (metrics.analEntryDistance <= 4.0f)
+        allowance += 1.5f;
+    }
+
+    if (std::isfinite(metrics.vaginalSupport) && std::isfinite(metrics.analSupport) &&
+        metrics.analSupport + 0.75f < metrics.vaginalSupport) {
+      allowance += 1.5f;
+    }
+
+    if (std::isfinite(metrics.vaginalEntryDistance) && std::isfinite(metrics.analEntryDistance) &&
+        metrics.analEntryDistance + 0.75f < metrics.vaginalEntryDistance) {
+      allowance += 1.5f;
+    }
+
+    // Close rear contacts are often animated more horizontally than the anus channel axis.
+    if (rootEntryDistance <= 4.5f)
+      allowance += 1.0f;
+    if (rootEntryDistance <= 3.0f)
+      allowance += 1.5f;
+    if (rootEntryDistance <= 2.0f)
+      allowance += 2.5f;
+    if (rootEntryDistance <= 1.0f)
+      allowance += 3.5f;
+
+    if (shaftDistance <= 5.0f)
+      allowance += 1.0f;
+    if (shaftDistance <= 3.5f)
+      allowance += 1.5f;
+    if (shaftDistance <= 2.5f)
+      allowance += 2.0f;
+    if (shaftDistance <= 1.5f)
+      allowance += 2.5f;
+
+    if (rootEntryDistance <= 1.25f && shaftDistance <= 2.5f)
+      allowance += 3.0f;
+
+    return std::clamp(allowance, 0.f, 22.f);
+  }
+
   bool IsNearThreshold(float currentValue, float predictedValue, float limit, float margin)
   {
     return currentValue <= limit + margin || predictedValue <= limit + margin;
@@ -943,11 +1242,18 @@ namespace
     if (axisDistance > maxAxis)
       return false;
 
-    depth                          = useMid ? metrics.midDepth : metrics.tipDepth;
+    depth = useMid ? metrics.midDepth : metrics.tipDepth;
+
+    const float shaftMinDepth = (std::min)({metrics.rootDepth, metrics.midDepth, metrics.tipDepth});
+    const float shaftMaxDepth = (std::max)({metrics.rootDepth, metrics.midDepth, metrics.tipDepth});
     const bool shaftInsideReceiver = metrics.overlapDepth > 0.05f;
+    const bool shaftInsideDepthWindow =
+        shaftMaxDepth >= minDepth + 0.05f && shaftMinDepth <= maxDepth - 0.05f;
     const bool nearEntryHold = stickyPair && Geometry::SampledShaftEntryDistance(metrics) <= 2.0f &&
                                axisDistance <= maxAxis + 0.6f;
-    if (!shaftInsideReceiver && !nearEntryHold)
+    const bool deepInsertionHold =
+        stickyPair && shaftInsideDepthWindow && axisDistance <= maxAxis + 0.6f;
+    if (!shaftInsideReceiver && !nearEntryHold && !deepInsertionHold)
       return false;
 
     if (depth < minDepth || depth > maxDepth) {
@@ -957,7 +1263,7 @@ namespace
       } else if (tipDepthInRange && metrics.tipAxisDistance <= maxAxis) {
         axisDistance = metrics.tipAxisDistance;
         depth        = metrics.tipDepth;
-      } else if (nearEntryHold) {
+      } else if (nearEntryHold || deepInsertionHold) {
         depth = std::clamp(depth, minDepth + 0.05f, maxDepth - 0.05f);
       } else {
         return false;
@@ -1304,6 +1610,8 @@ namespace
                      : SampledMetrics{};
     const float predictedDistance = hasPredicted ? Geometry::SampledShaftDistance(predictedMetrics)
                                                  : std::numeric_limits<float>::infinity();
+    const float predictedRootEntryDistance =
+        hasPredicted ? predictedMetrics.rootEntryDistance : std::numeric_limits<float>::infinity();
     const bool hasPreviousSamples = penisHistory->previous.valid && receiverHistory->previous.valid;
     const SampledMetrics previousMetrics =
         hasPreviousSamples
@@ -1344,6 +1652,14 @@ namespace
     const bool strongContext = hasStrongTypeContext(contextMetrics) ||
                                (hasPredicted && hasStrongTypeContext(predictedContextMetrics));
     const float contextBias  = ComputeFrontRearBias(contextMetrics, type);
+    const float analAngleAllowance =
+        type == Type::Anal
+            ? (std::max)(ComputeAnalAngleAllowance(contextMetrics, rootEntryDistance, distance),
+                         hasPredicted ? ComputeAnalAngleAllowance(predictedContextMetrics,
+                                                                  predictedRootEntryDistance,
+                                                                  predictedDistance)
+                                      : 0.f)
+            : 0.f;
 
     float effectiveMaxDistance = maxDistance;
     float effectiveMaxAngle    = maxAngle;
@@ -1352,6 +1668,9 @@ namespace
     float effectiveMaxDepth    = maxDepth;
     float temporalBonus        = 0.f;
     float switchPenalty        = 0.f;
+
+    if (type == Type::Anal)
+      effectiveMaxAngle += analAngleAllowance;
 
     if (previousSameType) {
       effectiveMaxDistance += type == Type::Vaginal ? 1.0f : 0.8f;
@@ -1507,6 +1826,8 @@ namespace
       candidateDetail = "accepted angle-hold opposite-switch";
     else if (heldByAngleHysteresis)
       candidateDetail = "accepted angle-hold";
+    else if (type == Type::Anal && analAngleAllowance > 0.f && angle > maxAngle)
+      candidateDetail = "accepted rear-angle";
     else if (previousOppositeType && !strongContext)
       candidateDetail = "opposite-type-switch";
 
@@ -2664,6 +2985,7 @@ namespace
         history.older          = history.previous;
         history.previous       = history.current;
         history.current        = BuildSnapshot(info.bodypart, nowMs);
+        EmitBodyPartCalibration(actor, name, info.bodypart);
       }
     }
   }

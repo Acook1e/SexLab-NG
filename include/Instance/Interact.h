@@ -84,6 +84,10 @@ public:
     float timeMs               = 0.f;
     bool valid                 = false;
     bool directional           = false;
+    std::vector<Define::CapsuleCollider> capsules{};
+    std::vector<Define::BoxCollider> boxes{};
+
+    [[nodiscard]] bool HasCollider() const { return !capsules.empty() || !boxes.empty(); }
   };
 
   struct MotionHistory

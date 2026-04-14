@@ -14,9 +14,11 @@
 #include <deque>
 #include <format>
 #include <future>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <mutex>
+#include <numbers>
 #include <optional>
 #include <ranges>
 #include <set>

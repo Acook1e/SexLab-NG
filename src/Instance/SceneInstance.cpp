@@ -425,6 +425,8 @@ bool SceneInstance::SetScene(Define::Scene* scene)
   ReadyActors();
   interact.FlashNodeData();
 
+  logger::info("[SexLab NG] Switched to scene: '{}'",
+               currentScene ? currentScene->GetName() : "null");
   state = InstanceState::ScenePlay;
   return true;
 }

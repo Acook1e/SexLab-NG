@@ -10,9 +10,6 @@
 #include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
-#include <algorithm>
-#include <cstdlib>
-
 static PRISMA_UI_API::IVPrismaUI2* prisma = nullptr;
 static PrismaView view                    = 0;
 
@@ -104,9 +101,23 @@ void UI::CreateView()
 
   // 注册 JS → C++ 监听器: 用户拖拽 HUD 后 JS 回传位置
   prisma->RegisterJSListener(view, "onHudPositionChanged", [](const char* arg) {
-    float x = 0, y = 0;
-    if (std::sscanf(arg, "%f,%f", &x, &y) == 2)
-      UI::GetSingleton().OnPositionChanged(x, y);
+    if (!arg || !*arg)
+      return;
+
+    const char* comma = std::strchr(arg, ',');
+    if (!comma)
+      return;
+
+    char* end     = nullptr;
+    const float x = std::strtof(arg, &end);
+    if (end != comma)
+      return;
+
+    const float y = std::strtof(comma + 1, &end);
+    if (end == comma + 1 || *end != '\0')
+      return;
+
+    UI::GetSingleton().OnPositionChanged(x, y);
   });
 
   prisma->RegisterJSListener(view, "onHudSceneSelected", [](const char* arg) {
