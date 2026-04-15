@@ -12,9 +12,9 @@ namespace Instance::Detail
 using Name              = Define::BodyPart::Name;
 using BP                = Define::BodyPart;
 using Type              = Interact::Type;
-using Info              = Interact::Info;
-using ActorData         = Interact::ActorData;
-using GenitalSlotMemory = Interact::GenitalSlotMemory;
+using PartState         = Interact::PartState;
+using ActorState        = Interact::ActorState;
+using PenetrationMemory = Interact::PenetrationMemory;
 using MotionSnapshot    = Interact::MotionSnapshot;
 using MotionHistory     = Interact::MotionHistory;
 
@@ -26,17 +26,6 @@ namespace
     Penetration = 0,
     Proximity   = 1,
     Contact     = 2,
-  };
-
-  enum class DebugEvent : std::uint8_t
-  {
-    Candidate = 0,
-    Reject,
-    Suppressed,
-    AssignSkipped,
-    Assigned,
-    FinalState,
-    Calibration,
   };
 
   enum class AngleModel : std::uint8_t
@@ -71,8 +60,8 @@ namespace
   {
     RE::Actor* actorA = nullptr;
     RE::Actor* actorB = nullptr;
-    const ActorData& dataA;
-    const ActorData& dataB;
+    const ActorState& dataA;
+    const ActorState& dataB;
     bool self = false;
   };
 
@@ -80,8 +69,8 @@ namespace
   {
     RE::Actor* sourceActor = nullptr;
     RE::Actor* targetActor = nullptr;
-    const ActorData& sourceData;
-    const ActorData& targetData;
+    const ActorState& sourceData;
+    const ActorState& targetData;
     bool self = false;
   };
 
@@ -95,6 +84,59 @@ namespace
     float distance         = 0.f;
     float score            = 0.f;
     CandidateFamily family = CandidateFamily::Contact;
+  };
+
+  struct SimpleDirectedSpec
+  {
+    const Name* sourceParts = nullptr;
+    std::size_t sourceCount = 0;
+    const Name* targetParts = nullptr;
+    std::size_t targetCount = 0;
+    Type type               = Type::None;
+    CandidateFamily family  = CandidateFamily::Contact;
+    float maxDistance       = 0.f;
+    AngleRange angleRange{};
+    float angleWeight       = 0.f;
+    float scoreOffset       = 0.f;
+    AnchorMode anchorMode   = AnchorMode::None;
+    float anchorWeight      = 0.f;
+    float anchorMaxDistance = 0.f;
+  };
+
+  struct PenetrationSpec
+  {
+    Name receiverPart = Name::Mouth;
+    Type type         = Type::None;
+    float maxDistance = 0.f;
+    float maxAngle    = 0.f;
+    float maxAxis     = 0.f;
+    float minDepth    = 0.f;
+    float maxDepth    = 0.f;
+  };
+
+  struct ProximitySpec
+  {
+    Name targetPart   = Name::Mouth;
+    Type type         = Type::None;
+    float maxDistance = 0.f;
+    AngleRange angleRange{};
+    float angleWeight       = 0.f;
+    float scoreOffset       = 0.f;
+    AnchorMode anchorMode   = AnchorMode::None;
+    float anchorWeight      = 0.f;
+    float anchorMaxDistance = 0.f;
+  };
+
+  struct SymmetricSpec
+  {
+    Name partA             = Name::Mouth;
+    Name partB             = Name::Mouth;
+    Type type              = Type::None;
+    CandidateFamily family = CandidateFamily::Contact;
+    float maxDistance      = 0.f;
+    AngleRange angleRange{};
+    float angleWeight = 0.f;
+    float scoreOffset = 0.f;
   };
 
   struct AssignInfo
@@ -158,27 +200,18 @@ namespace
     float analEntryDistance    = std::numeric_limits<float>::infinity();
   };
 
-  struct DebugKey
+  struct FamilyLogStats
   {
-    RE::Actor* sourceActor = nullptr;
-    RE::Actor* targetActor = nullptr;
-    Type type              = Type::None;
-    DebugEvent event       = DebugEvent::Candidate;
-
-    bool operator==(const DebugKey&) const = default;
+    std::size_t total      = 0;
+    std::size_t considered = 0;
+    std::size_t suppressed = 0;
+    std::size_t blocked    = 0;
   };
 
-  struct DebugKeyHash
+  struct AssignedCandidateLog
   {
-    std::size_t operator()(const DebugKey& key) const
-    {
-      std::size_t value = std::hash<RE::Actor*>{}(key.sourceActor);
-      value ^= std::hash<RE::Actor*>{}(key.targetActor) + 0x9E3779B97F4A7C15ull + (value << 6) +
-               (value >> 2);
-      value ^= static_cast<std::size_t>(key.type) << 8;
-      value ^= static_cast<std::size_t>(key.event) << 16;
-      return value;
-    }
+    Candidate candidate{};
+    Type resolvedType = Type::None;
   };
 
   struct PartKey
@@ -207,8 +240,6 @@ namespace
   static constexpr std::array<Name, 1> kAnusParts{Name::Anus};
   static constexpr std::array<Name, 1> kThighCleftParts{Name::ThighCleft};
   static constexpr std::array<Name, 1> kGlutealCleftParts{Name::GlutealCleft};
-  static constexpr std::array<Name, 1> kCleavageParts{Name::Cleavage};
-  static constexpr std::array<Name, 1> kBellyParts{Name::Belly};
   static constexpr std::array<Name, 2> kHandParts{Name::HandLeft, Name::HandRight};
   static constexpr std::array<Name, 2> kFingerParts{Name::FingerLeft, Name::FingerRight};
   static constexpr std::array<Name, 2> kBreastParts{Name::BreastLeft, Name::BreastRight};
@@ -372,148 +403,41 @@ namespace
     return Settings::bDebugMode;
   }
 
-  bool ShouldCalibrateBodyPart(Name name)
+  void LogFamilyOutcome(CandidateFamily family, const FamilyLogStats& stats,
+                        const std::vector<AssignedCandidateLog>& assignedCandidates)
   {
-    return name == Name::Vagina || name == Name::Anus || name == Name::Penis;
-  }
-
-  template <class Container>
-  std::string JoinText(const Container& values)
-  {
-    std::string result;
-    for (std::size_t index = 0; index < values.size(); ++index) {
-      if (index > 0)
-        result += "|";
-      result += std::string_view(values[index]);
-    }
-    return result;
-  }
-
-  void EmitBodyPartCalibration(RE::Actor* actor, Name name, const BP& bodypart)
-  {
-    if (!IsDebugEnabled() || !ShouldCalibrateBodyPart(name))
-      return;
-
-    static std::unordered_map<std::uint64_t, float> s_lastCalibrationLogTimes;
-    const std::uint64_t key =
-        (static_cast<std::uint64_t>(GetActorFormID(actor)) << 8) | static_cast<std::uint8_t>(name);
-    const float nowMs   = GetSteadyNowMs();
-    auto [it, inserted] = s_lastCalibrationLogTimes.try_emplace(key, nowMs);
-    if (!inserted && nowMs - it->second < 1200.f)
-      return;
-    it->second = nowMs;
-
-    const auto& shapeInfo       = bodypart.GetShapeInfo();
-    const auto* vectorInfo      = shapeInfo.vector ? &*shapeInfo.vector : nullptr;
-    const auto* collider        = shapeInfo.collider ? &*shapeInfo.collider : nullptr;
-    const Define::Point3f start = vectorInfo ? vectorInfo->start : Define::Point3f::Zero();
-    const Define::Point3f end   = vectorInfo ? vectorInfo->end : Define::Point3f::Zero();
-    const Define::Vector3f dir  = vectorInfo ? vectorInfo->direction : Define::Vector3f::Zero();
-    const float len             = vectorInfo ? vectorInfo->length : 0.f;
-
-    logger::info("[SexLab NG] BodyPartDebug actor={:08X} part={} shape={} valid={} "
-                 "start=({:.2f},{:.2f},{:.2f}) end=({:.2f},{:.2f},{:.2f}) "
-                 "dir=({:.3f},{:.3f},{:.3f}) len={:.2f} nodes={} boxes={} capsules={}",
-                 GetActorFormID(actor), magic_enum::enum_name(name),
-                 magic_enum::enum_name(bodypart.GetShape()), bodypart.IsValid(), start.x(),
-                 start.y(), start.z(), end.x(), end.y(), end.z(), dir.x(), dir.y(), dir.z(), len,
-                 vectorInfo ? vectorInfo->nodes.size() : 0, collider ? collider->boxes.size() : 0,
-                 collider ? collider->capsules.size() : 0);
-
-    if (vectorInfo) {
-      for (std::size_t index = 0; index < vectorInfo->nodes.size(); ++index) {
-        const auto& node = vectorInfo->nodes[index];
-
-        std::vector<std::string> resolvedNames, parentNames;
-        bool hasConcrete = false, allResolved = true;
-        for (std::size_t i = 0; i < node.requestedNodeNames.size(); ++i) {
-          const auto* n = i < node.resolvedNodes.size() ? node.resolvedNodes[i].get() : nullptr;
-          resolvedNames.push_back(n ? std::string{n->name.c_str()} : std::string{});
-          parentNames.push_back(n && n->parent ? std::string{n->parent->name.c_str()}
-                                               : std::string{});
-          if (!node.requestedNodeNames[i].empty()) {
-            hasConcrete = true;
-            if (!n)
-              allResolved = false;
-          }
-        }
-
-        logger::info("[SexLab NG] BodyPartDebug Node actor={:08X} part={} index={} "
-                     "pos=({:.2f},{:.2f},{:.2f}) "
-                     "requested=[{}] resolved=[{}] parents=[{}] valid={}",
-                     GetActorFormID(actor), magic_enum::enum_name(name), index, node.position.x(),
-                     node.position.y(), node.position.z(), JoinText(node.requestedNodeNames),
-                     JoinText(resolvedNames), JoinText(parentNames), hasConcrete && allResolved);
-      }
-    }
-
-    if (collider) {
-      for (std::size_t index = 0; index < collider->boxes.size(); ++index) {
-        const auto& box    = collider->boxes[index];
-        const auto lateral = box.basis.col(0);
-        const auto up      = box.basis.col(1);
-        const auto forward = box.basis.col(2);
-        logger::info("[SexLab NG] BodyPartDebug Box actor={:08X} part={} index={} "
-                     "center=({:.2f},{:.2f},{:.2f}) "
-                     "ext=({:.2f},{:.2f},{:.2f}) right=({:.3f},{:.3f},{:.3f}) "
-                     "up=({:.3f},{:.3f},{:.3f}) forward=({:.3f},{:.3f},{:.3f})",
-                     GetActorFormID(actor), magic_enum::enum_name(name), index, box.center.x(),
-                     box.center.y(), box.center.z(), box.halfExtents.x(), box.halfExtents.y(),
-                     box.halfExtents.z(), lateral.x(), lateral.y(), lateral.z(), up.x(), up.y(),
-                     up.z(), forward.x(), forward.y(), forward.z());
-      }
-
-      for (std::size_t index = 0; index < collider->capsules.size(); ++index) {
-        const auto& capsule = collider->capsules[index];
-        logger::info("[SexLab NG] BodyPartDebug Capsule actor={:08X} part={} index={} "
-                     "start=({:.2f},{:.2f},{:.2f}) end=({:.2f},{:.2f},{:.2f}) radius={:.2f}",
-                     GetActorFormID(actor), magic_enum::enum_name(name), index, capsule.start.x(),
-                     capsule.start.y(), capsule.start.z(), capsule.end.x(), capsule.end.y(),
-                     capsule.end.z(), capsule.radius);
-      }
-    }
-  }
-
-  bool ShouldEmitDebug(RE::Actor* sourceActor, RE::Actor* targetActor, Type type, DebugEvent event,
-                       float minIntervalMs = 350.f)
-  {
-    static std::unordered_map<DebugKey, float, DebugKeyHash> s_lastLogTimes;
-
     if (!IsDebugEnabled())
-      return false;
+      return;
 
-    const float nowMs = GetSteadyNowMs();
-    const DebugKey key{sourceActor, targetActor, type, event};
-    auto [it, inserted] = s_lastLogTimes.try_emplace(key, nowMs);
-    if (inserted || nowMs - it->second >= minIntervalMs) {
-      it->second = nowMs;
-      return true;
+    logger::info("[SexLab NG] Interact {} total={} considered={} suppressed={} blocked={} "
+                 "assigned={}",
+                 FamilyText(family), stats.total, stats.considered, stats.suppressed, stats.blocked,
+                 assignedCandidates.size());
+
+    for (const auto& entry : assignedCandidates) {
+      const Candidate& candidate = entry.candidate;
+      logger::info("[SexLab NG] Interact {} assigned type={} resolved={} src={:08X}:{} "
+                   "dst={:08X}:{} score={:.3f} distance={:.2f}",
+                   FamilyText(family), TypeText(candidate.type), TypeText(entry.resolvedType),
+                   GetActorFormID(candidate.sourceActor), NameText(candidate.sourcePart),
+                   GetActorFormID(candidate.targetActor), NameText(candidate.targetPart),
+                   candidate.score, candidate.distance);
     }
-
-    return false;
   }
 
-  const BP* TryGetBodyPart(const ActorData& data, Name name)
+  const PartState* TryGetPartState(const ActorState& data, Name name)
   {
-    auto it = data.infos.find(name);
-    if (it == data.infos.end() || !it->second.bodypart.IsValid())
-      return nullptr;
-    return &it->second.bodypart;
+    auto it = data.parts.find(name);
+    return it == data.parts.end() ? nullptr : &it->second;
   }
 
-  const Info* TryGetInfo(const ActorData& data, Name name)
+  const MotionHistory* TryGetMotionHistory(const ActorState& data, Name name)
   {
-    auto it = data.infos.find(name);
-    return it == data.infos.end() ? nullptr : &it->second;
+    const PartState* state = TryGetPartState(data, name);
+    return state ? &state->motion : nullptr;
   }
 
-  const MotionHistory* TryGetMotionHistory(const ActorData& data, Name name)
-  {
-    auto it = data.motion.find(name);
-    return it == data.motion.end() ? nullptr : &it->second;
-  }
-
-  const MotionSnapshot* TryGetCurrentSnapshot(const ActorData& data, Name name)
+  const MotionSnapshot* TryGetCurrentSnapshot(const ActorState& data, Name name)
   {
     const MotionHistory* history = TryGetMotionHistory(data, name);
     if (!history || !history->current.valid)
@@ -522,7 +446,7 @@ namespace
   }
 
   template <std::size_t N>
-  bool HasAnyCurrentPart(const ActorData& data, const std::array<Name, N>& names)
+  bool HasAnyCurrentPart(const ActorState& data, const std::array<Name, N>& names)
   {
     for (Name name : names) {
       if (TryGetCurrentSnapshot(data, name))
@@ -534,20 +458,19 @@ namespace
   MotionSnapshot BuildSnapshot(const BP& bodypart, float nowMs)
   {
     MotionSnapshot snapshot;
-    const auto& shapeInfo = bodypart.GetShapeInfo();
-    if (!shapeInfo.vector)
+    if (!bodypart.IsValid())
       return snapshot;
-    snapshot.start       = shapeInfo.vector->start;
-    snapshot.end         = shapeInfo.vector->end;
-    snapshot.direction   = shapeInfo.vector->direction;
-    snapshot.length      = shapeInfo.vector->length;
+
+    const auto& axisInfo = bodypart.GetAxisInfo();
+    snapshot.start       = axisInfo.start;
+    snapshot.end         = axisInfo.end;
+    snapshot.direction   = axisInfo.direction;
+    snapshot.length      = axisInfo.length;
     snapshot.timeMs      = nowMs;
-    snapshot.valid       = bodypart.IsValid();
-    snapshot.directional = bodypart.GetShape() != BP::Shape::Point && snapshot.length >= 1e-6f;
-    if (shapeInfo.collider) {
-      snapshot.capsules = shapeInfo.collider->capsules;
-      snapshot.boxes    = shapeInfo.collider->boxes;
-    }
+    snapshot.valid       = true;
+    snapshot.directional = bodypart.IsDirectional() && snapshot.length >= 1e-6f;
+    if (const auto* collisionInfo = bodypart.GetCollisionInfo())
+      snapshot.collisions = *collisionInfo;
     return snapshot;
   }
 
@@ -833,16 +756,6 @@ namespace
       return std::sqrt(sqDist);
     }
 
-    bool IsPointInsideBox(const Define::Point3f& point, const Define::BoxCollider& box)
-    {
-      const Define::Vector3f local = point - box.center;
-      for (int axis = 0; axis < 3; ++axis) {
-        if (std::abs(local.dot(box.basis.col(axis))) > box.halfExtents[axis])
-          return false;
-      }
-      return true;
-    }
-
     float DistanceCapsuleToCapsule(const Define::CapsuleCollider& a,
                                    const Define::CapsuleCollider& b)
     {
@@ -886,18 +799,18 @@ namespace
     {
       float best = std::numeric_limits<float>::infinity();
 
-      for (const auto& ca : a.capsules) {
-        for (const auto& cb : b.capsules)
+      for (const auto& ca : a.collisions.capsules) {
+        for (const auto& cb : b.collisions.capsules)
           best = (std::min)(best, DistanceCapsuleToCapsule(ca, cb));
-        for (const auto& bb : b.boxes)
+        for (const auto& bb : b.collisions.boxes)
           best = (std::min)(best, DistanceCapsuleToBox(ca, bb));
       }
 
-      for (const auto& ba : a.boxes) {
-        for (const auto& cb : b.capsules)
+      for (const auto& ba : a.collisions.boxes) {
+        for (const auto& cb : b.collisions.capsules)
           best = (std::min)(best, DistanceCapsuleToBox(cb, ba));
         // Box-box: sample centers cross-checked
-        for (const auto& bb : b.boxes) {
+        for (const auto& bb : b.collisions.boxes) {
           best = (std::min)(best, DistancePointToBox(ba.center, bb));
           best = (std::min)(best, DistancePointToBox(bb.center, ba));
         }
@@ -909,9 +822,9 @@ namespace
     float DistancePointToCollider(const Define::Point3f& point, const MotionSnapshot& collider)
     {
       float best = std::numeric_limits<float>::infinity();
-      for (const auto& capsule : collider.capsules)
+      for (const auto& capsule : collider.collisions.capsules)
         best = (std::min)(best, DistancePointToCapsule(point, capsule));
-      for (const auto& box : collider.boxes)
+      for (const auto& box : collider.collisions.boxes)
         best = (std::min)(best, DistancePointToBox(point, box));
       return best;
     }
@@ -927,15 +840,10 @@ namespace
       return best;
     }
 
-    bool HasCollider(const MotionSnapshot& part)
+    float MeasureSpatialDistance(const MotionSnapshot& lhs, const MotionSnapshot& rhs)
     {
-      return part.HasCollider();
-    }
-
-    float MeasureColliderDistance(const MotionSnapshot& lhs, const MotionSnapshot& rhs)
-    {
-      const bool lhsHas = HasCollider(lhs);
-      const bool rhsHas = HasCollider(rhs);
+      const bool lhsHas = lhs.HasCollider();
+      const bool rhsHas = rhs.HasCollider();
 
       if (lhsHas && rhsHas)
         return DistanceColliderToCollider(lhs, rhs);
@@ -999,24 +907,24 @@ namespace
     return std::clamp(distance / maxDistance, 0.f, 2.f);
   }
 
-  float TemporalBonus(const ActorData& data, Name part, RE::Actor* partner, Type type)
+  float TemporalBonus(const ActorState& data, Name part, RE::Actor* partner, Type type)
   {
-    const Info* info = TryGetInfo(data, part);
-    if (!info)
+    const PartState* state = TryGetPartState(data, part);
+    if (!state)
       return 0.f;
-    if (info->prevActor == partner && info->prevType == type)
+    if (state->previous.partner == partner && state->previous.type == type)
       return 0.12f;
-    if (info->prevActor == partner)
+    if (state->previous.partner == partner)
       return 0.06f;
-    if (info->prevType == type)
+    if (state->previous.type == type)
       return 0.03f;
     return 0.f;
   }
 
-  bool HadPreviousInteraction(const ActorData& data, Name part, RE::Actor* partner, Type type)
+  bool HadPreviousInteraction(const ActorState& data, Name part, RE::Actor* partner, Type type)
   {
-    const Info* info = TryGetInfo(data, part);
-    return info && info->prevActor == partner && info->prevType == type;
+    const PartState* state = TryGetPartState(data, part);
+    return state && state->previous.partner == partner && state->previous.type == type;
   }
 
   bool HasStickyInteractionPair(const DirectedContext& ctx, Name sourcePart, Name targetPart,
@@ -1052,19 +960,30 @@ namespace
     }
   }
 
-  bool HasPreviousPartContext(const ActorData& data, Name part, bool (*predicate)(Type))
+  bool HasPreviousPartContext(const ActorState& data, Name part, bool (*predicate)(Type))
   {
-    const Info* info = TryGetInfo(data, part);
-    return info && predicate(info->prevType);
+    const PartState* state = TryGetPartState(data, part);
+    return state && predicate(state->previous.type);
   }
 
-  bool HadPreviousPenetrationWithPartner(const ActorData& data, Name part, RE::Actor* partner)
+  bool HadPreviousPenetrationWithPartner(const ActorState& data, Name part, RE::Actor* partner)
   {
-    const Info* info = TryGetInfo(data, part);
-    if (!info || info->prevActor != partner)
+    const PartState* state = TryGetPartState(data, part);
+    if (!state || state->previous.partner != partner)
       return false;
 
-    return IncludesVaginal(info->prevType) || IncludesAnal(info->prevType);
+    return IncludesVaginal(state->previous.type) || IncludesAnal(state->previous.type);
+  }
+
+  RE::Actor* GetPreviousPenetrationPartner(const ActorState& data, Name part)
+  {
+    const PartState* state = TryGetPartState(data, part);
+    if (!state)
+      return nullptr;
+
+    return IncludesVaginal(state->previous.type) || IncludesAnal(state->previous.type)
+               ? state->previous.partner
+               : nullptr;
   }
 
   bool HasStrongRearPreference(float vaginalMetric, float analMetric, float tolerance = 0.55f)
@@ -1085,21 +1004,21 @@ namespace
     return vaginalMetric + tolerance < analMetric;
   }
 
-  float MeasurePartDistanceByName(const ActorData& data, Name lhs, const MotionSnapshot& rhs)
+  float MeasureSpatialDistanceByName(const ActorState& data, Name lhs, const MotionSnapshot& rhs)
   {
     const MotionSnapshot* lhsPart = TryGetCurrentSnapshot(data, lhs);
-    return lhsPart ? Geometry::MeasurePartDistance(*lhsPart, rhs)
+    return lhsPart ? Geometry::MeasureSpatialDistance(*lhsPart, rhs)
                    : std::numeric_limits<float>::infinity();
   }
 
-  PenisContextMetrics BuildPenisContextMetrics(const ActorData& receiverData,
+  PenisContextMetrics BuildPenisContextMetrics(const ActorState& receiverData,
                                                const MotionSnapshot& penisSnapshot)
   {
     PenisContextMetrics metrics;
     metrics.vaginalSupport =
-        MeasurePartDistanceByName(receiverData, Name::ThighCleft, penisSnapshot);
+        MeasureSpatialDistanceByName(receiverData, Name::ThighCleft, penisSnapshot);
     metrics.analSupport =
-        MeasurePartDistanceByName(receiverData, Name::GlutealCleft, penisSnapshot);
+        MeasureSpatialDistanceByName(receiverData, Name::GlutealCleft, penisSnapshot);
 
     if (const MotionSnapshot* vaginaPart = TryGetCurrentSnapshot(receiverData, Name::Vagina)) {
       metrics.vaginalEntryDistance = Geometry::SampledShaftEntryDistance(
@@ -1273,7 +1192,7 @@ namespace
     return depth >= minDepth && depth <= maxDepth;
   }
 
-  MotionSnapshot BuildOralChannelSnapshot(const ActorData& data, Name receiverPart,
+  MotionSnapshot BuildOralChannelSnapshot(const ActorState& data, Name receiverPart,
                                           bool predicted = false, bool previous = false)
   {
     const MotionHistory* mouthHistory  = TryGetMotionHistory(data, Name::Mouth);
@@ -1320,21 +1239,22 @@ namespace
                             distance, score, family});
   }
 
-  template <std::size_t NS, std::size_t NT>
   void AddSimpleDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx,
-                                   const std::array<Name, NS>& sourceParts,
-                                   const std::array<Name, NT>& targetParts, Type type,
+                                   const Name* sourceParts, std::size_t sourceCount,
+                                   const Name* targetParts, std::size_t targetCount, Type type,
                                    CandidateFamily family, float maxDistance, AngleRange angleRange,
                                    float angleWeight, float scoreOffset = 0.f,
                                    AnchorMode anchorMode = AnchorMode::None,
                                    float anchorWeight = 0.f, float anchorMaxDistance = 0.f)
   {
-    for (Name sourceName : sourceParts) {
+    for (std::size_t sourceIndex = 0; sourceIndex < sourceCount; ++sourceIndex) {
+      const Name sourceName            = sourceParts[sourceIndex];
       const MotionSnapshot* sourcePart = TryGetCurrentSnapshot(ctx.sourceData, sourceName);
       if (!sourcePart)
         continue;
 
-      for (Name targetName : targetParts) {
+      for (std::size_t targetIndex = 0; targetIndex < targetCount; ++targetIndex) {
+        const Name targetName = targetParts[targetIndex];
         if (ctx.self && sourceName == targetName)
           continue;
 
@@ -1342,7 +1262,7 @@ namespace
         if (!targetPart)
           continue;
 
-        const float distance = Geometry::MeasurePartDistance(*sourcePart, *targetPart);
+        const float distance = Geometry::MeasureSpatialDistance(*sourcePart, *targetPart);
         if (distance > maxDistance)
           continue;
 
@@ -1374,11 +1294,35 @@ namespace
     }
   }
 
+  template <std::size_t NS, std::size_t NT>
+  void AddSimpleDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx,
+                                   const std::array<Name, NS>& sourceParts,
+                                   const std::array<Name, NT>& targetParts, Type type,
+                                   CandidateFamily family, float maxDistance, AngleRange angleRange,
+                                   float angleWeight, float scoreOffset = 0.f,
+                                   AnchorMode anchorMode = AnchorMode::None,
+                                   float anchorWeight = 0.f, float anchorMaxDistance = 0.f)
+  {
+    AddSimpleDirectedCandidates(out, ctx, sourceParts.data(), sourceParts.size(),
+                                targetParts.data(), targetParts.size(), type, family, maxDistance,
+                                angleRange, angleWeight, scoreOffset, anchorMode, anchorWeight,
+                                anchorMaxDistance);
+  }
+
+  void AddSimpleDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx,
+                                   const SimpleDirectedSpec& spec)
+  {
+    AddSimpleDirectedCandidates(out, ctx, spec.sourceParts, spec.sourceCount, spec.targetParts,
+                                spec.targetCount, spec.type, spec.family, spec.maxDistance,
+                                spec.angleRange, spec.angleWeight, spec.scoreOffset,
+                                spec.anchorMode, spec.anchorWeight, spec.anchorMaxDistance);
+  }
+
   void TryAddGropeBreastCandidate(std::vector<Candidate>& out, const DirectedContext& ctx)
   {
-    constexpr float kMaxDistance       = 5.4f;
-    constexpr float kMaxNippleDistance = 4.9f;
-    constexpr AngleRange kAngleRange{156.f, 180.f};
+    constexpr float kMaxDistance       = 4.9f;
+    constexpr float kMaxNippleDistance = 4.5f;
+    constexpr AngleRange kAngleRange{160.f, 180.f};
 
     for (Name handName : kHandParts) {
       const MotionSnapshot* handPart = TryGetCurrentSnapshot(ctx.sourceData, handName);
@@ -1390,7 +1334,7 @@ namespace
         if (!breastPart)
           continue;
 
-        const float distance = Geometry::MeasurePartDistance(*handPart, *breastPart);
+        const float distance = Geometry::MeasureSpatialDistance(*handPart, *breastPart);
         if (distance > kMaxDistance)
           continue;
 
@@ -1417,14 +1361,6 @@ namespace
     }
   }
 
-  MotionSnapshot BuildPredictedOrCurrent(const ActorData& data, Name partName)
-  {
-    const MotionHistory* history = TryGetMotionHistory(data, partName);
-    if (!history)
-      return {};
-    return PredictSnapshot(*history);
-  }
-
   void TryAddHandjobCandidate(std::vector<Candidate>& out, const DirectedContext& ctx)
   {
     const MotionSnapshot* penisCurrent = TryGetCurrentSnapshot(ctx.targetData, Name::Penis);
@@ -1435,13 +1371,13 @@ namespace
     if (!penisHistory)
       return;
 
-    constexpr float kMaxDistance = 8.f;
-    constexpr AngleRange kAngleRange{50.f, 130.f};
+    constexpr float kMaxDistance = 7.2f;
+    constexpr AngleRange kAngleRange{58.f, 122.f};
     constexpr float kAngleWeight             = 0.20f;
     constexpr float kCoverageWeight          = 0.16f;
-    constexpr float kSelfFaceGuardDistance   = 6.6f;
+    constexpr float kSelfFaceGuardDistance   = 6.0f;
     constexpr float kOralInterferencePenalty = 0.45f;
-    constexpr float kPartnerOralDistance     = 8.6f;
+    constexpr float kPartnerOralDistance     = 7.8f;
 
     for (Name handName : kHandParts) {
       const MotionSnapshot* handCurrent = TryGetCurrentSnapshot(ctx.sourceData, handName);
@@ -1450,7 +1386,9 @@ namespace
 
       const SampledMetrics currentMetrics =
           Geometry::MeasureSampledMetrics(*penisCurrent, *handCurrent);
-      const float distance = Geometry::SampledShaftDistance(currentMetrics);
+      const float distance =
+          (std::min)(Geometry::SampledShaftDistance(currentMetrics),
+                     Geometry::MeasureSpatialDistance(*handCurrent, *penisCurrent));
       if (distance > kMaxDistance)
         continue;
 
@@ -1462,16 +1400,16 @@ namespace
       float penisToOral = std::numeric_limits<float>::infinity();
       if (const MotionSnapshot* mouthPart = TryGetCurrentSnapshot(ctx.sourceData, Name::Mouth))
         handToOral =
-            (std::min)(handToOral, Geometry::MeasurePartDistance(*handCurrent, *mouthPart));
+            (std::min)(handToOral, Geometry::MeasureSpatialDistance(*handCurrent, *mouthPart));
       if (const MotionSnapshot* throatPart = TryGetCurrentSnapshot(ctx.sourceData, Name::Throat))
         handToOral =
-            (std::min)(handToOral, Geometry::MeasurePartDistance(*handCurrent, *throatPart));
+            (std::min)(handToOral, Geometry::MeasureSpatialDistance(*handCurrent, *throatPart));
       if (const MotionSnapshot* mouthPart = TryGetCurrentSnapshot(ctx.sourceData, Name::Mouth))
         penisToOral =
-            (std::min)(penisToOral, Geometry::MeasurePartDistance(*penisCurrent, *mouthPart));
+            (std::min)(penisToOral, Geometry::MeasureSpatialDistance(*penisCurrent, *mouthPart));
       if (const MotionSnapshot* throatPart = TryGetCurrentSnapshot(ctx.sourceData, Name::Throat))
         penisToOral =
-            (std::min)(penisToOral, Geometry::MeasurePartDistance(*penisCurrent, *throatPart));
+            (std::min)(penisToOral, Geometry::MeasureSpatialDistance(*penisCurrent, *throatPart));
 
       if (ctx.self && std::isfinite(handToOral) && handToOral < kSelfFaceGuardDistance)
         continue;
@@ -1508,12 +1446,6 @@ namespace
       AddCandidate(out, ctx, handName, Name::Penis, Type::Handjob, CandidateFamily::Contact,
                    distance, score);
     }
-  }
-
-  bool ShouldLogPenetrationReject(float currentValue, float predictedValue, float limit,
-                                  float allowance)
-  {
-    return IsNearThreshold(currentValue, predictedValue, limit, allowance);
   }
 
   float ComputeGenitalAngleHoldMargin(Type type, bool stickyPair, bool previousSameType,
@@ -1565,24 +1497,6 @@ namespace
         (std::isfinite(predictedAngle) && predictedAngle + 2.0f < angle);
 
     return distanceImproving || angleImproving || predictedImproving;
-  }
-
-  void LogPenetrationEvent(std::string_view stage, const DirectedContext& ctx, Name receiverPart,
-                           Type type, float distance, float predictedDistance, float angle,
-                           float predictedAngle, float axisDistance, float predictedAxisDistance,
-                           float depth, float predictedDepth, float score, std::string_view detail,
-                           DebugEvent event, float intervalMs = 350.f)
-  {
-    if (!ShouldEmitDebug(ctx.sourceActor, ctx.targetActor, type, event, intervalMs))
-      return;
-
-    logger::info("[SexLab NG] InteractDebug Penetration {} src={:08X}:{} dst={:08X}:{} receiver={} "
-                 "dist={:.2f}/{:.2f} angle={:.2f}/{:.2f} axis={:.2f}/{:.2f} depth={:.2f}/{:.2f} "
-                 "score={:.3f} detail={}",
-                 stage, GetActorFormID(ctx.sourceActor), NameText(Name::Penis),
-                 GetActorFormID(ctx.targetActor), NameText(receiverPart), NameText(receiverPart),
-                 distance, predictedDistance, angle, predictedAngle, axisDistance,
-                 predictedAxisDistance, depth, predictedDepth, score, detail);
   }
 
   void TryAddGenitalPenetrationCandidate(std::vector<Candidate>& out, const DirectedContext& ctx,
@@ -1699,10 +1613,16 @@ namespace
       effectiveMaxAxis += 0.25f;
     }
 
-    const bool predictedDistanceHold = type == Type::Vaginal && hasPredicted && strongContext &&
-                                       predictedDistance <= effectiveMaxDistance + 0.25f &&
-                                       predictedDistance + 0.35f < distance &&
-                                       distance <= effectiveMaxDistance + 1.8f;
+    const bool predictedDistanceHold =
+        hasPredicted &&
+        ((type == Type::Vaginal && strongContext &&
+          predictedDistance <= effectiveMaxDistance + 0.25f &&
+          predictedDistance + 0.35f < distance && distance <= effectiveMaxDistance + 1.8f) ||
+         (type == Type::Anal && (stickyPair || previousSameType || strongContext) &&
+          predictedDistance <= effectiveMaxDistance + 0.35f &&
+          predictedDistance + 0.25f < distance && distance <= effectiveMaxDistance + 1.35f &&
+          predictedMetrics.minAxisDistance <= effectiveMaxAxis + 0.45f &&
+          predictedRootEntryDistance <= 3.75f));
 
     bool acceptedByPredictedApproach = false;
     if (distance > effectiveMaxDistance) {
@@ -1710,11 +1630,6 @@ namespace
         acceptedByPredictedApproach = true;
         temporalBonus += 0.05f;
       } else {
-        if (ShouldLogPenetrationReject(distance, predictedDistance, effectiveMaxDistance, 1.2f)) {
-          LogPenetrationEvent("reject-distance", ctx, receiverPartName, type, distance,
-                              predictedDistance, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, -1.f,
-                              "distance above gate", DebugEvent::Reject, 900.f);
-        }
         return;
       }
     }
@@ -1735,14 +1650,8 @@ namespace
     const bool heldByPredictedAngle = acceptedByPredictedApproach && angle > effectiveMaxAngle &&
                                       predictedAngle <= effectiveMaxAngle + 2.5f;
     float angleGateForScore         = effectiveMaxAngle;
-    if (angle > effectiveMaxAngle && !heldByAngleHysteresis && !heldByPredictedAngle) {
-      if (ShouldLogPenetrationReject(angle, predictedAngle, effectiveMaxAngle, 10.f)) {
-        LogPenetrationEvent("reject-angle", ctx, receiverPartName, type, distance,
-                            predictedDistance, angle, predictedAngle, 0.f, 0.f, 0.f, 0.f, -1.f,
-                            "angle above gate", DebugEvent::Reject, 900.f);
-      }
+    if (angle > effectiveMaxAngle && !heldByAngleHysteresis && !heldByPredictedAngle)
       return;
-    }
 
     if (heldByAngleHysteresis) {
       angleGateForScore += angleHoldMargin;
@@ -1764,16 +1673,6 @@ namespace
                                     axisDistance, depth)) {
         usedPredictedContact = true;
       } else {
-        const float predictedAxis  = hasPredicted ? predictedMetrics.minAxisDistance : 0.f;
-        const float predictedDepth = hasPredicted ? predictedMetrics.tipDepth : 0.f;
-        if (ShouldLogPenetrationReject(currentMetrics.minAxisDistance, predictedAxis,
-                                       effectiveMaxAxis, 1.2f)) {
-          LogPenetrationEvent("reject-shaft", ctx, receiverPartName, type, distance,
-                              predictedDistance, angle, predictedAngle,
-                              currentMetrics.minAxisDistance, predictedAxis,
-                              currentMetrics.tipDepth, predictedDepth, -1.f,
-                              "axis/depth outside gate", DebugEvent::Reject, 900.f);
-        }
         return;
       }
     }
@@ -1790,10 +1689,6 @@ namespace
                                            axisDistance <= effectiveMaxAxis - 0.35f;
     if (previousOppositeType && !previousSameType && !switchTrendConfirmed &&
         !comfortableSwitchGeometry) {
-      LogPenetrationEvent("reject-switch", ctx, receiverPartName, type, distance, predictedDistance,
-                          angle, predictedAngle, axisDistance, predictedAxisDistance, depth,
-                          predictedDepth, -1.f, "waiting for sustained opposite-type trend",
-                          DebugEvent::Reject, 900.f);
       return;
     }
 
@@ -1819,17 +1714,6 @@ namespace
     const float predictionBonus =
         hasPredicted ? std::clamp((distance - predictedDistance) / 8.f, 0.f, 0.08f) : 0.f;
     const float predictedApproachPenalty = usedPredictedContact ? 0.18f : 0.f;
-    const char* candidateDetail          = "accepted";
-    if (usedPredictedContact)
-      candidateDetail = "accepted predicted-approach";
-    else if (heldByAngleHysteresis && previousOppositeType && !strongContext)
-      candidateDetail = "accepted angle-hold opposite-switch";
-    else if (heldByAngleHysteresis)
-      candidateDetail = "accepted angle-hold";
-    else if (type == Type::Anal && analAngleAllowance > 0.f && angle > maxAngle)
-      candidateDetail = "accepted rear-angle";
-    else if (previousOppositeType && !strongContext)
-      candidateDetail = "opposite-type-switch";
 
     const float score =
         std::clamp(distNorm * 0.42f + angleNorm * 0.22f + axisNorm * 0.22f +
@@ -1837,9 +1721,8 @@ namespace
                        predictedApproachPenalty - bonus - temporalBonus - predictionBonus - 0.10f,
                    -1.20f, 2.50f);
 
-    LogPenetrationEvent("candidate", ctx, receiverPartName, type, distance, predictedDistance,
-                        angle, predictedAngle, axisDistance, predictedAxisDistance, depth,
-                        predictedDepth, score, candidateDetail, DebugEvent::Candidate, 320.f);
+    if (type == Type::Anal && score > 0.f)
+      return;
 
     AddCandidate(out, ctx, Name::Penis, receiverPartName, type, CandidateFamily::Penetration,
                  distance, score);
@@ -1899,43 +1782,20 @@ namespace
       temporalBonus += 0.05f;
     }
 
-    if (distance > effectiveMaxDistance) {
-      if (ShouldLogPenetrationReject(distance, predictedDistance, effectiveMaxDistance, 1.0f)) {
-        LogPenetrationEvent("reject-distance", ctx, receiverPartName, type, distance,
-                            predictedDistance, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, -1.f,
-                            "oral distance above gate", DebugEvent::Reject, 900.f);
-      }
+    if (distance > effectiveMaxDistance)
       return;
-    }
 
     const float angle = Geometry::MeasurePartAngle(receiverCurrent, penisHistory->current);
     const float predictedAngle =
         hasPredicted ? Geometry::MeasurePartAngle(receiverPredicted, predictedPenis) : angle;
-    if (angle > effectiveMaxAngle) {
-      if (ShouldLogPenetrationReject(angle, predictedAngle, effectiveMaxAngle, 8.f)) {
-        LogPenetrationEvent("reject-angle", ctx, receiverPartName, type, distance,
-                            predictedDistance, angle, predictedAngle, 0.f, 0.f, 0.f, 0.f, -1.f,
-                            "oral angle above gate", DebugEvent::Reject, 900.f);
-      }
+    if (angle > effectiveMaxAngle)
       return;
-    }
 
     float axisDistance = 0.f;
     float depth        = 0.f;
     if (!ResolvePenetrationContact(currentMetrics, effectiveMaxAxis, effectiveMinDepth,
                                    effectiveMaxDepth, stickyPair || previousRelated, axisDistance,
                                    depth)) {
-      const float predictedAxis =
-          hasPredicted
-              ? Geometry::MeasureSampledMetrics(predictedPenis, receiverPredicted).minAxisDistance
-              : 0.f;
-      if (ShouldLogPenetrationReject(currentMetrics.minAxisDistance, predictedAxis,
-                                     effectiveMaxAxis, 1.0f)) {
-        LogPenetrationEvent("reject-shaft", ctx, receiverPartName, type, distance,
-                            predictedDistance, angle, predictedAngle,
-                            currentMetrics.minAxisDistance, predictedAxis, currentMetrics.tipDepth,
-                            depth, -1.f, "oral axis/depth outside gate", DebugEvent::Reject, 900.f);
-      }
       return;
     }
 
@@ -1959,10 +1819,6 @@ namespace
                             std::clamp(depthPenalty, 0.f, 1.f) * 0.14f - bonus - temporalBonus -
                             predictionBonus - (type == Type::DeepThroat ? 0.08f : 0.12f));
 
-    LogPenetrationEvent("candidate", ctx, receiverPartName, type, distance, predictedDistance,
-                        angle, predictedAngle, axisDistance, axisDistance, depth, depth, score,
-                        "accepted", DebugEvent::Candidate, 320.f);
-
     AddCandidate(out, ctx, receiverPartName, Name::Penis, type, CandidateFamily::Penetration,
                  distance, score);
   }
@@ -1981,7 +1837,9 @@ namespace
 
     const SampledMetrics currentMetrics =
         Geometry::MeasureSampledMetrics(penisHistory->current, *targetPart);
-    const float distance = Geometry::SampledShaftDistance(currentMetrics);
+    const float distance =
+        (std::min)(Geometry::SampledShaftDistance(currentMetrics),
+                   Geometry::MeasureSpatialDistance(penisHistory->current, *targetPart));
     if (distance > maxDistance)
       return;
 
@@ -2020,16 +1878,6 @@ namespace
                         (stickyPair ? 0.04f : 0.f);
     score             = (std::max)(0.f, score + scoreOffset - bonus - predictionBonus);
 
-    if (ShouldEmitDebug(ctx.sourceActor, ctx.targetActor, type, DebugEvent::Candidate, 380.f)) {
-      logger::info(
-          "[SexLab NG] InteractDebug Proximity candidate type={} src={:08X}:{} dst={:08X}:{} "
-          "dist={:.2f} root/mid/tip=({:.2f},{:.2f},{:.2f}) angle={:.2f} score={:.3f}",
-          TypeText(type), GetActorFormID(ctx.sourceActor), NameText(Name::Penis),
-          GetActorFormID(ctx.targetActor), NameText(targetName), distance,
-          currentMetrics.rootDistance, currentMetrics.midDistance, currentMetrics.tipDistance,
-          angle, score);
-    }
-
     AddCandidate(out, ctx, Name::Penis, targetName, type, CandidateFamily::Proximity, distance,
                  score);
   }
@@ -2043,12 +1891,14 @@ namespace
 
     const SampledMetrics currentMetrics =
         Geometry::MeasureSampledMetrics(penisHistory->current, *belly);
-    const float distance = Geometry::SampledShaftDistance(currentMetrics);
-    if (distance > 10.5f)
+    const float distance =
+        (std::min)(Geometry::SampledShaftDistance(currentMetrics),
+                   Geometry::MeasureSpatialDistance(penisHistory->current, *belly));
+    if (distance > 9.4f)
       return;
 
     const float angle = Geometry::MeasurePartAngle(*belly, penisHistory->current);
-    if (angle > 60.f)
+    if (angle > 48.f)
       return;
 
     if (!Geometry::IsPointInFront(*belly, penisHistory->current.end) ||
@@ -2061,16 +1911,16 @@ namespace
         predictedPenis.valid && Geometry::IsHorizontal(predictedPenis)
             ? std::clamp((distance - Geometry::SampledShaftDistance(
                                          Geometry::MeasureSampledMetrics(predictedPenis, *belly))) /
-                             10.f,
+                             9.f,
                          0.f, 0.05f)
             : 0.f;
 
-    const float distNorm     = NormalizeDistance(distance, 10.5f);
-    const float angleNorm    = AngleDeviation(angle, {0.f, 60.f});
+    const float distNorm     = NormalizeDistance(distance, 9.4f);
+    const float angleNorm    = AngleDeviation(angle, {0.f, 48.f});
     const float coverageNorm = NormalizeDistance(
         (currentMetrics.rootDistance + currentMetrics.midDistance + currentMetrics.tipDistance) /
             3.f,
-        10.5f);
+        9.4f);
     const float bonus =
         TemporalBonus(ctx.sourceData, Name::Penis, ctx.targetActor, Type::Naveljob) +
         TemporalBonus(ctx.targetData, Name::Belly, ctx.sourceActor, Type::Naveljob);
@@ -2093,7 +1943,7 @@ namespace
     if (!lhs || !rhs)
       return;
 
-    const float distance = Geometry::MeasurePartDistance(*lhs, *rhs);
+    const float distance = Geometry::MeasureSpatialDistance(*lhs, *rhs);
     if (distance > maxDistance)
       return;
 
@@ -2124,24 +1974,76 @@ namespace
         !HasAnyCurrentPart(ctx.sourceData, kThroatParts))
       return;
 
-    AddSimpleDirectedCandidates(out, ctx, kMouthParts, kBreastParts, Type::BreastSucking,
-                                CandidateFamily::Contact, 8.f, {0.f, 180.f}, 0.f);
-    AddSimpleDirectedCandidates(out, ctx, kMouthParts, kFootParts, Type::ToeSucking,
-                                CandidateFamily::Contact, 8.f, {0.f, 180.f}, 0.f);
-    AddSimpleDirectedCandidates(out, ctx, kMouthParts, kThighCleftParts, Type::Cunnilingus,
-                                CandidateFamily::Contact, 7.2f, {0.f, 180.f}, 0.f, -0.05f,
-                                AnchorMode::StartToStart, 0.18f, 7.2f);
-    AddSimpleDirectedCandidates(out, ctx, kMouthParts, kVaginaParts, Type::Cunnilingus,
-                                CandidateFamily::Contact, 7.7f, {0.f, 180.f}, 0.f, 0.01f,
-                                AnchorMode::StartToStart, 0.22f, 7.4f);
-    AddSimpleDirectedCandidates(out, ctx, kMouthParts, kAnusParts, Type::Anilingus,
-                                CandidateFamily::Contact, 7.1f, {0.f, 180.f}, 0.f, 0.f,
-                                AnchorMode::StartToStart, 0.20f, 6.8f);
+    static constexpr SimpleDirectedSpec kContactSpecs[]{
+        {kMouthParts.data(),
+         kMouthParts.size(),
+         kBreastParts.data(),
+         kBreastParts.size(),
+         Type::BreastSucking,
+         CandidateFamily::Contact,
+         7.2f,
+         {0.f, 180.f},
+         0.f},
+        {kMouthParts.data(),
+         kMouthParts.size(),
+         kFootParts.data(),
+         kFootParts.size(),
+         Type::ToeSucking,
+         CandidateFamily::Contact,
+         7.2f,
+         {0.f, 180.f},
+         0.f},
+        {kMouthParts.data(),
+         kMouthParts.size(),
+         kThighCleftParts.data(),
+         kThighCleftParts.size(),
+         Type::Cunnilingus,
+         CandidateFamily::Contact,
+         6.4f,
+         {0.f, 180.f},
+         0.f,
+         -0.05f,
+         AnchorMode::StartToStart,
+         0.18f,
+         6.4f},
+        {kMouthParts.data(),
+         kMouthParts.size(),
+         kVaginaParts.data(),
+         kVaginaParts.size(),
+         Type::Cunnilingus,
+         CandidateFamily::Contact,
+         6.8f,
+         {0.f, 180.f},
+         0.f,
+         0.01f,
+         AnchorMode::StartToStart,
+         0.22f,
+         6.6f},
+        {kMouthParts.data(),
+         kMouthParts.size(),
+         kAnusParts.data(),
+         kAnusParts.size(),
+         Type::Anilingus,
+         CandidateFamily::Contact,
+         6.3f,
+         {0.f, 180.f},
+         0.f,
+         0.f,
+         AnchorMode::StartToStart,
+         0.20f,
+         6.0f},
+    };
+    for (const auto& spec : kContactSpecs)
+      AddSimpleDirectedCandidates(out, ctx, spec);
 
-    TryAddOralPenetrationCandidate(out, ctx, Name::Mouth, Type::Fellatio, 9.4f, 76.f, 6.6f, -2.5f,
-                                   10.5f);
-    TryAddOralPenetrationCandidate(out, ctx, Name::Throat, Type::DeepThroat, 7.4f, 46.f, 4.8f, 1.0f,
-                                   13.2f);
+    static constexpr PenetrationSpec kPenetrationSpecs[]{
+        {Name::Mouth, Type::Fellatio, 8.6f, 68.f, 5.8f, -2.2f, 9.6f},
+        {Name::Throat, Type::DeepThroat, 6.8f, 40.f, 4.2f, 1.4f, 12.2f},
+    };
+    for (const auto& spec : kPenetrationSpecs) {
+      TryAddOralPenetrationCandidate(out, ctx, spec.receiverPart, spec.type, spec.maxDistance,
+                                     spec.maxAngle, spec.maxAxis, spec.minDepth, spec.maxDepth);
+    }
   }
 
   void GenerateManualCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
@@ -2151,25 +2053,89 @@ namespace
       return;
 
     TryAddGropeBreastCandidate(out, ctx);
-    AddSimpleDirectedCandidates(out, ctx, kHandParts, kThighParts, Type::GropeThigh,
-                                CandidateFamily::Contact, 7.1f, {0.f, 180.f}, 0.f, 0.f,
-                                AnchorMode::StartToStart, 0.14f, 6.4f);
-    AddSimpleDirectedCandidates(out, ctx, kHandParts, kButtParts, Type::GropeButt,
-                                CandidateFamily::Contact, 5.2f, {0.f, 180.f}, 0.f, 0.f,
-                                AnchorMode::StartToStart, 0.16f, 4.8f);
-    AddSimpleDirectedCandidates(out, ctx, kHandParts, kFootParts, Type::GropeFoot,
-                                CandidateFamily::Contact, 7.0f, {0.f, 180.f}, 0.f, 0.f,
-                                AnchorMode::StartToStart, 0.12f, 6.4f);
 
-    AddSimpleDirectedCandidates(out, ctx, kFingerParts, kThighCleftParts, Type::FingerVagina,
-                                CandidateFamily::Contact, 6.4f, {0.f, 180.f}, 0.f, -0.04f,
-                                AnchorMode::StartToStart, 0.18f, 6.0f);
-    AddSimpleDirectedCandidates(out, ctx, kFingerParts, kVaginaParts, Type::FingerVagina,
-                                CandidateFamily::Contact, 7.2f, {0.f, 180.f}, 0.f, 0.01f,
-                                AnchorMode::StartToStart, 0.22f, 6.6f);
-    AddSimpleDirectedCandidates(out, ctx, kFingerParts, kAnusParts, Type::FingerAnus,
-                                CandidateFamily::Contact, 6.8f, {0.f, 180.f}, 0.f, 0.f,
-                                AnchorMode::StartToStart, 0.20f, 6.2f);
+    static constexpr SimpleDirectedSpec kManualSpecs[]{
+        {kHandParts.data(),
+         kHandParts.size(),
+         kThighParts.data(),
+         kThighParts.size(),
+         Type::GropeThigh,
+         CandidateFamily::Contact,
+         6.4f,
+         {0.f, 180.f},
+         0.f,
+         0.f,
+         AnchorMode::StartToStart,
+         0.14f,
+         5.8f},
+        {kHandParts.data(),
+         kHandParts.size(),
+         kButtParts.data(),
+         kButtParts.size(),
+         Type::GropeButt,
+         CandidateFamily::Contact,
+         4.7f,
+         {0.f, 180.f},
+         0.f,
+         0.f,
+         AnchorMode::StartToStart,
+         0.16f,
+         4.3f},
+        {kHandParts.data(),
+         kHandParts.size(),
+         kFootParts.data(),
+         kFootParts.size(),
+         Type::GropeFoot,
+         CandidateFamily::Contact,
+         6.4f,
+         {0.f, 180.f},
+         0.f,
+         0.f,
+         AnchorMode::StartToStart,
+         0.12f,
+         5.8f},
+        {kFingerParts.data(),
+         kFingerParts.size(),
+         kThighCleftParts.data(),
+         kThighCleftParts.size(),
+         Type::FingerVagina,
+         CandidateFamily::Contact,
+         5.8f,
+         {0.f, 180.f},
+         0.f,
+         -0.04f,
+         AnchorMode::StartToStart,
+         0.18f,
+         5.6f},
+        {kFingerParts.data(),
+         kFingerParts.size(),
+         kVaginaParts.data(),
+         kVaginaParts.size(),
+         Type::FingerVagina,
+         CandidateFamily::Contact,
+         6.4f,
+         {0.f, 180.f},
+         0.f,
+         0.01f,
+         AnchorMode::StartToStart,
+         0.22f,
+         6.0f},
+        {kFingerParts.data(),
+         kFingerParts.size(),
+         kAnusParts.data(),
+         kAnusParts.size(),
+         Type::FingerAnus,
+         CandidateFamily::Contact,
+         6.0f,
+         {0.f, 180.f},
+         0.f,
+         0.f,
+         AnchorMode::StartToStart,
+         0.20f,
+         5.6f},
+    };
+    for (const auto& spec : kManualSpecs)
+      AddSimpleDirectedCandidates(out, ctx, spec);
 
     TryAddHandjobCandidate(out, ctx);
   }
@@ -2179,25 +2145,24 @@ namespace
     if (!HasAnyCurrentPart(ctx.sourceData, kPenisParts))
       return;
 
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::BreastLeft, Type::Titfuck, 8.f,
-                                         {0.f, 58.f}, 0.32f);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::BreastRight, Type::Titfuck, 8.f,
-                                         {0.f, 58.f}, 0.32f);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::Cleavage, Type::Titfuck, 8.f,
-                                         {70.f, 110.f}, 0.40f, -0.03f);
+    static constexpr ProximitySpec kProximitySpecs[]{
+        {Name::BreastLeft, Type::Titfuck, 7.2f, {0.f, 50.f}, 0.32f},
+        {Name::BreastRight, Type::Titfuck, 7.2f, {0.f, 50.f}, 0.32f},
+        {Name::Cleavage, Type::Titfuck, 7.2f, {78.f, 102.f}, 0.40f, -0.03f},
+        {Name::ThighCleft, Type::Thighjob, 5.8f, {0.f, 28.f}, 0.24f, 0.02f},
+        {Name::ThighLeft, Type::Thighjob, 4.8f, {0.f, 28.f}, 0.22f, 0.01f},
+        {Name::ThighRight, Type::Thighjob, 4.8f, {0.f, 28.f}, 0.22f, 0.01f},
+        {Name::GlutealCleft, Type::Frottage, 7.2f, {148.f, 32.f, AngleModel::Wrap}, 0.28f},
+        {Name::FootLeft, Type::Footjob, 7.4f, {0.f, 180.f}, 0.f},
+        {Name::FootRight, Type::Footjob, 7.4f, {0.f, 180.f}, 0.f},
+    };
+    for (const auto& spec : kProximitySpecs) {
+      TryAddSampledPenisProximityCandidate(
+          out, ctx, spec.targetPart, spec.type, spec.maxDistance, spec.angleRange, spec.angleWeight,
+          spec.scoreOffset, spec.anchorMode, spec.anchorWeight, spec.anchorMaxDistance);
+    }
+
     TryAddNaveljobCandidate(out, ctx);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::ThighCleft, Type::Thighjob, 6.5f,
-                                         {0.f, 32.f}, 0.24f, 0.02f);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::ThighLeft, Type::Thighjob, 5.4f,
-                                         {0.f, 32.f}, 0.22f, 0.01f);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::ThighRight, Type::Thighjob, 5.4f,
-                                         {0.f, 32.f}, 0.22f, 0.01f);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::GlutealCleft, Type::Frottage, 8.f,
-                                         {140.f, 40.f, AngleModel::Wrap}, 0.28f);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::FootLeft, Type::Footjob, 8.2f,
-                                         {0.f, 180.f}, 0.f);
-    TryAddSampledPenisProximityCandidate(out, ctx, Name::FootRight, Type::Footjob, 8.2f,
-                                         {0.f, 180.f}, 0.f);
   }
 
   void GeneratePenetrationCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
@@ -2205,18 +2170,39 @@ namespace
     if (ctx.self || !HasAnyCurrentPart(ctx.sourceData, kPenisParts))
       return;
 
-    TryAddGenitalPenetrationCandidate(out, ctx, Name::Vagina, Type::Vaginal, 8.4f, 30.f, 5.5f,
-                                      -3.5f, 12.f);
-    TryAddGenitalPenetrationCandidate(out, ctx, Name::Anus, Type::Anal, 6.6f, 20.f, 4.5f, -2.5f,
-                                      9.8f);
+    static constexpr PenetrationSpec kPenetrationSpecs[]{
+        {Name::Vagina, Type::Vaginal, 7.4f, 24.f, 4.8f, -3.0f, 10.5f},
+        {Name::Anus, Type::Anal, 5.8f, 16.f, 3.9f, -2.0f, 8.8f},
+    };
+    for (const auto& spec : kPenetrationSpecs) {
+      TryAddGenitalPenetrationCandidate(out, ctx, spec.receiverPart, spec.type, spec.maxDistance,
+                                        spec.maxAngle, spec.maxAxis, spec.minDepth, spec.maxDepth);
+    }
   }
 
   void GenerateSymmetricCandidates(std::vector<Candidate>& out, const PairContext& pair)
   {
-    TryAddSymmetricCandidate(out, pair, Name::Mouth, Name::Mouth, Type::Kiss,
-                             CandidateFamily::Contact, 6.8f, {140.f, 180.f}, 0.48f);
-    TryAddSymmetricCandidate(out, pair, Name::Vagina, Name::Vagina, Type::Tribbing,
-                             CandidateFamily::Contact, 8.f, {140.f, 180.f}, 0.32f);
+    static constexpr SymmetricSpec kSymmetricSpecs[]{
+        {Name::Mouth,
+         Name::Mouth,
+         Type::Kiss,
+         CandidateFamily::Contact,
+         6.0f,
+         {145.f, 180.f},
+         0.48f},
+        {Name::Vagina,
+         Name::Vagina,
+         Type::Tribbing,
+         CandidateFamily::Contact,
+         7.2f,
+         {150.f, 180.f},
+         0.32f},
+    };
+    for (const auto& spec : kSymmetricSpecs) {
+      TryAddSymmetricCandidate(out, pair, spec.partA, spec.partB, spec.type, spec.family,
+                               spec.maxDistance, spec.angleRange, spec.angleWeight,
+                               spec.scoreOffset);
+    }
   }
 
   void GenerateDirectedCandidates(std::vector<Candidate>& out, const DirectedContext& ctx)
@@ -2266,6 +2252,7 @@ namespace
   void BuildSummaries(const AssignMap& assigns,
                       std::unordered_map<RE::Actor*, ActorInteractSummary>& summaries)
   {
+    summaries.reserve(assigns.size());
     for (const auto& [actor, partMap] : assigns) {
       ActorInteractSummary& summary = summaries[actor];
       for (const auto& [partName, assign] : partMap) {
@@ -2311,6 +2298,7 @@ namespace
   void BuildComboTypes(const std::unordered_map<RE::Actor*, ActorInteractSummary>& summaries,
                        std::unordered_map<RE::Actor*, std::vector<Type>>& comboTypes)
   {
+    comboTypes.reserve(summaries.size());
     for (const auto& [actor, summary] : summaries) {
       if (summary.givesOral && summary.givesOralTo) {
         auto it = summaries.find(summary.givesOralTo);
@@ -2415,30 +2403,24 @@ namespace
   }
 
   bool ShouldSuppressRecentPenetrationFallback(
-      const Candidate& candidate, const std::unordered_map<RE::Actor*, ActorData>& datas,
-      bool* sourceRecentOut = nullptr, bool* targetRecentOut = nullptr)
+      const Candidate& candidate, const std::unordered_map<RE::Actor*, ActorState>& actorStates)
   {
-    if (sourceRecentOut)
-      *sourceRecentOut = false;
-    if (targetRecentOut)
-      *targetRecentOut = false;
-
-    const auto sourceIt = datas.find(candidate.sourceActor);
-    const auto targetIt = datas.find(candidate.targetActor);
-    if (sourceIt == datas.end() || targetIt == datas.end())
+    const auto sourceIt = actorStates.find(candidate.sourceActor);
+    const auto targetIt = actorStates.find(candidate.targetActor);
+    if (sourceIt == actorStates.end() || targetIt == actorStates.end())
       return false;
 
-    const bool sourceRecent =
-        HadPreviousPenetrationWithPartner(sourceIt->second, Name::Penis, candidate.targetActor);
+    const RE::Actor* sourceRecentPartner =
+        GetPreviousPenetrationPartner(sourceIt->second, Name::Penis);
+    const bool sourceRecent = sourceRecentPartner != nullptr;
     const bool targetRecent =
         HadPreviousPenetrationWithPartner(targetIt->second, Name::Vagina, candidate.sourceActor) ||
         HadPreviousPenetrationWithPartner(targetIt->second, Name::Anus, candidate.sourceActor);
-    if (sourceRecentOut)
-      *sourceRecentOut = sourceRecent;
-    if (targetRecentOut)
-      *targetRecentOut = targetRecent;
     if (!sourceRecent && !targetRecent)
       return false;
+
+    if (sourceRecentPartner && sourceRecentPartner != candidate.targetActor)
+      return true;
 
     return TryGetCurrentSnapshot(targetIt->second, Name::Vagina) ||
            TryGetCurrentSnapshot(targetIt->second, Name::Anus);
@@ -2446,7 +2428,7 @@ namespace
 
   float GetProximityPenalty(const Candidate& candidate,
                             const std::unordered_map<RE::Actor*, ActorInteractSummary>& summaries,
-                            const std::unordered_map<RE::Actor*, ActorData>& datas)
+                            const std::unordered_map<RE::Actor*, ActorState>& actorStates)
   {
     const auto summaryIt      = summaries.find(candidate.targetActor);
     const bool currentVaginal = summaryIt != summaries.end() && summaryIt->second.hasVaginal &&
@@ -2454,12 +2436,12 @@ namespace
     const bool currentAnal    = summaryIt != summaries.end() && summaryIt->second.hasAnal &&
                                 summaryIt->second.analPartner == candidate.sourceActor;
 
-    const auto dataIt = datas.find(candidate.targetActor);
+    const auto dataIt = actorStates.find(candidate.targetActor);
     const bool prevVaginal =
-        dataIt != datas.end() &&
+        dataIt != actorStates.end() &&
         HadPreviousPenetrationWithPartner(dataIt->second, Name::Vagina, candidate.sourceActor);
     const bool prevAnal =
-        dataIt != datas.end() &&
+        dataIt != actorStates.end() &&
         HadPreviousPenetrationWithPartner(dataIt->second, Name::Anus, candidate.sourceActor);
     const bool anyCurrent  = currentVaginal || currentAnal;
     const bool anyPrevious = prevVaginal || prevAnal;
@@ -2482,7 +2464,8 @@ namespace
     return penalty;
   }
 
-  bool TryAssignCandidate(const Candidate& candidate, UsedPartSet& usedParts, AssignMap& assigns);
+  bool TryAssignCandidate(const Candidate& candidate, UsedPartSet& usedParts, AssignMap& assigns,
+                          std::vector<AssignedCandidateLog>* assignedLogs = nullptr);
 
   bool CandidateLess(const Candidate* lhs, const Candidate* rhs)
   {
@@ -2495,17 +2478,16 @@ namespace
 
   float GetGenitalSlotContinuityAdjustment(
       RE::Actor* receiver, GenitalSlotKind slot, RE::Actor* challenger,
-      const std::unordered_map<RE::Actor*, GenitalSlotMemory>& genitalSlotMemory)
+      const std::unordered_map<RE::Actor*, PenetrationMemory>& penetrationMemory)
   {
-    auto it = genitalSlotMemory.find(receiver);
-    if (it == genitalSlotMemory.end())
+    auto it = penetrationMemory.find(receiver);
+    if (it == penetrationMemory.end())
       return 0.f;
 
-    const GenitalSlotMemory& memory = it->second;
-    const RE::Actor* incumbent =
-        slot == GenitalSlotKind::Vaginal ? memory.vaginalPartner : memory.analPartner;
-    const std::uint8_t continuity =
-        slot == GenitalSlotKind::Vaginal ? memory.vaginalContinuity : memory.analContinuity;
+    const PenetrationMemory& memory = it->second;
+    const auto& slotMemory        = slot == GenitalSlotKind::Vaginal ? memory.vaginal : memory.anal;
+    const RE::Actor* incumbent    = slotMemory.partner;
+    const std::uint8_t continuity = slotMemory.continuity;
 
     if (!incumbent)
       return 0.f;
@@ -2517,20 +2499,20 @@ namespace
 
   float ComputeGenitalPlanScore(
       RE::Actor* receiver, const Candidate* vaginal, const Candidate* anal,
-      const std::unordered_map<RE::Actor*, GenitalSlotMemory>& genitalSlotMemory)
+      const std::unordered_map<RE::Actor*, PenetrationMemory>& penetrationMemory)
   {
     float score = 0.f;
 
     if (vaginal) {
       score += vaginal->score;
       score += GetGenitalSlotContinuityAdjustment(receiver, GenitalSlotKind::Vaginal,
-                                                  vaginal->sourceActor, genitalSlotMemory);
+                                                  vaginal->sourceActor, penetrationMemory);
     }
 
     if (anal) {
       score += anal->score;
       score += GetGenitalSlotContinuityAdjustment(receiver, GenitalSlotKind::Anal,
-                                                  anal->sourceActor, genitalSlotMemory);
+                                                  anal->sourceActor, penetrationMemory);
     }
 
     return score;
@@ -2539,7 +2521,7 @@ namespace
   std::vector<GenitalPlan> BuildReceiverGenitalPlans(
       RE::Actor* receiver, const std::vector<const Candidate*>& vaginalCandidates,
       const std::vector<const Candidate*>& analCandidates,
-      const std::unordered_map<RE::Actor*, GenitalSlotMemory>& genitalSlotMemory)
+      const std::unordered_map<RE::Actor*, PenetrationMemory>& penetrationMemory)
   {
     constexpr std::size_t kMaxCandidatesPerSlot = 4;
 
@@ -2561,13 +2543,13 @@ namespace
     for (const Candidate* vaginal : sortedVaginal) {
       plans.push_back(
           GenitalPlan{receiver, vaginal, nullptr,
-                      ComputeGenitalPlanScore(receiver, vaginal, nullptr, genitalSlotMemory), 1});
+                      ComputeGenitalPlanScore(receiver, vaginal, nullptr, penetrationMemory), 1});
     }
 
     for (const Candidate* anal : sortedAnal) {
       plans.push_back(
           GenitalPlan{receiver, nullptr, anal,
-                      ComputeGenitalPlanScore(receiver, nullptr, anal, genitalSlotMemory), 1});
+                      ComputeGenitalPlanScore(receiver, nullptr, anal, penetrationMemory), 1});
     }
 
     for (const Candidate* vaginal : sortedVaginal) {
@@ -2577,7 +2559,7 @@ namespace
 
         plans.push_back(
             GenitalPlan{receiver, vaginal, anal,
-                        ComputeGenitalPlanScore(receiver, vaginal, anal, genitalSlotMemory), 2});
+                        ComputeGenitalPlanScore(receiver, vaginal, anal, penetrationMemory), 2});
       }
     }
 
@@ -2668,20 +2650,25 @@ namespace
   }
 
   void AssignSortedPenetrationCandidates(const std::vector<const Candidate*>& sortedCandidates,
-                                         UsedPartSet& usedParts, AssignMap& assigns)
+                                         UsedPartSet& usedParts, AssignMap& assigns,
+                                         std::vector<AssignedCandidateLog>& assignedLogs,
+                                         FamilyLogStats& stats)
   {
     for (const Candidate* candidate : sortedCandidates) {
       if (!candidate)
         continue;
-      TryAssignCandidate(*candidate, usedParts, assigns);
+      if (!TryAssignCandidate(*candidate, usedParts, assigns, &assignedLogs))
+        ++stats.blocked;
     }
   }
 
   void AssignPenetrationCandidates(
       const std::vector<Candidate>& allCandidates,
-      const std::unordered_map<RE::Actor*, GenitalSlotMemory>& genitalSlotMemory,
+      const std::unordered_map<RE::Actor*, PenetrationMemory>& penetrationMemory,
       UsedPartSet& usedParts, AssignMap& assigns)
   {
+    FamilyLogStats stats;
+    std::vector<AssignedCandidateLog> assignedLogs;
     std::vector<const Candidate*> nonGenitalCandidates;
     std::unordered_map<RE::Actor*, std::vector<const Candidate*>> vaginalByReceiver;
     std::unordered_map<RE::Actor*, std::vector<const Candidate*>> analByReceiver;
@@ -2689,6 +2676,8 @@ namespace
     for (const Candidate& candidate : allCandidates) {
       if (candidate.family != CandidateFamily::Penetration)
         continue;
+
+      ++stats.total;
 
       if (!IsGenitalPenetrationType(candidate.type)) {
         nonGenitalCandidates.push_back(&candidate);
@@ -2702,7 +2691,9 @@ namespace
     }
 
     std::sort(nonGenitalCandidates.begin(), nonGenitalCandidates.end(), CandidateLess);
-    AssignSortedPenetrationCandidates(nonGenitalCandidates, usedParts, assigns);
+    stats.considered = stats.total;
+    AssignSortedPenetrationCandidates(nonGenitalCandidates, usedParts, assigns, assignedLogs,
+                                      stats);
 
     std::unordered_set<RE::Actor*> receivers;
     receivers.reserve(vaginalByReceiver.size() + analByReceiver.size());
@@ -2723,7 +2714,7 @@ namespace
           analIt != analByReceiver.end() ? analIt->second : emptyCandidates;
 
       auto plans =
-          BuildReceiverGenitalPlans(receiver, vaginalCandidates, analCandidates, genitalSlotMemory);
+          BuildReceiverGenitalPlans(receiver, vaginalCandidates, analCandidates, penetrationMemory);
       if (!plans.empty())
         receiverPlans.emplace_back(receiver, std::move(plans));
     }
@@ -2751,11 +2742,13 @@ namespace
                                best);
 
     for (const GenitalPlan& plan : best.plans) {
-      if (plan.vaginal)
-        TryAssignCandidate(*plan.vaginal, usedParts, assigns);
-      if (plan.anal)
-        TryAssignCandidate(*plan.anal, usedParts, assigns);
+      if (plan.vaginal && !TryAssignCandidate(*plan.vaginal, usedParts, assigns, &assignedLogs))
+        ++stats.blocked;
+      if (plan.anal && !TryAssignCandidate(*plan.anal, usedParts, assigns, &assignedLogs))
+        ++stats.blocked;
     }
+
+    LogFamilyOutcome(CandidateFamily::Penetration, stats, assignedLogs);
   }
 
   void AccumulateObservedInteractTags(
@@ -2775,9 +2768,9 @@ namespace
     }
   }
 
-  void UpdateGenitalSlotMemory(const std::unordered_map<RE::Actor*, ActorData>& datas,
+  void UpdateGenitalSlotMemory(const std::unordered_map<RE::Actor*, ActorState>& actorStates,
                                const AssignMap& assigns,
-                               std::unordered_map<RE::Actor*, GenitalSlotMemory>& genitalSlotMemory)
+                               std::unordered_map<RE::Actor*, PenetrationMemory>& penetrationMemory)
   {
     auto updateSlot = [](RE::Actor*& partnerOut, std::uint8_t& continuityOut,
                          const AssignInfo* assign, bool (*includeType)(Type)) {
@@ -2795,42 +2788,22 @@ namespace
       }
     };
 
-    for (const auto& [actor, _] : datas) {
-      GenitalSlotMemory& memory = genitalSlotMemory[actor];
-      updateSlot(memory.vaginalPartner, memory.vaginalContinuity,
+    for (const auto& [actor, _] : actorStates) {
+      PenetrationMemory& memory = penetrationMemory[actor];
+      updateSlot(memory.vaginal.partner, memory.vaginal.continuity,
                  FindAssignInfo(assigns, actor, Name::Vagina), IncludesVaginal);
-      updateSlot(memory.analPartner, memory.analContinuity,
+      updateSlot(memory.anal.partner, memory.anal.continuity,
                  FindAssignInfo(assigns, actor, Name::Anus), IncludesAnal);
     }
   }
 
-  bool TryAssignCandidate(const Candidate& candidate, UsedPartSet& usedParts, AssignMap& assigns)
+  bool TryAssignCandidate(const Candidate& candidate, UsedPartSet& usedParts, AssignMap& assigns,
+                          std::vector<AssignedCandidateLog>* assignedLogs)
   {
     const bool sourceUsed = usedParts.count({candidate.sourceActor, candidate.sourcePart}) > 0;
     const bool targetUsed = usedParts.count({candidate.targetActor, candidate.targetPart}) > 0;
-    if (sourceUsed || targetUsed) {
-      const AssignInfo* sourceAssign =
-          FindAssignInfo(assigns, candidate.sourceActor, candidate.sourcePart);
-      const AssignInfo* targetAssign =
-          FindAssignInfo(assigns, candidate.targetActor, candidate.targetPart);
-
-      if ((candidate.family == CandidateFamily::Penetration ||
-           candidate.family == CandidateFamily::Proximity) &&
-          ShouldEmitDebug(candidate.sourceActor, candidate.targetActor, candidate.type,
-                          DebugEvent::AssignSkipped, 260.f)) {
-        logger::info(
-            "[SexLab NG] InteractDebug Assign skipped family={} type={} src={:08X}:{} "
-            "dst={:08X}:{} "
-            "score={:.3f} distance={:.2f} sourceUsed={} sourceBy={} targetUsed={} targetBy={}",
-            FamilyText(candidate.family), TypeText(candidate.type),
-            GetActorFormID(candidate.sourceActor), NameText(candidate.sourcePart),
-            GetActorFormID(candidate.targetActor), NameText(candidate.targetPart), candidate.score,
-            candidate.distance, sourceUsed,
-            TypeText(sourceAssign ? sourceAssign->type : Type::None), targetUsed,
-            TypeText(targetAssign ? targetAssign->type : Type::None));
-      }
+    if (sourceUsed || targetUsed)
       return false;
-    }
 
     const Type resolvedType = ResolveSelfType(candidate);
 
@@ -2844,26 +2817,18 @@ namespace
         resolvedType};
     usedParts.insert({candidate.targetActor, candidate.targetPart});
 
-    if ((candidate.family == CandidateFamily::Penetration ||
-         candidate.family == CandidateFamily::Proximity) &&
-        ShouldEmitDebug(candidate.sourceActor, candidate.targetActor, candidate.type,
-                        DebugEvent::Assigned, 260.f)) {
-      logger::info(
-          "[SexLab NG] InteractDebug Assign applied family={} type={} src={:08X}:{} dst={:08X}:{} "
-          "resolvedType={} score={:.3f} distance={:.2f}",
-          FamilyText(candidate.family), TypeText(candidate.type),
-          GetActorFormID(candidate.sourceActor), NameText(candidate.sourcePart),
-          GetActorFormID(candidate.targetActor), NameText(candidate.targetPart),
-          TypeText(resolvedType), candidate.score, candidate.distance);
-    }
+    if (assignedLogs)
+      assignedLogs->push_back(AssignedCandidateLog{candidate, resolvedType});
 
     return true;
   }
 
   void AssignFamilyCandidates(const std::vector<Candidate>& allCandidates, CandidateFamily family,
-                              const std::unordered_map<RE::Actor*, ActorData>& datas,
+                              const std::unordered_map<RE::Actor*, ActorState>& actorStates,
                               UsedPartSet& usedParts, AssignMap& assigns)
   {
+    FamilyLogStats stats;
+    std::vector<AssignedCandidateLog> assignedLogs;
     std::unordered_map<RE::Actor*, ActorInteractSummary> summaries;
     if (family == CandidateFamily::Proximity)
       BuildSummaries(assigns, summaries);
@@ -2874,42 +2839,27 @@ namespace
       if (candidate.family != family)
         continue;
 
+      ++stats.total;
+
       Candidate adjusted = candidate;
       if (family == CandidateFamily::Proximity) {
         if (ShouldSuppressProximityCandidate(adjusted, summaries)) {
-          if (ShouldEmitDebug(adjusted.sourceActor, adjusted.targetActor, adjusted.type,
-                              DebugEvent::Suppressed, 700.f)) {
-            logger::info("[SexLab NG] InteractDebug Proximity suppressed type={} src={:08X}:{} "
-                         "dst={:08X}:{} "
-                         "detail=current penetration keeps fallback muted",
-                         TypeText(adjusted.type), GetActorFormID(adjusted.sourceActor),
-                         NameText(adjusted.sourcePart), GetActorFormID(adjusted.targetActor),
-                         NameText(adjusted.targetPart));
-          }
+          ++stats.suppressed;
           continue;
         }
 
-        bool sourceRecent = false;
-        bool targetRecent = false;
-        if (ShouldSuppressRecentPenetrationFallback(adjusted, datas, &sourceRecent,
-                                                    &targetRecent)) {
-          if (ShouldEmitDebug(adjusted.sourceActor, adjusted.targetActor, adjusted.type,
-                              DebugEvent::Suppressed, 700.f)) {
-            logger::info("[SexLab NG] InteractDebug Proximity suppressed type={} src={:08X}:{} "
-                         "dst={:08X}:{} "
-                         "detail=recent penetration hold sourceRecent={} targetRecent={}",
-                         TypeText(adjusted.type), GetActorFormID(adjusted.sourceActor),
-                         NameText(adjusted.sourcePart), GetActorFormID(adjusted.targetActor),
-                         NameText(adjusted.targetPart), sourceRecent, targetRecent);
-          }
+        if (ShouldSuppressRecentPenetrationFallback(adjusted, actorStates)) {
+          ++stats.suppressed;
           continue;
         }
 
-        adjusted.score += GetProximityPenalty(adjusted, summaries, datas);
+        adjusted.score += GetProximityPenalty(adjusted, summaries, actorStates);
       }
 
       familyCandidates.push_back(adjusted);
     }
+
+    stats.considered = familyCandidates.size();
 
     std::sort(familyCandidates.begin(), familyCandidates.end(),
               [](const Candidate& lhs, const Candidate& rhs) {
@@ -2920,97 +2870,66 @@ namespace
                 return static_cast<std::uint8_t>(lhs.type) < static_cast<std::uint8_t>(rhs.type);
               });
 
-    for (const Candidate& candidate : familyCandidates)
-      TryAssignCandidate(candidate, usedParts, assigns);
-  }
-
-  void LogPenetrationFinalStates(const std::unordered_map<RE::Actor*, ActorData>& datas,
-                                 const AssignMap& assigns)
-  {
-    if (!IsDebugEnabled())
-      return;
-
-    for (const auto& [actor, data] : datas) {
-      const bool hasVagina = TryGetCurrentSnapshot(data, Name::Vagina) != nullptr;
-      const bool hasAnus   = TryGetCurrentSnapshot(data, Name::Anus) != nullptr;
-      if (!hasVagina && !hasAnus)
-        continue;
-
-      const AssignInfo* vaginalAssign = FindAssignInfo(assigns, actor, Name::Vagina);
-      const AssignInfo* analAssign    = FindAssignInfo(assigns, actor, Name::Anus);
-      if (!vaginalAssign && !analAssign)
-        continue;
-
-      if (!ShouldEmitDebug(actor, actor, Type::None, DebugEvent::FinalState, 600.f))
-        continue;
-
-      logger::info("[SexLab NG] InteractDebug Final actor={:08X} has(vag={}, anus={}) "
-                   "vaginal={} partner={:08X} anal={} partner={:08X}",
-                   GetActorFormID(actor), hasVagina, hasAnus,
-                   TypeText(vaginalAssign ? vaginalAssign->type : Type::None),
-                   GetActorFormID(vaginalAssign ? vaginalAssign->partner : nullptr),
-                   TypeText(analAssign ? analAssign->type : Type::None),
-                   GetActorFormID(analAssign ? analAssign->partner : nullptr));
+    for (const Candidate& candidate : familyCandidates) {
+      if (!TryAssignCandidate(candidate, usedParts, assigns, &assignedLogs))
+        ++stats.blocked;
     }
+
+    LogFamilyOutcome(family, stats, assignedLogs);
   }
 
-  void ResetInteractionInfos(std::unordered_map<RE::Actor*, ActorData>& datas)
+  void ResetInteractionInfos(std::unordered_map<RE::Actor*, ActorState>& actorStates)
   {
-    for (auto& [actor, data] : datas) {
-      for (auto& [name, info] : data.infos) {
-        info.prevType     = info.type;
-        info.prevActor    = info.actor;
-        info.prevDistance = info.distance;
-        info.type         = Type::None;
-        info.actor        = nullptr;
-        info.distance     = 0.f;
-        info.velocity     = 0.f;
+    for (auto& [actor, actorState] : actorStates) {
+      for (auto& [name, partState] : actorState.parts) {
+        partState.previous = partState.current;
+        partState.current  = {};
       }
     }
   }
 
-  void UpdateBodyPartPositions(std::unordered_map<RE::Actor*, ActorData>& datas)
+  void UpdateBodyPartPositions(std::unordered_map<RE::Actor*, ActorState>& actorStates)
   {
-    for (auto& [actor, data] : datas) {
-      for (auto& [name, info] : data.infos)
-        info.bodypart.UpdatePosition();
+    for (auto& [actor, actorState] : actorStates) {
+      for (auto& [name, partState] : actorState.parts)
+        partState.bodyPart.UpdatePosition();
     }
   }
 
-  void CaptureMotionHistory(std::unordered_map<RE::Actor*, ActorData>& datas, float nowMs)
+  void CaptureMotionHistory(std::unordered_map<RE::Actor*, ActorState>& actorStates, float nowMs)
   {
-    for (auto& [actor, data] : datas) {
-      for (auto& [name, info] : data.infos) {
-        MotionHistory& history = data.motion[name];
+    for (auto& [actor, actorState] : actorStates) {
+      for (auto& [name, partState] : actorState.parts) {
+        MotionHistory& history = partState.motion;
         history.older          = history.previous;
         history.previous       = history.current;
-        history.current        = BuildSnapshot(info.bodypart, nowMs);
-        EmitBodyPartCalibration(actor, name, info.bodypart);
+        history.current        = BuildSnapshot(partState.bodyPart, nowMs);
       }
     }
   }
 
-  void ApplyAssignments(std::unordered_map<RE::Actor*, ActorData>& datas, const AssignMap& assigns,
-                        float nowMs)
+  void ApplyAssignments(std::unordered_map<RE::Actor*, ActorState>& actorStates,
+                        const AssignMap& assigns, float nowMs)
   {
-    for (auto& [actor, data] : datas) {
-      const float dt    = nowMs - data.lastUpdateMs;
-      data.lastUpdateMs = nowMs;
+    for (auto& [actor, actorState] : actorStates) {
+      const float dt              = nowMs - actorState.lastEvaluationMs;
+      actorState.lastEvaluationMs = nowMs;
 
       auto assignIt = assigns.find(actor);
       if (assignIt == assigns.end())
         continue;
 
-      for (auto& [partName, info] : data.infos) {
+      for (auto& [partName, partState] : actorState.parts) {
         auto partIt = assignIt->second.find(partName);
         if (partIt == assignIt->second.end())
           continue;
 
-        const AssignInfo& assign = partIt->second;
-        info.actor               = assign.partner;
-        info.distance            = assign.distance;
-        info.type                = assign.type;
-        info.velocity            = dt > 1e-4f ? (assign.distance - info.prevDistance) / dt : 0.f;
+        const AssignInfo& assign   = partIt->second;
+        partState.current.partner  = assign.partner;
+        partState.current.distance = assign.distance;
+        partState.current.type     = assign.type;
+        partState.current.approachSpeed =
+            dt > 1e-4f ? (assign.distance - partState.previous.distance) / dt : 0.f;
       }
     }
   }
@@ -3021,70 +2940,70 @@ namespace
 
 #pragma region RuntimeEntryPoints
 
-void InitializeInteractActors(std::unordered_map<RE::Actor*, Interact::ActorData>& datas,
+void InitializeInteractActors(std::unordered_map<RE::Actor*, Interact::ActorState>& actorStates,
                               const std::vector<RE::Actor*>& actors)
 {
-  datas.clear();
+  actorStates.clear();
 
   for (auto* actor : actors) {
     if (!actor)
       continue;
 
-    ActorData data;
-    data.race   = Define::Race(actor);
-    data.gender = Define::Gender(actor);
+    ActorState actorState;
+    actorState.race   = Define::Race(actor);
+    actorState.gender = Define::Gender(actor);
+    actorState.parts.reserve(static_cast<std::size_t>(Name::Penis) + 1);
 
     for (std::uint8_t index = 0; index < static_cast<std::uint8_t>(Name::Penis) + 1; ++index) {
       const auto name = static_cast<Name>(index);
-      if (!BP::HasBodyPart(data.gender, data.race, name))
+      if (!BP::HasBodyPart(actorState.gender, actorState.race, name))
         continue;
-      data.infos.emplace(name, Info{BP{actor, data.race, name}});
-      data.motion.emplace(name, MotionHistory{});
+      actorState.parts.emplace(name, PartState{BP{actor, actorState.race, name}});
     }
 
-    datas.emplace(actor, std::move(data));
+    actorStates.emplace(actor, std::move(actorState));
   }
 }
 
-void FlashInteractNodeData(std::unordered_map<RE::Actor*, Interact::ActorData>& datas)
+void FlashInteractNodeData(std::unordered_map<RE::Actor*, Interact::ActorState>& actorStates)
 {
-  for (auto& [actor, data] : datas)
-    for (auto& [name, info] : data.infos)
-      info.bodypart.UpdateNodes();
+  for (auto& [actor, actorState] : actorStates)
+    for (auto& [name, partState] : actorState.parts)
+      partState.bodyPart.UpdateNodes();
 }
 
 void UpdateInteractState(
-    std::unordered_map<RE::Actor*, Interact::ActorData>& datas,
-    std::unordered_map<RE::Actor*, Interact::GenitalSlotMemory>& genitalSlotMemory,
+    std::unordered_map<RE::Actor*, Interact::ActorState>& actorStates,
+    std::unordered_map<RE::Actor*, Interact::PenetrationMemory>& penetrationMemory,
     std::unordered_map<RE::Actor*, Define::InteractTags>& observedInteractTags)
 {
-  ResetInteractionInfos(datas);
-  UpdateBodyPartPositions(datas);
+  ResetInteractionInfos(actorStates);
+  UpdateBodyPartPositions(actorStates);
 
   const float nowMs = GetSteadyNowMs();
-  CaptureMotionHistory(datas, nowMs);
+  CaptureMotionHistory(actorStates, nowMs);
 
   std::vector<Candidate> candidates;
   std::vector<RE::Actor*> actors;
-  actors.reserve(datas.size());
-  for (const auto& [actor, _] : datas)
+  actors.reserve(actorStates.size());
+  for (const auto& [actor, _] : actorStates)
     actors.push_back(actor);
 
   for (std::size_t i = 0; i < actors.size(); ++i) {
     for (std::size_t j = i; j < actors.size(); ++j) {
       RE::Actor* actorA = actors[i];
       RE::Actor* actorB = actors[j];
-      GeneratePairCandidates(candidates, PairContext{actorA, actorB, datas.at(actorA),
-                                                     datas.at(actorB), actorA == actorB});
+      GeneratePairCandidates(candidates, PairContext{actorA, actorB, actorStates.at(actorA),
+                                                     actorStates.at(actorB), actorA == actorB});
     }
   }
 
   UsedPartSet usedParts;
   AssignMap assigns;
 
-  AssignPenetrationCandidates(candidates, genitalSlotMemory, usedParts, assigns);
-  AssignFamilyCandidates(candidates, CandidateFamily::Proximity, datas, usedParts, assigns);
-  AssignFamilyCandidates(candidates, CandidateFamily::Contact, datas, usedParts, assigns);
+  AssignPenetrationCandidates(candidates, penetrationMemory, usedParts, assigns);
+  AssignFamilyCandidates(candidates, CandidateFamily::Proximity, actorStates, usedParts, assigns);
+  AssignFamilyCandidates(candidates, CandidateFamily::Contact, actorStates, usedParts, assigns);
 
   std::unordered_map<RE::Actor*, ActorInteractSummary> summaries;
   BuildSummaries(assigns, summaries);
@@ -3093,9 +3012,8 @@ void UpdateInteractState(
   BuildComboTypes(summaries, comboTypes);
   AccumulateObservedInteractTags(assigns, comboTypes, observedInteractTags);
   ApplyComboOverrides(assigns, summaries, comboTypes);
-  LogPenetrationFinalStates(datas, assigns);
-  ApplyAssignments(datas, assigns, nowMs);
-  UpdateGenitalSlotMemory(datas, assigns, genitalSlotMemory);
+  ApplyAssignments(actorStates, assigns, nowMs);
+  UpdateGenitalSlotMemory(actorStates, assigns, penetrationMemory);
 }
 
 #pragma endregion
@@ -3109,34 +3027,35 @@ namespace Instance
 
 Interact::Interact(std::vector<RE::Actor*> actors)
 {
-  Detail::InitializeInteractActors(datas, actors);
+  Detail::InitializeInteractActors(actorStates, actors);
 }
 
 void Interact::FlashNodeData()
 {
-  Detail::FlashInteractNodeData(datas);
+  Detail::FlashInteractNodeData(actorStates);
 }
 
 void Interact::Update()
 {
-  if (genitalSlotMemory.empty()) {
-    for (const auto& [actor, _] : datas) {
-      genitalSlotMemory.emplace(actor, GenitalSlotMemory{});
+  if (penetrationMemory.empty()) {
+    for (const auto& [actor, _] : actorStates) {
+      penetrationMemory.emplace(actor, PenetrationMemory{});
       observedInteractTags.try_emplace(actor, Define::InteractTags{});
     }
   }
 
-  Detail::UpdateInteractState(datas, genitalSlotMemory, observedInteractTags);
+  Detail::UpdateInteractState(actorStates, penetrationMemory, observedInteractTags);
 }
 
-const Interact::Info& Interact::GetInfo(RE::Actor* actor, Define::BodyPart::Name partName) const
+const Interact::PartState& Interact::GetPartState(RE::Actor* actor,
+                                                  Define::BodyPart::Name partName) const
 {
-  static const Interact::Info kEmpty{};
-  auto it = datas.find(actor);
-  if (it == datas.end())
+  static const Interact::PartState kEmpty{};
+  auto it = actorStates.find(actor);
+  if (it == actorStates.end())
     return kEmpty;
-  auto partIt = it->second.infos.find(partName);
-  if (partIt == it->second.infos.end())
+  auto partIt = it->second.parts.find(partName);
+  if (partIt == it->second.parts.end())
     return kEmpty;
   return partIt->second;
 }

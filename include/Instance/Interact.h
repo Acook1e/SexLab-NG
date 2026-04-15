@@ -63,16 +63,14 @@ public:
     Total
   };
 
-  struct Info
+  struct InteractionState
   {
-    Define::BodyPart bodypart{};
-    RE::Actor* actor     = nullptr;
-    RE::Actor* prevActor = nullptr;
-    float distance       = 0.f;
-    float prevDistance   = 0.f;
-    Type type            = Type::None;
-    Type prevType        = Type::None;
-    float velocity       = 0.f;  // 靠近速度（units/ms，负=靠近）
+    RE::Actor* partner  = nullptr;
+    Type type           = Type::None;
+    float distance      = 0.f;
+    float approachSpeed = 0.f;  // 靠近速度（units/ms，负=靠近）
+
+    [[nodiscard]] bool IsActive() const noexcept { return type != Type::None; }
   };
 
   struct MotionSnapshot
@@ -84,10 +82,12 @@ public:
     float timeMs               = 0.f;
     bool valid                 = false;
     bool directional           = false;
-    std::vector<Define::CapsuleCollider> capsules{};
-    std::vector<Define::BoxCollider> boxes{};
+    Define::CollisionSet collisions{};
 
-    [[nodiscard]] bool HasCollider() const { return !capsules.empty() || !boxes.empty(); }
+    [[nodiscard]] bool HasCollider() const noexcept
+    {
+      return !collisions.capsules.empty() || !collisions.boxes.empty();
+    }
   };
 
   struct MotionHistory
@@ -97,21 +97,34 @@ public:
     MotionSnapshot older{};
   };
 
-  struct ActorData
+  struct PartState
   {
-    std::unordered_map<Define::BodyPart::Name, Interact::Info> infos{};
-    std::unordered_map<Define::BodyPart::Name, Interact::MotionHistory> motion{};
-    Define::Race race     = Define::Race::Type::Unknown;
-    Define::Gender gender = Define::Gender::Type::Unknown;
-    float lastUpdateMs    = 0.f;
+    Define::BodyPart bodyPart{};
+    InteractionState current{};
+    InteractionState previous{};
+    MotionHistory motion{};
+
+    [[nodiscard]] bool HasInteraction() const noexcept { return current.IsActive(); }
   };
 
-  struct GenitalSlotMemory
+  struct SlotMemory
   {
-    RE::Actor* vaginalPartner      = nullptr;
-    RE::Actor* analPartner         = nullptr;
-    std::uint8_t vaginalContinuity = 0;
-    std::uint8_t analContinuity    = 0;
+    RE::Actor* partner      = nullptr;
+    std::uint8_t continuity = 0;
+  };
+
+  struct ActorState
+  {
+    std::unordered_map<Define::BodyPart::Name, Interact::PartState> parts{};
+    Define::Race race      = Define::Race::Type::Unknown;
+    Define::Gender gender  = Define::Gender::Type::Unknown;
+    float lastEvaluationMs = 0.f;
+  };
+
+  struct PenetrationMemory
+  {
+    SlotMemory vaginal{};
+    SlotMemory anal{};
   };
 
   Interact() = default;
@@ -121,13 +134,21 @@ public:
   void Update();
 
   // ── 查询 ────────────────────────────────────────────────────────────────
-  [[nodiscard]] const ActorData& GetData(RE::Actor* actor) const { return datas.at(actor); }
-  [[nodiscard]] const Info& GetInfo(RE::Actor* actor, Define::BodyPart::Name part) const;
+  [[nodiscard]] const ActorState& GetActorState(RE::Actor* actor) const
+  {
+    return actorStates.at(actor);
+  }
+  [[nodiscard]] const ActorState& GetData(RE::Actor* actor) const { return GetActorState(actor); }
+  [[nodiscard]] const PartState& GetPartState(RE::Actor* actor, Define::BodyPart::Name part) const;
+  [[nodiscard]] const PartState& GetInfo(RE::Actor* actor, Define::BodyPart::Name part) const
+  {
+    return GetPartState(actor, part);
+  }
   [[nodiscard]] const Define::InteractTags& GetObservedInteractTags(RE::Actor* actor) const;
 
 private:
-  std::unordered_map<RE::Actor*, ActorData> datas{};
-  std::unordered_map<RE::Actor*, GenitalSlotMemory> genitalSlotMemory{};
+  std::unordered_map<RE::Actor*, ActorState> actorStates{};
+  std::unordered_map<RE::Actor*, PenetrationMemory> penetrationMemory{};
   std::unordered_map<RE::Actor*, Define::InteractTags> observedInteractTags{};
 };
 

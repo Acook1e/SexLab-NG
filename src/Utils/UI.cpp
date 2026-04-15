@@ -16,13 +16,14 @@ static PrismaView view                    = 0;
 namespace
 {
 nlohmann::json BuildInteractionJson(Define::BodyPart::Name partName,
-                                    const Instance::Interact::Info& bpInfo)
+                                    const Instance::Interact::PartState& partState)
 {
+  const auto& interaction = partState.current;
   nlohmann::json ij;
   ij["part"]     = std::string(magic_enum::enum_name(partName));
-  ij["type"]     = std::string(magic_enum::enum_name(bpInfo.type));
-  ij["partner"]  = bpInfo.actor ? bpInfo.actor->GetDisplayFullName() : "";
-  ij["velocity"] = bpInfo.velocity;
+  ij["type"]     = std::string(magic_enum::enum_name(interaction.type));
+  ij["partner"]  = interaction.partner ? interaction.partner->GetDisplayFullName() : "";
+  ij["velocity"] = interaction.approachSpeed;
   return ij;
 }
 
@@ -254,10 +255,10 @@ void UI::SendInitData(Instance::SceneInstance* scene)
     // 初始交互列表（可能全为空）
     aj["interactions"]    = nlohmann::json::array();
     const auto& actorData = interact.GetData(actor);
-    for (const auto& [partName, bpInfo] : actorData.infos) {
-      if (bpInfo.type == Instance::Interact::Type::None)
+    for (const auto& [partName, partState] : actorData.parts) {
+      if (!partState.HasInteraction())
         continue;
-      aj["interactions"].push_back(BuildInteractionJson(partName, bpInfo));
+      aj["interactions"].push_back(BuildInteractionJson(partName, partState));
     }
 
     j["actors"].push_back(aj);
@@ -295,10 +296,10 @@ void UI::SendUpdateData(Instance::SceneInstance* scene)
 
     aj["interactions"]    = nlohmann::json::array();
     const auto& actorData = interact.GetData(actor);
-    for (const auto& [partName, bpInfo] : actorData.infos) {
-      if (bpInfo.type == Instance::Interact::Type::None)
+    for (const auto& [partName, partState] : actorData.parts) {
+      if (!partState.HasInteraction())
         continue;
-      aj["interactions"].push_back(BuildInteractionJson(partName, bpInfo));
+      aj["interactions"].push_back(BuildInteractionJson(partName, partState));
     }
 
     j["actors"].push_back(aj);

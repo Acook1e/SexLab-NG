@@ -5,12 +5,6 @@
 
 #include "eigen3/Eigen/Dense"
 
-#include <cstdint>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-
 namespace Define
 {
 using Point3f  = Eigen::Vector3f;
@@ -21,15 +15,31 @@ struct Node
 {
   std::vector<std::string_view> requestedNodeNames{};
   std::vector<RE::NiPointer<RE::NiNode>> resolvedNodes{};
-  Point3f position           = Point3f::Zero();
-  Matrix3f offsetRotation    = Matrix3f::Identity();
-  Vector3f offsetTranslation = Vector3f::Zero();
-  bool hasOffset             = false;
+  Point3f position = Point3f::Zero();
+  // 偏移节点视为没有孙节点的虚拟子节点，只需要局部位移。
+  // 世界坐标计算公式:
+  // world_pos = parent.world_rot * (parent.world_scale * child.local_pos) + parent.world_pos
+  RE::NiPoint3 localTranslate = RE::NiPoint3::Zero();
+
+  Node() = default;
+
+  Node(std::string_view nodeName, const RE::NiPoint3& localTranslate = RE::NiPoint3::Zero())
+  {
+    requestedNodeNames.push_back(nodeName);
+    this->localTranslate = localTranslate;
+  }
+  Node(std::initializer_list<std::string_view> nodeNames,
+       const RE::NiPoint3& localTranslate = RE::NiPoint3::Zero())
+  {
+    requestedNodeNames.assign(nodeNames.begin(), nodeNames.end());
+    this->localTranslate = localTranslate;
+  }
+
+  [[nodiscard]] bool HasOffset() const noexcept { return localTranslate.SqrLength() > 1e-6f; }
 };
 
 struct Vector
 {
-  std::vector<Node> nodes{};
   Point3f start      = Point3f::Zero();
   Point3f end        = Point3f::Zero();
   Vector3f direction = Vector3f::Zero();
@@ -38,31 +48,28 @@ struct Vector
 
 struct CapsuleCollider
 {
-  Point3f start = Point3f::Zero();
-  Point3f end   = Point3f::Zero();
-  float radius  = 0.f;
+  Point3f start      = Point3f::Zero();
+  Point3f end        = Point3f::Zero();
+  Vector3f direction = Vector3f::Zero();
+  float length       = 0.f;
+  float radius       = 0.f;
 };
 
 struct BoxCollider
 {
+  Point3f start        = Point3f::Zero();
+  Point3f end          = Point3f::Zero();
+  Vector3f direction   = Vector3f::Zero();
+  float length         = 0.f;
   Point3f center       = Point3f::Zero();
   Matrix3f basis       = Matrix3f::Identity();
   Vector3f halfExtents = Vector3f::Zero();
 };
 
-struct Collider
+struct CollisionSet
 {
   std::vector<CapsuleCollider> capsules{};
   std::vector<BoxCollider> boxes{};
-  Point3f center     = Point3f::Zero();
-  Vector3f direction = Vector3f::Zero();
-  float length       = 0.f;
-};
-
-struct ShapeInfo
-{
-  std::optional<Vector> vector{};
-  std::optional<Collider> collider{};
 };
 
 class BodyPart
@@ -93,41 +100,36 @@ public:
     Penis,         // Male, Futa or CreatureMale
   };
 
-  static bool HasBodyPart(Gender gender, Race race, Name name);
-
   enum class Shape : std::uint8_t
   {
-    Point,    // Single node; no direction
-    Vector,   // start -> end, direction = unit(end - start)
-    Collider  // Capsule or box collider
+    Point,    // Single anchor; no axis direction
+    Segment,  // 2 or more points but not a collider
+    CapsuleCollider,
+    BoxCollider
   };
 
-  using Type = Shape;
+  static bool HasBodyPart(Gender gender, Race race, Name name);
 
   BodyPart() = default;
   BodyPart(RE::Actor* actor, Race race, Name name);
 
   [[nodiscard]] bool IsValid() const;
   [[nodiscard]] Name GetName() const noexcept { return name; }
+  [[nodiscard]] bool IsDirectional() const noexcept { return shape != Shape::Point; }
   [[nodiscard]] Shape GetShape() const noexcept { return shape; }
-  [[nodiscard]] Type GetType() const noexcept { return shape; }
-  [[nodiscard]] const ShapeInfo& GetShapeInfo() const noexcept { return info; }
+  [[nodiscard]] const Vector& GetAxisInfo() const noexcept { return vectorInfo; }
+  [[nodiscard]] const CollisionSet* GetCollisionInfo() const noexcept
+  {
+    return collisionInfo ? &(*collisionInfo) : nullptr;
+  }
 
   void UpdateNodes();
   void UpdatePosition();
 
 private:
-  [[nodiscard]] bool IsNodeResolved(const Node& node) const;
-  [[nodiscard]] std::vector<Point3f> CollectResolvedWorldPositions(const Node& node) const;
-  void UpdateNodePosition(Node& node);
-  [[nodiscard]] std::vector<Point3f> CollectValidNodePositions(const Vector& vectorInfo) const;
-  [[nodiscard]] Vector3f BuildResolvedNodeSpanAxis(const Node& node) const;
-  [[nodiscard]] Matrix3f BuildBasis(const Vector3f& primaryAxis, const Node* referenceNode) const;
-  void UpdateVectorInfo();
-  void UpdateColliderInfo();
-  [[nodiscard]] Vector3f FitVector(const Vector& vectorInfo) const;
-
-  ShapeInfo info{};
+  std::vector<Node> nodes{};
+  Vector vectorInfo{};
+  std::optional<CollisionSet> collisionInfo{};
   RE::Actor* actor = nullptr;
   Name name        = Name::Mouth;
   Shape shape      = Shape::Point;

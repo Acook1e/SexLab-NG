@@ -415,16 +415,16 @@ namespace
            type == InteractionType::PenisAnimObj;
   }
 
-  static float CalculateObjectFactor(const Instance::Interact::Info& info)
+  static float CalculateObjectFactor(const Instance::Interact::InteractionState& interaction)
   {
-    if (info.type == InteractionType::Masturbation)
+    if (interaction.type == InteractionType::Masturbation)
       return 0.82f;
-    if (IsAnimObjectInteraction(info.type))
+    if (IsAnimObjectInteraction(interaction.type))
       return 0.68f;
-    if (!info.actor)
+    if (!interaction.partner)
       return 0.86f;
 
-    switch (info.type) {
+    switch (interaction.type) {
     case InteractionType::Kiss:
       return 0.97f;
     case InteractionType::GropeBreast:
@@ -603,7 +603,7 @@ namespace
   }
 
   static InteractionTickResult CalculateInteract(RE::Actor* actor, ActorStat::Stat& stat,
-                                                 const Instance::Interact::ActorData& interactData)
+                                                 const Instance::Interact::ActorState& actorState)
   {
     InteractionTickResult result;
     std::unordered_map<ActiveTrackKey, float, ActiveTrackKeyHash> trackContributions;
@@ -612,28 +612,30 @@ namespace
     const float arouseMultiplier  = CalculateArouseMultiplier(stat);
     const auto selfGender         = Define::Gender(actor).Get();
 
-    for (const auto& [partName, info] : interactData.infos) {
-      if (!IsTrackedInteraction(info.type))
+    for (const auto& [partName, partState] : actorState.parts) {
+      const auto& interaction = partState.current;
+      if (!IsTrackedInteraction(interaction.type))
         continue;
 
       const auto track = GetTrackForBodyPart(partName);
       if (!IsBodyTrack(track))
         continue;
 
-      const auto& profile        = GetInteractionProfile(info.type);
+      const auto& profile        = GetInteractionProfile(interaction.type);
       const float effectiveLv    = GetEffectiveTrackLevel(stat, track);
       const float skillFactor    = CalculateSkillFactor(effectiveLv, profile);
       const float tendencyFactor = CalculateTendencyFactor(stat, track);
       const float genderFactor   = CalculateGenderFactor(selfGender, track, profile.family);
-      const float partnerFactor  = CalculatePartnerPreferenceFactor(stat, actor, info.actor);
-      const float speedFactor    = CalculateSpeedFactor(info.velocity);
-      const float objectFactor   = CalculateObjectFactor(info);
+      const float partnerFactor =
+          CalculatePartnerPreferenceFactor(stat, actor, interaction.partner);
+      const float speedFactor  = CalculateSpeedFactor(interaction.approachSpeed);
+      const float objectFactor = CalculateObjectFactor(interaction);
 
       const float contribution = profile.baseEnjoy * skillFactor * tendencyFactor * genderFactor *
                                  partnerFactor * speedFactor * objectFactor * sensitivityFactor *
                                  arouseMultiplier;
 
-      const ActiveTrackKey key{track, info.actor};
+      const ActiveTrackKey key{track, interaction.partner};
       auto [it, inserted] = trackContributions.try_emplace(key, contribution);
       if (!inserted)
         it->second = (std::max)(it->second, contribution);
