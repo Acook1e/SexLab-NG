@@ -1,56 +1,92 @@
 #include "Define/BodyPart.h"
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "magic_enum/magic_enum.hpp"
 
 namespace Define
 {
 namespace
 {
-  using NodeList = std::vector<Node>;
-  using Shape    = BodyPart::Shape;
+  using VolumeList = std::vector<VolumeData>;
 
-  struct ColliderSpec
+  struct ResolvedFace
   {
-    float capsuleRadius          = 0.f;
-    float boxHalfWidth           = 0.f;
-    float boxHalfHeight          = 0.f;
-    float boxHalfLengthScale     = 0.5f;
-    float boxHalfLengthMin       = 0.f;
-    float boxHalfLengthMax       = 0.f;
-    Vector3f entranceHalfExtents = Vector3f::Zero();
-    float entranceOffset         = 0.f;
-    float channelRadius          = 0.f;
-    float channelLengthScale     = 1.f;
+    std::vector<Point3f> points{};
+    Point3f center    = Point3f::Zero();
+    Vector3f normal   = Vector3f::Zero();
+    Vector3f edgeHint = Vector3f::Zero();
   };
 
-  ColliderSpec MakeCapsuleSpec(float capsuleRadius)
+  struct ResolvedCapsule
   {
-    ColliderSpec spec;
-    spec.capsuleRadius = capsuleRadius;
-    return spec;
+    Point3f start  = Point3f::Zero();
+    Point3f end    = Point3f::Zero();
+    float radius   = 0.f;
+    float length   = 0.f;
+    Vector3f axis  = Vector3f::Zero();
+    Point3f center = Point3f::Zero();
+  };
+
+  RE::NiPoint3 Offset(float x, float y, float z)
+  {
+    return RE::NiPoint3{x, y, z};
   }
 
-  ColliderSpec MakeBoxSpec(float halfWidth, float halfHeight, float halfLengthMin,
-                           float halfLengthMax, float halfLengthScale = 0.5f)
+  Node MakeNode(std::string_view name, float x = 0.f, float y = 0.f, float z = 0.f)
   {
-    ColliderSpec spec;
-    spec.boxHalfWidth       = halfWidth;
-    spec.boxHalfHeight      = halfHeight;
-    spec.boxHalfLengthScale = halfLengthScale;
-    spec.boxHalfLengthMin   = halfLengthMin;
-    spec.boxHalfLengthMax   = halfLengthMax;
-    return spec;
+    return Node(name, Offset(x, y, z));
   }
 
-  ColliderSpec MakeApertureSpec(const Vector3f& entranceHalfExtents, float entranceOffset,
-                                float channelRadius, float channelLengthScale)
+  Point MakePoint(Node node)
   {
-    ColliderSpec spec;
-    spec.entranceHalfExtents = entranceHalfExtents;
-    spec.entranceOffset      = entranceOffset;
-    spec.channelRadius       = channelRadius;
-    spec.channelLengthScale  = channelLengthScale;
-    return spec;
+    return Point{std::move(node)};
+  }
+
+  Point MakePoint2(Node first, Node second)
+  {
+    return Point{Polygon<2>{std::move(first), std::move(second)}};
+  }
+
+  Face MakeFace3(Node first, Node second, Node third)
+  {
+    return Face{Polygon<3>{std::move(first), std::move(second), std::move(third)}};
+  }
+
+  Face MakeFace4(Node first, Node second, Node third, Node fourth)
+  {
+    return Face{
+        Polygon<4>{std::move(first), std::move(second), std::move(third), std::move(fourth)}};
+  }
+
+  Capsule MakeCapsuleVolume(Point start, Point end, float radius)
+  {
+    Capsule capsule;
+    capsule.start  = std::move(start);
+    capsule.end    = std::move(end);
+    capsule.radius = radius;
+    return capsule;
+  }
+
+  VolumeProfile MakeVolumeProfile(VolumeType topology, MotionClass motionClass, bool canInitiate,
+                                  bool ownsStateSlot, bool providesSupport, bool exclusiveSource,
+                                  bool exclusiveTarget)
+  {
+    VolumeProfile profile;
+    profile.topology        = topology;
+    profile.motionClass     = motionClass;
+    profile.canInitiate     = canInitiate;
+    profile.ownsStateSlot   = ownsStateSlot;
+    profile.providesSupport = providesSupport;
+    profile.exclusiveSource = exclusiveSource;
+    profile.exclusiveTarget = exclusiveTarget;
+    return profile;
   }
 
   Vector MakeVectorInfo(const Point3f& start, const Point3f& end)
@@ -93,9 +129,201 @@ namespace
     return collider;
   }
 
-  bool HasEntranceBox(const ColliderSpec& spec)
+  FunnelCollider MakeFunnelCollider(const Point3f& entranceCenter, const Vector3f& entranceNormal,
+                                    float entranceRadius, float innerRadius, float depth,
+                                    std::vector<Point3f> channelSpline)
   {
-    return spec.entranceHalfExtents.maxCoeff() > 0.f;
+    FunnelCollider collider;
+    collider.entranceCenter = entranceCenter;
+    collider.entranceNormal = entranceNormal;
+    collider.entranceRadius = entranceRadius;
+    collider.innerRadius    = innerRadius;
+    collider.depth          = depth;
+    collider.channelSpline  = std::move(channelSpline);
+    return collider;
+  }
+
+  SurfaceCollider MakeSurfaceCollider(const Point3f& center, const Matrix3f& basis,
+                                      const Vector3f& halfExtents)
+  {
+    SurfaceCollider collider;
+    collider.center      = center;
+    collider.basis       = basis;
+    collider.halfExtents = halfExtents;
+    collider.normal      = basis.col(2);
+    return collider;
+  }
+
+  EnvelopeCollider MakeEnvelopeCollider(const Point3f& center, const Matrix3f& basis,
+                                        const Vector3f& halfExtents)
+  {
+    EnvelopeCollider collider;
+    collider.center      = center;
+    collider.basis       = basis;
+    collider.halfExtents = halfExtents;
+    collider.clampAxis   = basis.col(0);
+    return collider;
+  }
+
+  bool HasAnyCollision(const CollisionSet& collisions)
+  {
+    return !collisions.capsules.empty() || !collisions.boxes.empty() ||
+           !collisions.funnels.empty() || !collisions.surfaces.empty() ||
+           !collisions.envelopes.empty();
+  }
+
+  template <std::size_t N>
+  Point3f ComputeAverage(const std::array<Point3f, N>& points)
+  {
+    Point3f center = Point3f::Zero();
+    for (const auto& point : points)
+      center += point;
+    return center / static_cast<float>(N);
+  }
+
+  Vector3f ComputePolygonNormal(const std::vector<Point3f>& points)
+  {
+    if (points.size() < 3)
+      return Vector3f::Zero();
+
+    Vector3f normal = Vector3f::Zero();
+    for (std::size_t index = 0; index < points.size(); ++index) {
+      const auto& current = points[index];
+      const auto& next    = points[(index + 1) % points.size()];
+      normal.x() += (current.y() - next.y()) * (current.z() + next.z());
+      normal.y() += (current.z() - next.z()) * (current.x() + next.x());
+      normal.z() += (current.x() - next.x()) * (current.y() + next.y());
+    }
+
+    if (normal.squaredNorm() <= 1e-6f)
+      normal = (points[1] - points[0]).cross(points[2] - points[0]);
+
+    if (normal.squaredNorm() <= 1e-6f)
+      return Vector3f::Zero();
+
+    normal.normalize();
+    return normal;
+  }
+
+  Matrix3f BuildBasis(const Vector3f& primaryAxis, const Vector3f* lateralHint = nullptr)
+  {
+    Vector3f forward = primaryAxis;
+    if (forward.squaredNorm() <= 1e-6f)
+      forward = Vector3f::UnitZ();
+    else
+      forward.normalize();
+
+    Vector3f lateral = lateralHint ? *lateralHint : Vector3f::Zero();
+    lateral -= forward * lateral.dot(forward);
+    if (lateral.squaredNorm() <= 1e-6f) {
+      const Vector3f fallback =
+          std::abs(forward.z()) < 0.85f ? Vector3f::UnitZ() : Vector3f::UnitX();
+      lateral = forward.cross(fallback);
+    }
+    if (lateral.squaredNorm() <= 1e-6f)
+      lateral = Vector3f::UnitY();
+    lateral.normalize();
+
+    Vector3f up = forward.cross(lateral);
+    if (up.squaredNorm() <= 1e-6f)
+      up = Vector3f::UnitZ();
+    else
+      up.normalize();
+
+    lateral = up.cross(forward);
+    if (lateral.squaredNorm() <= 1e-6f)
+      lateral = Vector3f::UnitX();
+    else
+      lateral.normalize();
+
+    Matrix3f basis = Matrix3f::Identity();
+    basis.col(0)   = lateral;
+    basis.col(1)   = up;
+    basis.col(2)   = forward;
+    return basis;
+  }
+
+  Vector3f MeasureHalfExtents(const std::vector<Point3f>& points, const Point3f& center,
+                              const Matrix3f& basis, float halfThickness)
+  {
+    Vector3f halfExtents = Vector3f::Zero();
+    for (const auto& point : points) {
+      const Vector3f offset = point - center;
+      for (int axis = 0; axis < 3; ++axis)
+        halfExtents[axis] = (std::max)(halfExtents[axis], std::abs(offset.dot(basis.col(axis))));
+    }
+
+    halfExtents[2] = (std::max)(halfExtents[2], halfThickness);
+    return halfExtents;
+  }
+
+  template <std::size_t N>
+  std::optional<std::array<Point3f, N>> ResolvePolygon(const Polygon<N>& polygon)
+  {
+    std::array<Point3f, N> points{};
+    for (std::size_t index = 0; index < N; ++index) {
+      if (!polygon[index].IsResolved())
+        return std::nullopt;
+      points[index] = polygon[index].GetWorldPosition();
+    }
+    return points;
+  }
+
+  std::optional<Point3f> ResolvePoint(const Point& point)
+  {
+    return std::visit(
+        [](const auto& value) -> std::optional<Point3f> {
+          using T = std::decay_t<decltype(value)>;
+          if constexpr (std::is_same_v<T, Node>) {
+            if (!value.IsResolved())
+              return std::nullopt;
+            return value.GetWorldPosition();
+          } else {
+            const auto resolved = ResolvePolygon(value);
+            if (!resolved)
+              return std::nullopt;
+            return ComputeAverage(*resolved);
+          }
+        },
+        point);
+  }
+
+  std::optional<ResolvedFace> ResolveFace(const Face& face)
+  {
+    return std::visit(
+        [](const auto& polygon) -> std::optional<ResolvedFace> {
+          const auto resolved = ResolvePolygon(polygon);
+          if (!resolved)
+            return std::nullopt;
+
+          ResolvedFace faceInfo;
+          faceInfo.points.assign(resolved->begin(), resolved->end());
+          faceInfo.center = ComputeAverage(*resolved);
+          faceInfo.normal = ComputePolygonNormal(faceInfo.points);
+          if (faceInfo.points.size() >= 2)
+            faceInfo.edgeHint = faceInfo.points[1] - faceInfo.points[0];
+          else
+            faceInfo.edgeHint = Vector3f::Zero();
+          return faceInfo;
+        },
+        face);
+  }
+
+  std::optional<ResolvedCapsule> ResolveCapsule(const Capsule& capsule)
+  {
+    const auto start = ResolvePoint(capsule.start);
+    const auto end   = ResolvePoint(capsule.end);
+    if (!start || !end)
+      return std::nullopt;
+
+    ResolvedCapsule resolved;
+    resolved.start  = *start;
+    resolved.end    = *end;
+    resolved.radius = capsule.radius;
+    resolved.center = (*start + *end) * 0.5f;
+    resolved.axis   = *end - *start;
+    resolved.length = resolved.axis.norm();
+    return resolved;
   }
 
   std::optional<Point3f> TryResolveNodePosition(RE::Actor* actor, std::string_view nodeName)
@@ -115,23 +343,19 @@ namespace
   std::optional<Point3f> TryResolveNodeAverage(RE::Actor* actor,
                                                std::initializer_list<std::string_view> nodeNames)
   {
-    Point3f centroid  = Point3f::Zero();
+    Point3f center    = Point3f::Zero();
     std::size_t count = 0;
-
-    for (std::string_view nodeName : nodeNames) {
+    for (const auto nodeName : nodeNames) {
       const auto position = TryResolveNodePosition(actor, nodeName);
       if (!position)
         continue;
-
-      centroid += *position;
+      center += *position;
       ++count;
     }
 
     if (count == 0)
       return std::nullopt;
-
-    centroid /= static_cast<float>(count);
-    return centroid;
+    return center / static_cast<float>(count);
   }
 
   Vector3f BuildAnusReferenceAxis(RE::Actor* actor, const Point3f& anusStart,
@@ -204,308 +428,451 @@ namespace
     return blendedAxis * deepAxis.norm();
   }
 
-  const ColliderSpec& GetColliderSpec(BodyPart::Name name)
+  void UpdatePointNodes(Point& point, RE::Actor* actor)
   {
-    static const std::unordered_map<BodyPart::Name, ColliderSpec> colliderMap{
-        {BodyPart::Name::Mouth, MakeCapsuleSpec(0.90f)},
-        {BodyPart::Name::Throat, MakeCapsuleSpec(1.10f)},
-        {BodyPart::Name::BreastLeft, MakeCapsuleSpec(1.70f)},
-        {BodyPart::Name::BreastRight, MakeCapsuleSpec(1.70f)},
-        {BodyPart::Name::Cleavage, MakeCapsuleSpec(1.20f)},
-        {BodyPart::Name::HandLeft, MakeBoxSpec(0.80f, 0.50f, 1.25f, 3.00f, 0.45f)},
-        {BodyPart::Name::HandRight, MakeBoxSpec(0.80f, 0.50f, 1.25f, 3.00f, 0.45f)},
-        {BodyPart::Name::Belly, MakeCapsuleSpec(1.90f)},
-        {BodyPart::Name::ThighCleft, MakeCapsuleSpec(1.00f)},
-        {BodyPart::Name::GlutealCleft, MakeCapsuleSpec(1.10f)},
-        {BodyPart::Name::FootLeft, MakeCapsuleSpec(0.90f)},
-        {BodyPart::Name::FootRight, MakeCapsuleSpec(0.90f)},
-        {BodyPart::Name::Vagina, MakeApertureSpec({1.25f, 1.00f, 0.60f}, 0.10f, 0.70f, 0.70f)},
-        {BodyPart::Name::Anus, MakeApertureSpec({0.95f, 0.85f, 0.50f}, 0.08f, 0.60f, 0.65f)},
-        {BodyPart::Name::Penis, MakeCapsuleSpec(0.55f)},
+    std::visit(
+        [&](auto& value) {
+          using T = std::decay_t<decltype(value)>;
+          if constexpr (std::is_same_v<T, Node>) {
+            (void)value.UpdateNode(actor);
+          } else {
+            for (auto& node : value)
+              (void)node.UpdateNode(actor);
+          }
+        },
+        point);
+  }
+
+  void UpdateFaceNodes(Face& face, RE::Actor* actor)
+  {
+    std::visit(
+        [&](auto& polygon) {
+          for (auto& node : polygon)
+            (void)node.UpdateNode(actor);
+        },
+        face);
+  }
+
+  void UpdateVolumeNodes(Ball& ball, RE::Actor* actor)
+  {
+    UpdatePointNodes(ball.center, actor);
+  }
+
+  void UpdateVolumeNodes(HalfBall& halfBall, RE::Actor* actor)
+  {
+    UpdatePointNodes(halfBall.center, actor);
+    UpdatePointNodes(halfBall.pole, actor);
+  }
+
+  void UpdateVolumeNodes(Capsule& capsule, RE::Actor* actor)
+  {
+    UpdatePointNodes(capsule.start, actor);
+    UpdatePointNodes(capsule.end, actor);
+  }
+
+  void UpdateVolumeNodes(Funnel& funnel, RE::Actor* actor)
+  {
+    UpdateFaceNodes(funnel.entrance, actor);
+    UpdatePointNodes(funnel.deep, actor);
+  }
+
+  void UpdateVolumeNodes(Surface& surface, RE::Actor* actor)
+  {
+    UpdateFaceNodes(surface.face, actor);
+  }
+
+  void UpdateVolumeNodes(Envelope& envelope, RE::Actor* actor)
+  {
+    UpdateVolumeNodes(envelope.left, actor);
+    UpdateVolumeNodes(envelope.right, actor);
+  }
+
+  void UpdateVolumeNodes(VolumeData& volume, RE::Actor* actor)
+  {
+    std::visit(
+        [&](auto& value) {
+          UpdateVolumeNodes(value, actor);
+        },
+        volume);
+  }
+
+  std::optional<Vector> AppendVolumeRuntime(BodyPart::Name, RE::Actor*, const Ball& ball,
+                                            CollisionSet& collisions)
+  {
+    const auto center = ResolvePoint(ball.center);
+    if (!center)
+      return std::nullopt;
+
+    collisions.capsules.push_back(MakeCapsuleCollider(*center, *center, ball.radius));
+    return MakeVectorInfo(*center, *center);
+  }
+
+  std::optional<Vector> AppendVolumeRuntime(BodyPart::Name, RE::Actor*, const HalfBall& halfBall,
+                                            CollisionSet& collisions)
+  {
+    const auto center = ResolvePoint(halfBall.center);
+    const auto pole   = ResolvePoint(halfBall.pole);
+    if (!center || !pole)
+      return std::nullopt;
+
+    const Vector axis = MakeVectorInfo(*center, *pole);
+    collisions.capsules.push_back(MakeCapsuleCollider(*center, *pole, halfBall.radius));
+    if (axis.length > 1e-6f) {
+      const Matrix3f basis = BuildBasis(axis.direction);
+      const Vector3f halfExtents(halfBall.radius, halfBall.radius,
+                                 (std::max)(axis.length * 0.5f, halfBall.radius * 0.5f));
+      collisions.surfaces.push_back(
+          MakeSurfaceCollider((*center + *pole) * 0.5f, basis, halfExtents));
+    }
+    return axis;
+  }
+
+  std::optional<Vector> AppendVolumeRuntime(BodyPart::Name, RE::Actor*, const Capsule& capsule,
+                                            CollisionSet& collisions)
+  {
+    const auto resolved = ResolveCapsule(capsule);
+    if (!resolved)
+      return std::nullopt;
+
+    collisions.capsules.push_back(
+        MakeCapsuleCollider(resolved->start, resolved->end, resolved->radius));
+    return MakeVectorInfo(resolved->start, resolved->end);
+  }
+
+  std::optional<Vector> AppendVolumeRuntime(BodyPart::Name name, RE::Actor* actor,
+                                            const Funnel& funnel, CollisionSet& collisions)
+  {
+    const auto entrance = ResolveFace(funnel.entrance);
+    const auto deep     = ResolvePoint(funnel.deep);
+    if (!entrance || !deep)
+      return std::nullopt;
+
+    Vector3f channelAxis = *deep - entrance->center;
+    if (name == BodyPart::Name::Anus)
+      channelAxis = BuildAnusChannelAxis(actor, entrance->center, entrance->points, channelAxis);
+
+    if (channelAxis.squaredNorm() <= 1e-6f) {
+      const float fallbackDepth = funnel.depth > 0.f ? funnel.depth : 1.0f;
+      channelAxis = entrance->normal.squaredNorm() > 1e-6f ? entrance->normal * fallbackDepth
+                                                           : Vector3f(0.f, 0.f, fallbackDepth);
+    }
+
+    Vector axis = MakeVectorInfo(entrance->center, entrance->center + channelAxis);
+    if (funnel.depth > 0.f && axis.length > 1e-6f)
+      axis = MakeVectorInfo(entrance->center, entrance->center + axis.direction * funnel.depth);
+
+    const Vector3f basisForward =
+        axis.length > 1e-6f
+            ? axis.direction
+            : (entrance->normal.squaredNorm() > 1e-6f ? entrance->normal : Vector3f::UnitZ());
+    const Matrix3f basis = BuildBasis(basisForward, &entrance->edgeHint);
+    const float halfThickness =
+        (std::max)(axis.length > 1e-6f ? axis.length * 0.18f : funnel.depth * 0.18f, 0.25f);
+    const Vector3f entranceExtents =
+        MeasureHalfExtents(entrance->points, entrance->center, basis, halfThickness);
+    const float entranceRadius = funnel.entranceRadius > 0.f
+                                     ? funnel.entranceRadius
+                                     : (std::max)(entranceExtents.x(), entranceExtents.y());
+    const float innerRadius    = funnel.innerRadius > 0.f ? funnel.innerRadius : entranceRadius;
+
+    const Vector entranceAxis =
+        MakeVectorInfo(entrance->center - basis.col(2) * entranceExtents.z(),
+                       entrance->center + basis.col(2) * entranceExtents.z());
+    collisions.boxes.push_back(
+        MakeBoxCollider(entranceAxis, entrance->center, basis, entranceExtents));
+    collisions.capsules.push_back(MakeCapsuleCollider(axis.start, axis.end, innerRadius));
+    collisions.funnels.push_back(MakeFunnelCollider(entrance->center, basis.col(2), entranceRadius,
+                                                    innerRadius, axis.length,
+                                                    std::vector<Point3f>{axis.start, axis.end}));
+    return axis;
+  }
+
+  std::optional<Vector> AppendVolumeRuntime(BodyPart::Name, RE::Actor*, const Surface& surface,
+                                            CollisionSet& collisions)
+  {
+    const auto resolved = ResolveFace(surface.face);
+    if (!resolved || resolved->normal.squaredNorm() <= 1e-6f)
+      return std::nullopt;
+
+    const float halfThickness = (std::max)(surface.halfThickness, 0.25f);
+    const Matrix3f basis      = BuildBasis(resolved->normal, &resolved->edgeHint);
+    const Vector3f halfExtents =
+        MeasureHalfExtents(resolved->points, resolved->center, basis, halfThickness);
+    const Vector axis = MakeVectorInfo(resolved->center - basis.col(2) * halfThickness,
+                                       resolved->center + basis.col(2) * halfThickness);
+
+    collisions.boxes.push_back(MakeBoxCollider(axis, resolved->center, basis, halfExtents));
+    collisions.surfaces.push_back(MakeSurfaceCollider(resolved->center, basis, halfExtents));
+    return axis;
+  }
+
+  std::optional<Vector> AppendVolumeRuntime(BodyPart::Name, RE::Actor*, const Envelope& envelope,
+                                            CollisionSet& collisions)
+  {
+    const auto left  = ResolveCapsule(envelope.left);
+    const auto right = ResolveCapsule(envelope.right);
+    if (!left || !right)
+      return std::nullopt;
+
+    const Point3f start  = (left->start + right->start) * 0.5f;
+    const Point3f end    = (left->end + right->end) * 0.5f;
+    const Point3f center = (left->center + right->center) * 0.5f;
+    Vector axis          = MakeVectorInfo(start, end);
+
+    Vector3f lateral = right->center - left->center;
+    if (lateral.squaredNorm() <= 1e-6f)
+      lateral = right->start - left->start;
+
+    if (axis.length <= 1e-6f) {
+      const Vector3f averageAxis = (right->end - right->start) + (left->end - left->start);
+      if (averageAxis.squaredNorm() > 1e-6f)
+        axis = MakeVectorInfo(center, center + averageAxis.normalized());
+    }
+
+    const Vector3f basisForward =
+        axis.length > 1e-6f
+            ? axis.direction
+            : (lateral.squaredNorm() > 1e-6f ? lateral.normalized() : Vector3f::UnitZ());
+    const Matrix3f basis = BuildBasis(basisForward, &lateral);
+
+    const float averageRadius = (left->radius + right->radius) * 0.5f;
+    const float averageLength = (left->length + right->length) * 0.5f;
+    const float halfWidth =
+        (std::max)(0.5f * lateral.norm(), (std::max)(left->radius, right->radius));
+    const float halfDepth  = (std::max)(averageRadius + envelope.depthPadding, 0.35f);
+    const float halfLength = (std::max)(averageLength * 0.5f, averageRadius);
+    const Vector3f halfExtents(halfWidth, halfDepth, halfLength);
+
+    const Vector boxAxis = axis.length > 1e-6f ? axis
+                                               : MakeVectorInfo(center - basis.col(2) * halfLength,
+                                                                center + basis.col(2) * halfLength);
+
+    collisions.boxes.push_back(MakeBoxCollider(boxAxis, center, basis, halfExtents));
+    collisions.envelopes.push_back(MakeEnvelopeCollider(center, basis, halfExtents));
+    return boxAxis;
+  }
+
+  std::optional<Vector> AppendVolumeRuntime(BodyPart::Name name, RE::Actor* actor,
+                                            const VolumeData& volume, CollisionSet& collisions)
+  {
+    return std::visit(
+        [&](const auto& value) -> std::optional<Vector> {
+          return AppendVolumeRuntime(name, actor, value, collisions);
+        },
+        volume);
+  }
+
+  VolumeList BuildHumanVolumes(BodyPart::Name name)
+  {
+    switch (name) {
+    case BodyPart::Name::Mouth:
+      return {Funnel{MakeFace3(MakeNode("NPC Head [Head]", 2.4f, 4.4f, -2.4f),
+                               MakeNode("NPC Head [Head]", 4.0f, 4.4f, -2.4f),
+                               MakeNode("NPC Head [Head]", 3.2f, 4.4f, -1.0f)),
+                     MakePoint(MakeNode("NPC Head [Head]")), 1.00f, 0.65f, 4.25f}};
+    case BodyPart::Name::Throat:
+      return {MakeCapsuleVolume(MakePoint(MakeNode("NPC Head [Head]")),
+                                MakePoint(MakeNode("NPC Neck [Neck]")), 1.10f)};
+    case BodyPart::Name::BreastLeft:
+      return {
+          HalfBall{MakePoint(MakeNode("L Breast02")), MakePoint(MakeNode("L Breast03")), 1.70f}};
+    case BodyPart::Name::BreastRight:
+      return {
+          HalfBall{MakePoint(MakeNode("R Breast02")), MakePoint(MakeNode("R Breast03")), 1.70f}};
+    case BodyPart::Name::Cleavage:
+      return {
+          Envelope{MakeCapsuleVolume(MakePoint(MakeNode("L Breast02", 0.9f, 1.0f, -4.2f)),
+                                     MakePoint(MakeNode("L Breast02", 0.3f, 1.0f, 3.8f)), 0.85f),
+                   MakeCapsuleVolume(MakePoint(MakeNode("R Breast02", -0.9f, 1.0f, -4.2f)),
+                                     MakePoint(MakeNode("R Breast02", -0.3f, 1.0f, 3.8f)), 0.85f),
+                   0.35f}};
+    case BodyPart::Name::HandLeft:
+      return {Surface{MakeFace3(MakeNode("NPC L Hand [LHnd]"), MakeNode("NPC L Finger01 [LF01]"),
+                                MakeNode("NPC L Finger40 [LF40]")),
+                      0.60f}};
+    case BodyPart::Name::HandRight:
+      return {Surface{MakeFace3(MakeNode("NPC R Hand [RHnd]"), MakeNode("NPC R Finger01 [RF01]"),
+                                MakeNode("NPC R Finger40 [RF40]")),
+                      0.60f}};
+    case BodyPart::Name::FingerLeft:
+      return {Ball{MakePoint(MakeNode("NPC L Finger22 [LF22]")), 0.35f}};
+    case BodyPart::Name::FingerRight:
+      return {Ball{MakePoint(MakeNode("NPC R Finger22 [RF22]")), 0.35f}};
+    case BodyPart::Name::Belly:
+      return {Surface{MakeFace4(MakeNode("NPC Belly", -4.0f, 3.0f, -10.0f),
+                                MakeNode("NPC Belly", 4.0f, 3.0f, -10.0f),
+                                MakeNode("NPC Belly", 4.0f, 5.0f, -1.0f),
+                                MakeNode("NPC Belly", -4.0f, 5.0f, -1.0f)),
+                      0.90f}};
+    case BodyPart::Name::ThighLeft:
+      return {MakeCapsuleVolume(MakePoint(MakeNode("NPC L RearThigh")),
+                                MakePoint(MakeNode("NPC L FrontThigh")), 1.10f)};
+    case BodyPart::Name::ThighRight:
+      return {MakeCapsuleVolume(MakePoint(MakeNode("NPC R RearThigh")),
+                                MakePoint(MakeNode("NPC R FrontThigh")), 1.10f)};
+    case BodyPart::Name::ThighCleft:
+      return {
+          Envelope{MakeCapsuleVolume(MakePoint(MakeNode("VaginaB1", -1.7f, -3.0f, -2.0f)),
+                                     MakePoint(MakeNode("Clitoral1", -1.2f, -1.0f, -3.0f)), 0.75f),
+                   MakeCapsuleVolume(MakePoint(MakeNode("VaginaB1", 1.7f, -3.0f, -2.0f)),
+                                     MakePoint(MakeNode("Clitoral1", 1.2f, -1.0f, -3.0f)), 0.75f),
+                   0.45f}};
+    case BodyPart::Name::ButtLeft:
+      return {Ball{MakePoint(MakeNode("NPC L Butt", -5.0f, -1.0f, -3.0f)), 1.45f}};
+    case BodyPart::Name::ButtRight:
+      return {Ball{MakePoint(MakeNode("NPC R Butt", 5.0f, 1.0f, -3.0f)), 1.45f}};
+    case BodyPart::Name::GlutealCleft:
+      return {
+          Envelope{MakeCapsuleVolume(MakePoint(MakeNode("NPC L Butt", -1.8f, -0.5f, -4.0f)),
+                                     MakePoint(MakeNode("NPC L Butt", -0.8f, -3.5f, 2.5f)), 0.85f),
+                   MakeCapsuleVolume(MakePoint(MakeNode("NPC R Butt", 1.8f, 0.5f, -4.0f)),
+                                     MakePoint(MakeNode("NPC R Butt", 0.8f, -3.5f, 2.5f)), 0.85f),
+                   0.45f}};
+    case BodyPart::Name::FootLeft:
+      return {Surface{MakeFace4(MakeNode("NPC L Foot [Lft ]", -1.2f, 0.0f, 0.0f),
+                                MakeNode("NPC L Foot [Lft ]", 1.2f, 0.0f, 0.0f),
+                                MakeNode("NPC L Toe0 [LToe]", 0.9f, 1.0f, 0.0f),
+                                MakeNode("NPC L Toe0 [LToe]", -0.9f, 1.0f, 0.0f)),
+                      0.45f}};
+    case BodyPart::Name::FootRight:
+      return {Surface{MakeFace4(MakeNode("NPC R Foot [Rft ]", -1.2f, 0.0f, 0.0f),
+                                MakeNode("NPC R Foot [Rft ]", 1.2f, 0.0f, 0.0f),
+                                MakeNode("NPC R Toe0 [RToe]", 0.9f, 1.0f, 0.0f),
+                                MakeNode("NPC R Toe0 [RToe]", -0.9f, 1.0f, 0.0f)),
+                      0.45f}};
+    case BodyPart::Name::Vagina:
+      return {Funnel{
+          MakeFace3(MakeNode("NPC L Pussy02"), MakeNode("NPC R Pussy02"), MakeNode("VaginaB1")),
+          MakePoint(MakeNode("VaginaDeep1")), 1.25f, 0.70f, 4.50f}};
+    case BodyPart::Name::Anus:
+      return {Funnel{MakeFace4(MakeNode("NPC RT Anus2"), MakeNode("NPC LT Anus2"),
+                               MakeNode("NPC LB Anus2"), MakeNode("NPC RB Anus2")),
+                     MakePoint2(MakeNode("NPC Anus Deep1"), MakeNode("NPC Anus Deep2")), 0.95f,
+                     0.60f, 4.00f}};
+    default:
+      return {};
+    }
+  }
+
+  VolumeList BuildPenisVolumes(Race::Type race)
+  {
+    static const std::unordered_map<Race::Type, std::array<std::string_view, 3>> penisNodes{
+        {Race::Type::Human,
+         {"NPC Genitals01 [Gen01]", "NPC Genitals04 [Gen04]", "NPC Genitals06 [Gen06]"}},
+        {Race::Type::Bear, {"BearD 5", "BearD 7", "BearD 9"}},
+        {Race::Type::Boar, {"BoarDick04", "BoarDick05", "BoarDick06"}},
+        {Race::Type::BoarMounted, {"BoarDick04", "BoarDick05", "BoarDick06"}},
+        {Race::Type::Chaurus, {"CO 4", "CO 7", "CO 9"}},
+        {Race::Type::ChaurusHunter, {"CO 3", "CO 5", "CO 8"}},
+        {Race::Type::ChaurusReaper, {"CO 4", "CO 7", "CO 9"}},
+        {Race::Type::Deer, {"ElkD03", "ElkD05", "ElkD06"}},
+        {Race::Type::Dog, {"CDPenis 3", "CDPenis 5", "CDPenis 7"}},
+        {Race::Type::DragonPriest, {"DD 2", "DD 4", "DD 6"}},
+        {Race::Type::Draugr, {"DD 2", "DD 4", "DD 6"}},
+        {Race::Type::DwarvenCenturion,
+         {"DwarvenBattery01", "DwarvenBattery02", "DwarvenInjectorLid"}},
+        {Race::Type::DwarvenSpider, {"Dildo01", "Dildo02", "Dildo03"}},
+        {Race::Type::Falmer, {"FD 3", "FD 5", "FD 7"}},
+        {Race::Type::Fox, {"CDPenis 3", "CDPenis 5", "CDPenis 7"}},
+        {Race::Type::FrostAtronach, {"NPC IceGenital03", "NPC IcePenis01", "NPC IcePenis02"}},
+        {Race::Type::Gargoyle, {"GD 3", "GD 5", "GD 7"}},
+        {Race::Type::Giant, {"GS 3", "GS 5", "GS 7"}},
+        {Race::Type::GiantSpider, {"CO 5", "CO 7", "CO tip"}},
+        {Race::Type::Horse, {"HS 5", "HS 6", "HorsePenisFlareTop2"}},
+        {Race::Type::LargeSpider, {"CO 5", "CO 7", "CO tip"}},
+        {Race::Type::Lurker, {"GS 3", "GS 5", "GS 7"}},
+        {Race::Type::Riekling, {"RD 2", "RD 4", "RD 5"}},
+        {Race::Type::Sabrecat, {"SCD 3", "SCD 5", "SCD 7"}},
+        {Race::Type::Skeever, {"SkeeverD 03", "SkeeverD 05", "SkeeverD 07"}},
+        {Race::Type::Spider, {"CO 5", "CO 7", "CO tip"}},
+        {Race::Type::StormAtronach, {"", "Torso Rock 2", ""}},
+        {Race::Type::Troll, {"TD 3", "TD 5", "TD 7"}},
+        {Race::Type::VampireLord, {"VLDick03", "VLDick05", "VLDick06"}},
+        {Race::Type::Werebear, {"WWD 5", "WWD 7", "WWD 9"}},
+        {Race::Type::Werewolf, {"WWD 5", "WWD 7", "WWD 9"}},
+        {Race::Type::Wolf, {"CDPenis 3", "CDPenis 5", "CDPenis 7"}},
     };
-    static const ColliderSpec fallback{};
-    if (const auto it = colliderMap.find(name); it != colliderMap.end())
+
+    const auto it = penisNodes.find(race);
+    if (it == penisNodes.end())
+      return {};
+
+    return {
+        MakeCapsuleVolume(MakePoint(Node(it->second[0])), MakePoint(Node(it->second[2])), 0.55f)};
+  }
+
+  VolumeList BuildVolumes(Race::Type race, BodyPart::Name name)
+  {
+    if (name == BodyPart::Name::Penis)
+      return BuildPenisVolumes(race);
+
+    if (race == Race::Type::Human)
+      return BuildHumanVolumes(name);
+
+    return {};
+  }
+
+  const VolumeProfile& GetVolumeProfileSpec(BodyPart::Name name)
+  {
+    static const std::unordered_map<BodyPart::Name, VolumeProfile> profiles{
+        {BodyPart::Name::Mouth,
+         MakeVolumeProfile(VolumeType::Funnel, MotionClass::Fine, true, true, false, true, true)},
+        {BodyPart::Name::Throat, MakeVolumeProfile(VolumeType::Capsule, MotionClass::Static, false,
+                                                   true, false, false, true)},
+        {BodyPart::Name::BreastLeft, MakeVolumeProfile(VolumeType::HalfBall, MotionClass::Static,
+                                                       false, true, false, false, true)},
+        {BodyPart::Name::BreastRight, MakeVolumeProfile(VolumeType::HalfBall, MotionClass::Static,
+                                                        false, true, false, false, true)},
+        {BodyPart::Name::Cleavage, MakeVolumeProfile(VolumeType::Envelope, MotionClass::Static,
+                                                     false, true, true, false, true)},
+        {BodyPart::Name::HandLeft, MakeVolumeProfile(VolumeType::Surface, MotionClass::Fine, true,
+                                                     false, false, true, false)},
+        {BodyPart::Name::HandRight, MakeVolumeProfile(VolumeType::Surface, MotionClass::Fine, true,
+                                                      false, false, true, false)},
+        {BodyPart::Name::FingerLeft,
+         MakeVolumeProfile(VolumeType::Ball, MotionClass::Fine, true, false, false, true, false)},
+        {BodyPart::Name::FingerRight,
+         MakeVolumeProfile(VolumeType::Ball, MotionClass::Fine, true, false, false, true, false)},
+        {BodyPart::Name::Belly, MakeVolumeProfile(VolumeType::Surface, MotionClass::Static, false,
+                                                  true, true, false, true)},
+        {BodyPart::Name::ThighLeft, MakeVolumeProfile(VolumeType::Capsule, MotionClass::Static,
+                                                      false, false, true, false, false)},
+        {BodyPart::Name::ThighRight, MakeVolumeProfile(VolumeType::Capsule, MotionClass::Static,
+                                                       false, false, true, false, false)},
+        {BodyPart::Name::ThighCleft, MakeVolumeProfile(VolumeType::Envelope, MotionClass::Static,
+                                                       false, true, true, false, true)},
+        {BodyPart::Name::ButtLeft, MakeVolumeProfile(VolumeType::Ball, MotionClass::Static, false,
+                                                     false, true, false, false)},
+        {BodyPart::Name::ButtRight, MakeVolumeProfile(VolumeType::Ball, MotionClass::Static, false,
+                                                      false, true, false, false)},
+        {BodyPart::Name::GlutealCleft, MakeVolumeProfile(VolumeType::Envelope, MotionClass::Static,
+                                                         false, true, true, false, true)},
+        {BodyPart::Name::FootLeft, MakeVolumeProfile(VolumeType::Surface, MotionClass::Static,
+                                                     false, true, false, false, true)},
+        {BodyPart::Name::FootRight, MakeVolumeProfile(VolumeType::Surface, MotionClass::Static,
+                                                      false, true, false, false, true)},
+        {BodyPart::Name::Vagina, MakeVolumeProfile(VolumeType::Funnel, MotionClass::Static, false,
+                                                   true, true, false, true)},
+        {BodyPart::Name::Anus, MakeVolumeProfile(VolumeType::Funnel, MotionClass::Static, false,
+                                                 true, true, false, true)},
+        {BodyPart::Name::Penis, MakeVolumeProfile(VolumeType::Capsule, MotionClass::Large, true,
+                                                  false, false, true, false)},
+    };
+
+    static const VolumeProfile fallback{};
+    if (const auto it = profiles.find(name); it != profiles.end())
       return it->second;
     return fallback;
   }
 
-  bool IsNodeResolved(const Node& node)
-  {
-    bool hasConcreteRequest = false;
-    for (std::size_t index = 0; index < node.requestedNodeNames.size(); ++index) {
-      if (node.requestedNodeNames[index].empty())
-        continue;
-      hasConcreteRequest = true;
-      if (index >= node.resolvedNodes.size() || !node.resolvedNodes[index])
-        return false;
-    }
-    return hasConcreteRequest;
-  }
-
-  std::vector<Point3f> CollectResolvedWorldPositions(const Node& node)
-  {
-    std::vector<Point3f> positions;
-    positions.reserve(node.resolvedNodes.size());
-    for (const auto& resolvedNode : node.resolvedNodes) {
-      if (!resolvedNode)
-        continue;
-      const auto pos = resolvedNode->world.translate;
-      positions.push_back(Point3f{pos.x, pos.y, pos.z});
-    }
-    return positions;
-  }
-
-  void UpdateNodePosition(Node& node)
-  {
-    node.position = Point3f::Zero();
-    if (!IsNodeResolved(node))
-      return;
-
-    if (node.HasOffset()) {
-      Point3f accumulated = Point3f::Zero();
-      std::size_t count   = 0;
-      for (const auto& resolvedNode : node.resolvedNodes) {
-        if (!resolvedNode)
-          continue;
-
-        const RE::NiPoint3 scaledLocal = resolvedNode->world.scale * node.localTranslate;
-        const RE::NiPoint3 worldPos =
-            resolvedNode->world.rotate * scaledLocal + resolvedNode->world.translate;
-        accumulated += Point3f(worldPos.x, worldPos.y, worldPos.z);
-        ++count;
-      }
-
-      if (count == 0)
-        return;
-
-      node.position = accumulated / static_cast<float>(count);
-      return;
-    }
-
-    const auto positions = CollectResolvedWorldPositions(node);
-    if (positions.empty())
-      return;
-
-    Point3f center = Point3f::Zero();
-    for (const auto& position : positions)
-      center += position;
-    node.position = center / static_cast<float>(positions.size());
-  }
-
-  Vector3f BuildResolvedNodeSpanAxis(const Node& node)
-  {
-    const auto positions = CollectResolvedWorldPositions(node);
-    if (positions.size() >= 4)
-      return (positions[0] + positions[3]) - (positions[1] + positions[2]);
-    if (positions.size() >= 2)
-      return positions[1] - positions[0];
-    return Vector3f::Zero();
-  }
-
-  Matrix3f BuildBasis(const Vector3f& primaryAxis, const Node* referenceNode)
-  {
-    Vector3f forward = primaryAxis;
-    if (forward.squaredNorm() <= 1e-6f)
-      forward = Vector3f::UnitZ();
-    else
-      forward.normalize();
-
-    Vector3f lateral = Vector3f::Zero();
-    if (referenceNode)
-      lateral = BuildResolvedNodeSpanAxis(*referenceNode);
-    lateral -= forward * lateral.dot(forward);
-    if (lateral.squaredNorm() <= 1e-6f) {
-      const Vector3f fallback =
-          std::abs(forward.z()) < 0.85f ? Vector3f::UnitZ() : Vector3f::UnitX();
-      lateral = forward.cross(fallback);
-    }
-    if (lateral.squaredNorm() <= 1e-6f)
-      lateral = Vector3f::UnitY();
-    lateral.normalize();
-
-    Vector3f up = forward.cross(lateral);
-    if (up.squaredNorm() <= 1e-6f)
-      up = Vector3f::UnitZ();
-    else
-      up.normalize();
-
-    lateral = up.cross(forward);
-    if (lateral.squaredNorm() <= 1e-6f)
-      lateral = Vector3f::UnitX();
-    else
-      lateral.normalize();
-
-    Matrix3f basis;
-    basis.col(0) = lateral;
-    basis.col(1) = up;
-    basis.col(2) = forward;
-    return basis;
-  }
-
-  Vector BuildBodyVector(BodyPart::Name name, Shape shape, RE::Actor* actor,
-                         const std::vector<Node>& nodes)
-  {
-    if (nodes.empty() || !IsNodeResolved(nodes.front()))
-      return {};
-
-    if (shape == Shape::Point)
-      return MakeVectorInfo(nodes.front().position, nodes.front().position);
-
-    if (nodes.size() < 2 || !IsNodeResolved(nodes.back()))
-      return {};
-
-    Point3f start = nodes.front().position;
-    Point3f end   = nodes.back().position;
-    if (name == BodyPart::Name::Anus) {
-      const auto ringPositions = CollectResolvedWorldPositions(nodes.front());
-      const Vector3f anusAxis  = BuildAnusChannelAxis(actor, start, ringPositions, end - start);
-      if (anusAxis.squaredNorm() > 1e-6f)
-        end = start + anusAxis;
-    }
-
-    return MakeVectorInfo(start, end);
-  }
-
-  Vector3f BuildBoxHalfExtents(const Vector& axisInfo, const ColliderSpec& spec)
-  {
-    const float halfWidth =
-        spec.boxHalfWidth > 0.f ? spec.boxHalfWidth : (std::max)(spec.capsuleRadius, 0.35f);
-    const float halfHeight =
-        spec.boxHalfHeight > 0.f ? spec.boxHalfHeight : (std::max)(halfWidth * 0.7f, 0.25f);
-
-    float halfLength = axisInfo.length * spec.boxHalfLengthScale;
-    halfLength =
-        (std::max)(halfLength, spec.boxHalfLengthMin > 0.f ? spec.boxHalfLengthMin : halfWidth);
-    if (spec.boxHalfLengthMax > 0.f)
-      halfLength = (std::min)(halfLength, spec.boxHalfLengthMax);
-
-    return {halfWidth, halfHeight, halfLength};
-  }
-
 }  // namespace
 
-static std::unordered_map<Race::Type, std::array<Node, 2>> mouthMap{
-    {Define::Race::Type::Human,
-     {Node("NPC Head [Head]", {3.229f, 4.421f, -2.296f}), Node("NPC Head [Head]")}},
-};
-
-static std::unordered_map<Race::Type, std::array<Node, 2>> handLeftMap{
-    {Define::Race::Type::Human,
-     {Node({"NPC L Hand [LHnd]", "NPC L Finger01 [LF01]", "NPC L Finger40 [LF40]"}),
-      Node("SHIELD")}},
-};
-static std::unordered_map<Race::Type, std::array<Node, 2>> handRightMap{
-    {Define::Race::Type::Human,
-     {Node({"NPC R Hand [RHnd]", "NPC R Finger01 [RF01]", "NPC R Finger40 [RF40]"}),
-      Node("WEAPON")}},
-};
-
-static std::unordered_map<Race::Type, std::array<Node, 2>> footLeftMap{
-    {Define::Race::Type::Human, {Node("NPC L Foot [Lft ]"), Node("NPC L Toe0 [LToe]")}},
-};
-static std::unordered_map<Race::Type, std::array<Node, 2>> footRightMap{
-    {Define::Race::Type::Human, {Node("NPC R Foot [Rft ]"), Node("NPC R Toe0 [RToe]")}},
-};
-
-static std::unordered_map<Race::Type, std::array<Node, 3>> schlongMap{
-    {Define::Race::Type::Human,
-     {Node("NPC Genitals01 [Gen01]"), Node("NPC Genitals04 [Gen04]"),
-      Node("NPC Genitals06 [Gen06]")}},
-    {Define::Race::Type::Bear, {Node("BearD 5"), Node("BearD 7"), Node("BearD 9")}},
-    {Define::Race::Type::Boar, {Node("BoarDick04"), Node("BoarDick05"), Node("BoarDick06")}},
-    {Define::Race::Type::BoarMounted, {Node("BoarDick04"), Node("BoarDick05"), Node("BoarDick06")}},
-    {Define::Race::Type::Chaurus, {Node("CO 4"), Node("CO 7"), Node("CO 9")}},
-    {Define::Race::Type::ChaurusHunter, {Node("CO 3"), Node("CO 5"), Node("CO 8")}},
-    {Define::Race::Type::ChaurusReaper, {Node("CO 4"), Node("CO 7"), Node("CO 9")}},
-    {Define::Race::Type::Deer, {Node("ElkD03"), Node("ElkD05"), Node("ElkD06")}},
-    {Define::Race::Type::Dog, {Node("CDPenis 3"), Node("CDPenis 5"), Node("CDPenis 7")}},
-    {Define::Race::Type::DragonPriest, {Node("DD 2"), Node("DD 4"), Node("DD 6")}},
-    {Define::Race::Type::Draugr, {Node("DD 2"), Node("DD 4"), Node("DD 6")}},
-    {Define::Race::Type::DwarvenCenturion,
-     {Node("DwarvenBattery01"), Node("DwarvenBattery02"), Node("DwarvenInjectorLid")}},
-    {Define::Race::Type::DwarvenSpider, {Node("Dildo01"), Node("Dildo02"), Node("Dildo03")}},
-    {Define::Race::Type::Falmer, {Node("FD 3"), Node("FD 5"), Node("FD 7")}},
-    {Define::Race::Type::Fox, {Node("CDPenis 3"), Node("CDPenis 5"), Node("CDPenis 7")}},
-    {Define::Race::Type::FrostAtronach,
-     {Node("NPC IceGenital03"), Node("NPC IcePenis01"), Node("NPC IcePenis02")}},
-    {Define::Race::Type::Gargoyle, {Node("GD 3"), Node("GD 5"), Node("GD 7")}},
-    {Define::Race::Type::Giant, {Node("GS 3"), Node("GS 5"), Node("GS 7")}},
-    {Define::Race::Type::GiantSpider, {Node("CO 5"), Node("CO 7"), Node("CO tip")}},
-    {Define::Race::Type::Horse, {Node("HS 5"), Node("HS 6"), Node("HorsePenisFlareTop2")}},
-    {Define::Race::Type::LargeSpider, {Node("CO 5"), Node("CO 7"), Node("CO tip")}},
-    {Define::Race::Type::Lurker, {Node("GS 3"), Node("GS 5"), Node("GS 7")}},
-    {Define::Race::Type::Riekling, {Node("RD 2"), Node("RD 4"), Node("RD 5")}},
-    {Define::Race::Type::Sabrecat, {Node("SCD 3"), Node("SCD 5"), Node("SCD 7")}},
-    {Define::Race::Type::Skeever, {Node("SkeeverD 03"), Node("SkeeverD 05"), Node("SkeeverD 07")}},
-    {Define::Race::Type::Spider, {Node("CO 5"), Node("CO 7"), Node("CO tip")}},
-    {Define::Race::Type::StormAtronach, {Node(""), Node("Torso Rock 2"), Node("")}},
-    {Define::Race::Type::Troll, {Node("TD 3"), Node("TD 5"), Node("TD 7")}},
-    {Define::Race::Type::VampireLord, {Node("VLDick03"), Node("VLDick05"), Node("VLDick06")}},
-    {Define::Race::Type::Werebear, {Node("WWD 5"), Node("WWD 7"), Node("WWD 9")}},
-    {Define::Race::Type::Werewolf, {Node("WWD 5"), Node("WWD 7"), Node("WWD 9")}},
-    {Define::Race::Type::Wolf, {Node("CDPenis 3"), Node("CDPenis 5"), Node("CDPenis 7")}},
-};
-
-static std::unordered_map<BodyPart::Name, NodeList> humanMap{
-    {BodyPart::Name::Throat, {Node("NPC Head [Head]"), Node("NPC Neck [Neck]")}},
-    {BodyPart::Name::BreastLeft, {Node("L Breast02"), Node("L Breast03")}},
-    {BodyPart::Name::BreastRight, {Node("R Breast02"), Node("R Breast03")}},
-    // 从下乳沟指向上乳沟
-    {BodyPart::Name::Cleavage,
-     {Node({"L Breast02", "R Breast02"}, {0.f, 1.f, -4.f}),
-      Node({"L Breast02", "R Breast02"}, {0.f, 1.f, 4.f})}},
-    {BodyPart::Name::FingerLeft, {Node("NPC L Finger22 [LF22]")}},
-    {BodyPart::Name::FingerRight, {Node("NPC R Finger22 [RF22]")}},
-    // 从下腹部指向肚脐
-    {BodyPart::Name::Belly,
-     {Node("NPC Belly", {0.f, 3.f, -10.f}), Node("NPC Belly", {0.f, 5.f, -1.0f})}},
-    {BodyPart::Name::ThighLeft, {Node("NPC L RearThigh"), Node("NPC L FrontThigh")}},
-    {BodyPart::Name::ThighRight, {Node("NPC R RearThigh"), Node("NPC R FrontThigh")}},
-    {BodyPart::Name::ThighCleft,
-     {Node("VaginaB1", {0.f, -3.f, -2.f}), Node("Clitoral1", {0.f, -1.f, -3.f})}},
-    // 左臀中心稍微靠左
-    {BodyPart::Name::ButtLeft, {Node("NPC L Butt", {-5.f, -1.f, -3.f})}},
-    {BodyPart::Name::ButtRight, {Node("NPC R Butt", {5.f, 1.f, -3.f})}},
-    // 臀沟末尾指向臀沟上方靠近后腰
-    {BodyPart::Name::GlutealCleft,
-     {Node({"NPC L Butt", "NPC R Butt"}), Node("VaginaB1", {0.f, -4.5f, 3.f})}},
-    {BodyPart::Name::Vagina,
-     {Node({"NPC L Pussy02", "NPC R Pussy02", "VaginaB1"}), Node("VaginaDeep1")}},
-    {BodyPart::Name::Anus,
-     {Node({"NPC RT Anus2", "NPC LT Anus2", "NPC LB Anus2", "NPC RB Anus2"}),
-      Node({"NPC Anus Deep1", "NPC Anus Deep2"})}},
-};
-
-static const std::unordered_map<BodyPart::Name, BodyPart::Shape> shapeMap{
-    {BodyPart::Name::Mouth, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::Throat, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::BreastLeft, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::BreastRight, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::Cleavage, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::HandLeft, BodyPart::Shape::BoxCollider},
-    {BodyPart::Name::HandRight, BodyPart::Shape::BoxCollider},
-    {BodyPart::Name::FingerLeft, BodyPart::Shape::Point},
-    {BodyPart::Name::FingerRight, BodyPart::Shape::Point},
-    {BodyPart::Name::Belly, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::ThighLeft, BodyPart::Shape::Segment},
-    {BodyPart::Name::ThighRight, BodyPart::Shape::Segment},
-    {BodyPart::Name::ThighCleft, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::ButtLeft, BodyPart::Shape::Point},
-    {BodyPart::Name::ButtRight, BodyPart::Shape::Point},
-    {BodyPart::Name::GlutealCleft, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::FootLeft, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::FootRight, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::Vagina, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::Anus, BodyPart::Shape::CapsuleCollider},
-    {BodyPart::Name::Penis, BodyPart::Shape::CapsuleCollider},
-};
-
-bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
+bool BodyPart::HasBodyPart(Gender gender, Race race, Name name)
 {
   const bool isFemaleOrFuta =
-      gender.Get() == Define::Gender::Type::Female || gender.Get() == Define::Gender::Type::Futa;
+      gender.Get() == Gender::Type::Female || gender.Get() == Gender::Type::Futa;
 
-  switch (a_name) {
+  switch (name) {
   case Name::Mouth:
   case Name::HandLeft:
   case Name::HandRight:
@@ -526,7 +893,7 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
   case Name::ButtLeft:
   case Name::ButtRight:
   case Name::Anus:
-    return race.GetType() == Define::Race::Type::Human;
+    return race.GetType() == Race::Type::Human;
   case Name::Penis:
     return gender.HasPenis();
   default:
@@ -534,74 +901,35 @@ bool BodyPart::HasBodyPart(Gender gender, Race race, Name a_name)
   }
 }
 
-BodyPart::BodyPart(RE::Actor* a_actor, Race a_race, Name a_name) : actor(a_actor), name(a_name)
+const VolumeProfile& BodyPart::GetVolumeProfile(Name name)
 {
-  const auto appendNodes = [&](const auto& definitions) {
-    nodes.insert(nodes.end(), definitions.begin(), definitions.end());
-  };
+  return GetVolumeProfileSpec(name);
+}
 
-  if (const auto it = shapeMap.find(a_name); it != shapeMap.end())
-    shape = it->second;
+const VolumeProfile& BodyPart::GetVolumeProfile() const noexcept
+{
+  return GetVolumeProfile(name);
+}
 
-  switch (a_name) {
-  case Name::Mouth:
-    if (auto it = mouthMap.find(a_race.GetType()); it != mouthMap.end())
-      appendNodes(it->second);
-    break;
-  case Name::HandLeft:
-    if (auto it = handLeftMap.find(a_race.GetType()); it != handLeftMap.end())
-      appendNodes(it->second);
-    break;
-  case Name::HandRight:
-    if (auto it = handRightMap.find(a_race.GetType()); it != handRightMap.end())
-      appendNodes(it->second);
-    break;
-  case Name::FootLeft:
-    if (auto it = footLeftMap.find(a_race.GetType()); it != footLeftMap.end())
-      appendNodes(it->second);
-    break;
-  case Name::FootRight:
-    if (auto it = footRightMap.find(a_race.GetType()); it != footRightMap.end())
-      appendNodes(it->second);
-    break;
-  case Name::Penis:
-    if (auto it = schlongMap.find(a_race.GetType()); it != schlongMap.end())
-      appendNodes(it->second);
-    else
-      logger::warn("No schlong mapping for race: {}", magic_enum::enum_name(a_race.GetType()));
-    break;
-  case Name::Throat:
-  case Name::BreastLeft:
-  case Name::BreastRight:
-  case Name::Cleavage:
-  case Name::FingerLeft:
-  case Name::FingerRight:
-  case Name::Belly:
-  case Name::ThighLeft:
-  case Name::ThighRight:
-  case Name::ThighCleft:
-  case Name::ButtLeft:
-  case Name::ButtRight:
-  case Name::GlutealCleft:
-  case Name::Vagina:
-  case Name::Anus:
-    if (auto it = humanMap.find(a_name); it != humanMap.end())
-      appendNodes(it->second);
-    break;
-  default:
-    break;
+BodyPart::BodyPart(RE::Actor* actor, Race race, Name name) : actor(actor), name(name)
+{
+  volumes = BuildVolumes(race.GetType(), name);
+  if (volumes.empty()) {
+    logger::warn("BodyPart volume definition not found for race: {} and name: {}",
+                 magic_enum::enum_name(race.GetType()), magic_enum::enum_name(name));
+    return;
   }
 
-  if (nodes.empty())
-    logger::warn("BodyPart not found for race: {} and name: {}",
-                 magic_enum::enum_name(a_race.GetType()), magic_enum::enum_name(a_name));
-
   UpdateNodes();
-
-  if (!IsValid())
-    logger::warn("No valid nodes found for BodyPart with name: {}", magic_enum::enum_name(a_name));
-
   UpdatePosition();
+
+  if (!valid)
+    logger::warn("No valid volume nodes found for BodyPart: {}", magic_enum::enum_name(name));
+}
+
+bool BodyPart::IsDirectional() const noexcept
+{
+  return valid && vectorInfo.length > 1e-6f;
 }
 
 void BodyPart::UpdateNodes()
@@ -609,107 +937,37 @@ void BodyPart::UpdateNodes()
   if (!actor)
     return;
 
-  for (auto& node : nodes) {
-    node.resolvedNodes.clear();
-    node.resolvedNodes.reserve(node.requestedNodeNames.size());
-
-    for (std::string_view nodeName : node.requestedNodeNames) {
-      if (nodeName.empty()) {
-        node.resolvedNodes.push_back(nullptr);
-        continue;
-      }
-
-      auto* obj = actor->GetNodeByName(nodeName);
-      if (!obj)
-        logger::warn("Node not found for {}: {}", magic_enum::enum_name(name), nodeName);
-
-      auto ptr = obj ? obj->AsNode() : nullptr;
-      node.resolvedNodes.push_back(RE::NiPointer<RE::NiNode>(ptr));
-    }
-
-    UpdateNodePosition(node);
-  }
-}
-
-bool BodyPart::IsValid() const
-{
-  if (nodes.empty())
-    return false;
-
-  switch (shape) {
-  case Shape::Point:
-    return IsNodeResolved(nodes.front());
-  case Shape::Segment:
-  case Shape::CapsuleCollider:
-  case Shape::BoxCollider:
-    return nodes.size() >= 2 && IsNodeResolved(nodes.front()) && IsNodeResolved(nodes.back());
-  default:
-    return false;
-  }
+  for (auto& volume : volumes)
+    UpdateVolumeNodes(volume, actor);
 }
 
 void BodyPart::UpdatePosition()
 {
   vectorInfo = {};
   collisionInfo.reset();
+  valid = false;
 
-  for (auto& node : nodes)
-    UpdateNodePosition(node);
-
-  if (!IsValid()) {
-    logger::warn("Cannot update position for invalid BodyPart: {}", magic_enum::enum_name(name));
+  if (volumes.empty())
     return;
-  }
 
-  vectorInfo = BuildBodyVector(name, shape, actor, nodes);
+  CollisionSet collisions;
+  bool hasPrimaryAxis = false;
 
-  switch (shape) {
-  case Shape::Point:
-    return;
-  case Shape::Segment:
-    return;
-  case Shape::CapsuleCollider: {
-    const auto& spec      = GetColliderSpec(name);
-    const bool isAperture = name == Name::Vagina || name == Name::Anus;
-    CollisionSet collisions;
+  for (const auto& volume : volumes) {
+    const auto axis = AppendVolumeRuntime(name, actor, volume, collisions);
+    if (!axis)
+      continue;
 
-    if (isAperture && vectorInfo.length > 1e-6f) {
-      const Matrix3f basis = BuildBasis(vectorInfo.direction, &nodes.front());
-      if (HasEntranceBox(spec)) {
-        collisions.boxes.push_back(MakeBoxCollider(
-            vectorInfo, vectorInfo.start + vectorInfo.direction * spec.entranceOffset, basis,
-            spec.entranceHalfExtents));
-      }
-      if (spec.channelRadius > 0.f) {
-        const float channelLength =
-            std::clamp(vectorInfo.length * spec.channelLengthScale, 0.f, vectorInfo.length);
-        collisions.capsules.push_back(MakeCapsuleCollider(
-            vectorInfo.start, vectorInfo.start + vectorInfo.direction * channelLength,
-            spec.channelRadius));
-      }
-    } else if (spec.capsuleRadius > 0.f) {
-      collisions.capsules.push_back(
-          MakeCapsuleCollider(vectorInfo.start, vectorInfo.end, spec.capsuleRadius));
+    if (!hasPrimaryAxis) {
+      vectorInfo     = *axis;
+      hasPrimaryAxis = true;
     }
+  }
 
-    if (!collisions.capsules.empty() || !collisions.boxes.empty())
-      collisionInfo = collisions;
-    return;
-  }
-  case Shape::BoxCollider: {
-    const auto& spec     = GetColliderSpec(name);
-    const Matrix3f basis = BuildBasis(vectorInfo.direction, &nodes.front());
-    const Point3f center = (vectorInfo.start + vectorInfo.end) * 0.5f;
+  if (HasAnyCollision(collisions))
+    collisionInfo = std::move(collisions);
 
-    CollisionSet collisions;
-    collisions.boxes.push_back(
-        MakeBoxCollider(vectorInfo, center, basis, BuildBoxHalfExtents(vectorInfo, spec)));
-    collisionInfo = collisions;
-    return;
-  }
-  default:
-    return;
-  }
+  valid = hasPrimaryAxis || collisionInfo.has_value();
 }
 
 }  // namespace Define

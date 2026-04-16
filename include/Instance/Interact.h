@@ -63,7 +63,7 @@ public:
     Total
   };
 
-  struct InteractionState
+  struct InteractionSnapshot
   {
     RE::Actor* partner  = nullptr;
     Type type           = Type::None;
@@ -86,7 +86,9 @@ public:
 
     [[nodiscard]] bool HasCollider() const noexcept
     {
-      return !collisions.capsules.empty() || !collisions.boxes.empty();
+      return !collisions.capsules.empty() || !collisions.boxes.empty() ||
+             !collisions.funnels.empty() || !collisions.surfaces.empty() ||
+             !collisions.envelopes.empty();
     }
   };
 
@@ -100,8 +102,8 @@ public:
   struct PartState
   {
     Define::BodyPart bodyPart{};
-    InteractionState current{};
-    InteractionState previous{};
+    InteractionSnapshot current{};
+    InteractionSnapshot previous{};
     MotionHistory motion{};
 
     [[nodiscard]] bool HasInteraction() const noexcept { return current.IsActive(); }
@@ -109,29 +111,30 @@ public:
 
   struct SlotMemory
   {
-    RE::Actor* partner      = nullptr;
-    std::uint8_t continuity = 0;
+    RE::Actor* partner = nullptr;
+    float continuityMs = 0.f;
+    float holdMs       = 0.f;
+
+    [[nodiscard]] bool HasRecentPartner() const noexcept
+    {
+      return partner != nullptr && holdMs > 0.f;
+    }
   };
 
   struct ActorState
   {
     std::unordered_map<Define::BodyPart::Name, Interact::PartState> parts{};
-    Define::Race race      = Define::Race::Type::Unknown;
-    Define::Gender gender  = Define::Gender::Type::Unknown;
-    float lastEvaluationMs = 0.f;
-  };
-
-  struct PenetrationMemory
-  {
     SlotMemory vaginal{};
     SlotMemory anal{};
+    Define::Race race     = Define::Race::Type::Unknown;
+    Define::Gender gender = Define::Gender::Type::Unknown;
   };
 
   Interact() = default;
   explicit Interact(std::vector<RE::Actor*> actors);
 
   void FlashNodeData();
-  void Update();
+  void Update(float deltaMs);
 
   // ── 查询 ────────────────────────────────────────────────────────────────
   [[nodiscard]] const ActorState& GetActorState(RE::Actor* actor) const
@@ -148,8 +151,8 @@ public:
 
 private:
   std::unordered_map<RE::Actor*, ActorState> actorStates{};
-  std::unordered_map<RE::Actor*, PenetrationMemory> penetrationMemory{};
   std::unordered_map<RE::Actor*, Define::InteractTags> observedInteractTags{};
+  float timelineMs = 0.f;
 };
 
 }  // namespace Instance

@@ -194,6 +194,7 @@ bool SceneInstance::Update()
 
     currentStage        = 1;
     lastStageUpdateTime = now - BASE_STAGE_LENGTH + SOS_READY;  // Schedule the first stage update
+    lastUpdateTime      = now;
     state               = InstanceState::ScenePlay;
     interact.FlashNodeData();
 
@@ -203,6 +204,7 @@ bool SceneInstance::Update()
   // 处于场景切换阶段时，暂停更新
   // 设置上次推进阶段的时间为最大，确保切换完成后能立即推进到下一阶段
   if (state == InstanceState::SceneChange) {
+    lastUpdateTime      = now;
     lastStageUpdateTime = now - MAX_STAGE_LENGTH;
     return true;
   }
@@ -213,9 +215,10 @@ bool SceneInstance::Update()
     if (now - lastUpdateTime < UPDATE_INTERVAL)
       return true;
 
-    lastUpdateTime = now;
+    const float deltaMs = static_cast<float>(now - lastUpdateTime);
+    lastUpdateTime      = now;
 
-    interact.Update();
+    interact.Update(deltaMs);
     Registry::ActorStat::GetSingleton().UpdateEnjoyment(currentScene, actorInfoMap, interact);
 
     // 总是最后更新 UI，确保数据同步

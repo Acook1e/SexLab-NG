@@ -415,7 +415,7 @@ namespace
            type == InteractionType::PenisAnimObj;
   }
 
-  static float CalculateObjectFactor(const Instance::Interact::InteractionState& interaction)
+  static float CalculateObjectFactor(const Instance::Interact::InteractionSnapshot& interaction)
   {
     if (interaction.type == InteractionType::Masturbation)
       return 0.82f;
