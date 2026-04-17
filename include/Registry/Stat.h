@@ -77,14 +77,14 @@ public:
 
   // 向指定 body/style 轨道添加 XP，自动升级（上限 999）
   void AddXP(RE::Actor* actor, ExperienceType type, float amount);
-  void AddInteractionXP(RE::Actor* actor, Instance::Interact::Type type, float amount);
+  void AddInteractionXP(RE::Actor* actor, Instance::InteractionType type, float amount);
 
   std::uint16_t GetTrackLevel(RE::Actor* actor, ExperienceType type) const;
   float GetTrackTendency(RE::Actor* actor, ExperienceType type) const;
 
   // 这里返回的是交互归一化后的代表性 body 轨道数值。
-  std::uint16_t GetInteractionLevel(RE::Actor* actor, Instance::Interact::Type type) const;
-  float GetInteractionTendency(RE::Actor* actor, Instance::Interact::Type type) const;
+  std::uint16_t GetInteractionLevel(RE::Actor* actor, Instance::InteractionType type) const;
+  float GetInteractionTendency(RE::Actor* actor, Instance::InteractionType type) const;
 
   // 全局游戏更新且不在场景的时候，性欲/享受等随时间变化的值
   // deltaGameHours: 距上次调用经过的游戏内小时数（由 Calendar 计算）

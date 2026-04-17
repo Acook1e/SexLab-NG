@@ -15,10 +15,10 @@ static PrismaView view                    = 0;
 
 namespace
 {
-nlohmann::json BuildInteractionJson(Define::BodyPart::Name partName,
-                                    const Instance::Interact::PartState& partState)
+nlohmann::json BuildInteractionJson(Define::ActorBody::PartName partName,
+                                    const Instance::PartRuntime& partState)
 {
-  const auto& interaction = partState.current;
+  const auto& interaction = partState.interaction;
   nlohmann::json ij;
   ij["part"]     = std::string(magic_enum::enum_name(partName));
   ij["type"]     = std::string(magic_enum::enum_name(interaction.type));
@@ -243,7 +243,6 @@ void UI::SendInitData(Instance::SceneInstance* scene)
     if (!actor)
       continue;
 
-    const auto& info = scene->GetActorInfo(actor);
     const auto& stat = Registry::ActorStat::GetSingleton().GetStat(actor);
 
     nlohmann::json aj;
@@ -254,9 +253,12 @@ void UI::SendInitData(Instance::SceneInstance* scene)
 
     // 初始交互列表（可能全为空）
     aj["interactions"]    = nlohmann::json::array();
-    const auto& actorData = interact.GetData(actor);
-    for (const auto& [partName, partState] : actorData.parts) {
-      if (!partState.HasInteraction())
+    const auto* actorData = interact.GetActorState(actor);
+    if (!actorData)
+      continue;
+
+    for (const auto& [partName, partState] : actorData->parts) {
+      if (!partState.interaction.active)
         continue;
       aj["interactions"].push_back(BuildInteractionJson(partName, partState));
     }
@@ -286,7 +288,6 @@ void UI::SendUpdateData(Instance::SceneInstance* scene)
     if (!actor)
       continue;
 
-    const auto& info = scene->GetActorInfo(actor);
     const auto& stat = Registry::ActorStat::GetSingleton().GetStat(actor);
 
     nlohmann::json aj;
@@ -295,9 +296,12 @@ void UI::SendUpdateData(Instance::SceneInstance* scene)
     aj["degree"] = std::string(magic_enum::enum_name(stat.enjoy.GetDegree()));
 
     aj["interactions"]    = nlohmann::json::array();
-    const auto& actorData = interact.GetData(actor);
-    for (const auto& [partName, partState] : actorData.parts) {
-      if (!partState.HasInteraction())
+    const auto* actorData = interact.GetActorState(actor);
+    if (!actorData)
+      continue;
+
+    for (const auto& [partName, partState] : actorData->parts) {
+      if (!partState.interaction.active)
         continue;
       aj["interactions"].push_back(BuildInteractionJson(partName, partState));
     }

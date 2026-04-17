@@ -13,25 +13,24 @@ namespace Registry
 namespace
 {
   using ExperienceType  = ActorStat::ExperienceType;
-  using InteractionType = Instance::Interact::Type;
-  using BodyPartName    = Define::BodyPart::Name;
+  using InteractionType = Instance::InteractionType;
+  using BodyPartName    = Define::ActorBody::PartName;
 
-  constexpr std::size_t kInteractionProfileCount = static_cast<std::size_t>(InteractionType::Total);
-  constexpr std::size_t kExperienceTypeCount     = static_cast<std::size_t>(ExperienceType::Total);
-  constexpr float kEnjoyUpdateSeconds            = 0.10f;
-  constexpr float kMaxEnjoyTickDelta             = 1.05f;
-  constexpr float kMinSensitivityFactor          = 0.75f;
-  constexpr float kMaxSensitivityFactor          = 1.30f;
-  constexpr float kPostClimaxMinEnjoy            = -18.0f;
-  constexpr float kPostClimaxMaxEnjoy            = 18.0f;
-  constexpr float kArouseMultiplierCeil          = 1.25f;
-  constexpr float kVelocityReference             = 0.08f;
-  constexpr float kVelocityNormalization         = 2.50f;
-  constexpr float kMainLevelSupportWeight        = 0.35f;
-  constexpr float kMaxTrackXPPerScene            = 36.0f;
-  constexpr float kMaxMainXPPerScene             = 32.0f;
-  constexpr float kMaxSceneStyleXPPerScene       = 20.0f;
-  constexpr float kTendencyPruneEpsilon          = 0.0005f;
+  constexpr std::size_t kExperienceTypeCount = static_cast<std::size_t>(ExperienceType::Total);
+  constexpr float kEnjoyUpdateSeconds        = 0.10f;
+  constexpr float kMaxEnjoyTickDelta         = 1.05f;
+  constexpr float kMinSensitivityFactor      = 0.75f;
+  constexpr float kMaxSensitivityFactor      = 1.30f;
+  constexpr float kPostClimaxMinEnjoy        = -18.0f;
+  constexpr float kPostClimaxMaxEnjoy        = 18.0f;
+  constexpr float kArouseMultiplierCeil      = 1.25f;
+  constexpr float kVelocityReference         = 0.08f;
+  constexpr float kVelocityNormalization     = 2.50f;
+  constexpr float kMainLevelSupportWeight    = 0.35f;
+  constexpr float kMaxTrackXPPerScene        = 36.0f;
+  constexpr float kMaxMainXPPerScene         = 32.0f;
+  constexpr float kMaxSceneStyleXPPerScene   = 20.0f;
+  constexpr float kTendencyPruneEpsilon      = 0.0005f;
 
   enum class InteractionFamily : std::uint8_t
   {
@@ -101,11 +100,6 @@ namespace
       ExperienceType::Vagina, ExperienceType::Anus,   ExperienceType::Penis,
   };
 
-  constexpr std::size_t ToInteractionIndex(InteractionType type)
-  {
-    return static_cast<std::size_t>(type);
-  }
-
   constexpr std::size_t ToExperienceIndex(ExperienceType type)
   {
     return static_cast<std::size_t>(type);
@@ -134,7 +128,7 @@ namespace
 
   constexpr bool IsTrackedInteraction(InteractionType type)
   {
-    return type > InteractionType::None && type < InteractionType::Total;
+    return type > InteractionType::None && type < InteractionType::Count;
   }
 
   constexpr ExperienceType GetTrackForBodyPart(BodyPartName part)
@@ -173,49 +167,136 @@ namespace
     }
   }
 
-  static const std::array<InteractionProfile, kInteractionProfileCount> kInteractionProfiles{{
-      {ExperienceType::Main, InteractionFamily::Utility, 0.00f, 0.00f, 0.0000f, 1.0f, 1.0f},
-      {ExperienceType::Mouth, InteractionFamily::Tender, 0.08f, 0.14f, 0.0038f, 10.0f, 8.0f},
-      {ExperienceType::Breast, InteractionFamily::Oral, 0.16f, 0.22f, 0.0055f, 16.0f, 11.0f},
-      {ExperienceType::Body, InteractionFamily::Oral, 0.10f, 0.16f, 0.0040f, 20.0f, 14.0f},
-      {ExperienceType::Vagina, InteractionFamily::Oral, 0.24f, 0.34f, 0.0070f, 16.0f, 10.0f},
-      {ExperienceType::Anus, InteractionFamily::Oral, 0.18f, 0.28f, 0.0060f, 20.0f, 12.0f},
-      {ExperienceType::Penis, InteractionFamily::Oral, 0.22f, 0.32f, 0.0068f, 16.0f, 10.0f},
-      {ExperienceType::Penis, InteractionFamily::Oral, 0.28f, 0.40f, 0.0080f, 24.0f, 13.0f},
-      {ExperienceType::Mouth, InteractionFamily::Utility, 0.10f, 0.16f, 0.0025f, 14.0f, 11.0f},
-      {ExperienceType::Breast, InteractionFamily::Manual, 0.12f, 0.18f, 0.0045f, 12.0f, 10.0f},
-      {ExperienceType::Breast, InteractionFamily::External, 0.24f, 0.30f, 0.0060f, 20.0f, 13.0f},
-      {ExperienceType::Body, InteractionFamily::Manual, 0.10f, 0.16f, 0.0042f, 12.0f, 10.0f},
-      {ExperienceType::Body, InteractionFamily::Manual, 0.13f, 0.18f, 0.0045f, 12.0f, 10.0f},
-      {ExperienceType::Body, InteractionFamily::Manual, 0.08f, 0.14f, 0.0038f, 18.0f, 13.0f},
-      {ExperienceType::Vagina, InteractionFamily::Penetration, 0.18f, 0.26f, 0.0058f, 16.0f, 10.0f},
-      {ExperienceType::Anus, InteractionFamily::Penetration, 0.16f, 0.24f, 0.0055f, 20.0f, 12.0f},
-      {ExperienceType::Penis, InteractionFamily::Manual, 0.18f, 0.26f, 0.0058f, 14.0f, 10.0f},
-      {ExperienceType::Body, InteractionFamily::Manual, 0.16f, 0.22f, 0.0055f, 12.0f, 10.0f},
-      {ExperienceType::Hand, InteractionFamily::Utility, 0.08f, 0.14f, 0.0025f, 14.0f, 11.0f},
-      {ExperienceType::Body, InteractionFamily::External, 0.12f, 0.18f, 0.0044f, 18.0f, 12.0f},
-      {ExperienceType::Body, InteractionFamily::External, 0.14f, 0.20f, 0.0048f, 18.0f, 12.0f},
-      {ExperienceType::Body, InteractionFamily::External, 0.16f, 0.22f, 0.0050f, 18.0f, 12.0f},
-      {ExperienceType::Body, InteractionFamily::External, 0.12f, 0.18f, 0.0044f, 20.0f, 14.0f},
-      {ExperienceType::Vagina, InteractionFamily::Penetration, 0.20f, 0.28f, 0.0062f, 16.0f, 11.0f},
-      {ExperienceType::Vagina, InteractionFamily::Penetration, 0.28f, 0.40f, 0.0080f, 16.0f, 10.0f},
-      {ExperienceType::Vagina, InteractionFamily::Utility, 0.09f, 0.15f, 0.0025f, 16.0f, 11.0f},
-      {ExperienceType::Anus, InteractionFamily::Penetration, 0.24f, 0.36f, 0.0072f, 20.0f, 12.0f},
-      {ExperienceType::Anus, InteractionFamily::Utility, 0.08f, 0.14f, 0.0025f, 18.0f, 12.0f},
-      {ExperienceType::Penis, InteractionFamily::Utility, 0.08f, 0.14f, 0.0025f, 16.0f, 11.0f},
-      {ExperienceType::Mouth, InteractionFamily::Multi, 0.12f, 0.20f, 0.0050f, 24.0f, 14.0f},
-      {ExperienceType::Body, InteractionFamily::Multi, 0.14f, 0.22f, 0.0058f, 28.0f, 16.0f},
-      {ExperienceType::Body, InteractionFamily::Multi, 0.15f, 0.24f, 0.0060f, 30.0f, 16.0f},
-      {ExperienceType::Body, InteractionFamily::Multi, 0.18f, 0.28f, 0.0068f, 36.0f, 18.0f},
-  }};
-
-  static_assert(kInteractionProfiles.size() == kInteractionProfileCount);
-
   static const InteractionProfile& GetInteractionProfile(InteractionType type)
   {
-    if (!IsTrackedInteraction(type))
-      return kInteractionProfiles.front();
-    return kInteractionProfiles[ToInteractionIndex(type)];
+    static const InteractionProfile kNone{
+        ExperienceType::Main, InteractionFamily::Utility, 0.00f, 0.00f, 0.0000f, 1.0f, 1.0f};
+    static const InteractionProfile kKiss{
+        ExperienceType::Mouth, InteractionFamily::Tender, 0.08f, 0.14f, 0.0038f, 10.0f, 8.0f};
+    static const InteractionProfile kBreastSucking{
+        ExperienceType::Breast, InteractionFamily::Oral, 0.16f, 0.22f, 0.0055f, 16.0f, 11.0f};
+    static const InteractionProfile kToeSucking{
+        ExperienceType::Body, InteractionFamily::Oral, 0.10f, 0.16f, 0.0040f, 20.0f, 14.0f};
+    static const InteractionProfile kCunnilingus{
+        ExperienceType::Vagina, InteractionFamily::Oral, 0.24f, 0.34f, 0.0070f, 16.0f, 10.0f};
+    static const InteractionProfile kAnilingus{
+        ExperienceType::Anus, InteractionFamily::Oral, 0.18f, 0.28f, 0.0060f, 20.0f, 12.0f};
+    static const InteractionProfile kFellatio{
+        ExperienceType::Penis, InteractionFamily::Oral, 0.22f, 0.32f, 0.0068f, 16.0f, 10.0f};
+    static const InteractionProfile kDeepThroat{
+        ExperienceType::Penis, InteractionFamily::Oral, 0.28f, 0.40f, 0.0080f, 24.0f, 13.0f};
+    static const InteractionProfile kGropeBreast{
+        ExperienceType::Breast, InteractionFamily::Manual, 0.12f, 0.18f, 0.0045f, 12.0f, 10.0f};
+    static const InteractionProfile kGropeThigh{
+        ExperienceType::Body, InteractionFamily::Manual, 0.10f, 0.16f, 0.0042f, 12.0f, 10.0f};
+    static const InteractionProfile kGropeButt{
+        ExperienceType::Body, InteractionFamily::Manual, 0.13f, 0.18f, 0.0045f, 12.0f, 10.0f};
+    static const InteractionProfile kGropeFoot{
+        ExperienceType::Body, InteractionFamily::Manual, 0.08f, 0.14f, 0.0038f, 18.0f, 13.0f};
+    static const InteractionProfile kFingerVagina{ExperienceType::Vagina,
+                                                  InteractionFamily::Penetration,
+                                                  0.18f,
+                                                  0.26f,
+                                                  0.0058f,
+                                                  16.0f,
+                                                  10.0f};
+    static const InteractionProfile kFingerAnus{
+        ExperienceType::Anus, InteractionFamily::Penetration, 0.16f, 0.24f, 0.0055f, 20.0f, 12.0f};
+    static const InteractionProfile kHandjob{
+        ExperienceType::Penis, InteractionFamily::Manual, 0.18f, 0.26f, 0.0058f, 14.0f, 10.0f};
+    static const InteractionProfile kMasturbation{
+        ExperienceType::Hand, InteractionFamily::Manual, 0.16f, 0.22f, 0.0055f, 12.0f, 10.0f};
+    static const InteractionProfile kTitfuck{
+        ExperienceType::Breast, InteractionFamily::External, 0.24f, 0.30f, 0.0060f, 20.0f, 13.0f};
+    static const InteractionProfile kNaveljob{
+        ExperienceType::Body, InteractionFamily::External, 0.12f, 0.18f, 0.0044f, 18.0f, 12.0f};
+    static const InteractionProfile kThighjob{
+        ExperienceType::Body, InteractionFamily::External, 0.14f, 0.20f, 0.0048f, 18.0f, 12.0f};
+    static const InteractionProfile kFrottage{
+        ExperienceType::Body, InteractionFamily::External, 0.16f, 0.22f, 0.0050f, 18.0f, 12.0f};
+    static const InteractionProfile kFootjob{
+        ExperienceType::Body, InteractionFamily::External, 0.12f, 0.18f, 0.0044f, 20.0f, 14.0f};
+    static const InteractionProfile kVaginal{ExperienceType::Vagina,
+                                             InteractionFamily::Penetration,
+                                             0.20f,
+                                             0.28f,
+                                             0.0062f,
+                                             16.0f,
+                                             11.0f};
+    static const InteractionProfile kAnal{
+        ExperienceType::Anus, InteractionFamily::Penetration, 0.24f, 0.36f, 0.0072f, 20.0f, 12.0f};
+    static const InteractionProfile kTribbing{
+        ExperienceType::Vagina, InteractionFamily::Utility, 0.09f, 0.15f, 0.0025f, 16.0f, 11.0f};
+    static const InteractionProfile kSixtyNine{
+        ExperienceType::Mouth, InteractionFamily::Multi, 0.12f, 0.20f, 0.0050f, 24.0f, 14.0f};
+    static const InteractionProfile kSpitroast{
+        ExperienceType::Body, InteractionFamily::Multi, 0.14f, 0.22f, 0.0058f, 28.0f, 16.0f};
+    static const InteractionProfile kDoublePenetration{
+        ExperienceType::Body, InteractionFamily::Multi, 0.15f, 0.24f, 0.0060f, 30.0f, 16.0f};
+    static const InteractionProfile kTriplePenetration{
+        ExperienceType::Body, InteractionFamily::Multi, 0.18f, 0.28f, 0.0068f, 36.0f, 18.0f};
+
+    switch (type) {
+    case InteractionType::Kiss:
+      return kKiss;
+    case InteractionType::BreastSucking:
+      return kBreastSucking;
+    case InteractionType::ToeSucking:
+      return kToeSucking;
+    case InteractionType::Cunnilingus:
+      return kCunnilingus;
+    case InteractionType::Anilingus:
+      return kAnilingus;
+    case InteractionType::Fellatio:
+      return kFellatio;
+    case InteractionType::DeepThroat:
+      return kDeepThroat;
+    case InteractionType::GropeBreast:
+      return kGropeBreast;
+    case InteractionType::GropeThigh:
+      return kGropeThigh;
+    case InteractionType::GropeButt:
+      return kGropeButt;
+    case InteractionType::GropeFoot:
+      return kGropeFoot;
+    case InteractionType::FingerVagina:
+      return kFingerVagina;
+    case InteractionType::FingerAnus:
+      return kFingerAnus;
+    case InteractionType::Handjob:
+      return kHandjob;
+    case InteractionType::Masturbation:
+      return kMasturbation;
+    case InteractionType::Titfuck:
+      return kTitfuck;
+    case InteractionType::Naveljob:
+      return kNaveljob;
+    case InteractionType::Thighjob:
+      return kThighjob;
+    case InteractionType::Frottage:
+      return kFrottage;
+    case InteractionType::Footjob:
+      return kFootjob;
+    case InteractionType::Vaginal:
+      return kVaginal;
+    case InteractionType::Anal:
+      return kAnal;
+    case InteractionType::Tribbing:
+      return kTribbing;
+    case InteractionType::SixtyNine:
+      return kSixtyNine;
+    case InteractionType::Spitroast:
+      return kSpitroast;
+    case InteractionType::DoublePenetration:
+      return kDoublePenetration;
+    case InteractionType::TriplePenetration:
+      return kTriplePenetration;
+    case InteractionType::None:
+    case InteractionType::Count:
+      return kNone;
+    }
+
+    return kNone;
   }
 
   static ExperienceType GetRepresentativeTrack(InteractionType type)
@@ -410,12 +491,11 @@ namespace
 
   static bool IsAnimObjectInteraction(InteractionType type)
   {
-    return type == InteractionType::MouthAnimObj || type == InteractionType::HandAnimObj ||
-           type == InteractionType::VaginaAnimObj || type == InteractionType::AnalAnimObj ||
-           type == InteractionType::PenisAnimObj;
+    (void)type;
+    return false;
   }
 
-  static float CalculateObjectFactor(const Instance::Interact::InteractionSnapshot& interaction)
+  static float CalculateObjectFactor(const Instance::InteractionSnapshot& interaction)
   {
     if (interaction.type == InteractionType::Masturbation)
       return 0.82f;
@@ -603,7 +683,7 @@ namespace
   }
 
   static InteractionTickResult CalculateInteract(RE::Actor* actor, ActorStat::Stat& stat,
-                                                 const Instance::Interact::ActorState& actorState)
+                                                 const Instance::ActorInteractState& actorState)
   {
     InteractionTickResult result;
     std::unordered_map<ActiveTrackKey, float, ActiveTrackKeyHash> trackContributions;
@@ -613,7 +693,7 @@ namespace
     const auto selfGender         = Define::Gender(actor).Get();
 
     for (const auto& [partName, partState] : actorState.parts) {
-      const auto& interaction = partState.current;
+      const auto& interaction = partState.interaction;
       if (!IsTrackedInteraction(interaction.type))
         continue;
 
@@ -926,8 +1006,11 @@ void ActorStat::UpdateEnjoyment(
       continue;
 
     auto& stat            = GetStat(actor);
-    const auto& actorData = interact.GetData(actor);
-    const auto tick       = CalculateInteract(actor, stat, actorData);
+    const auto* actorData = interact.GetActorState(actor);
+    if (!actorData)
+      continue;
+
+    const auto tick = CalculateInteract(actor, stat, *actorData);
 
     if (tick.activeInteractions == 0)
       continue;

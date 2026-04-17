@@ -27,6 +27,8 @@ public:
   SceneSearchResult SearchScenes(std::vector<RE::Actor*> actors, SearchOptions options = {});
   static std::uint64_t CreateInstance(std::vector<RE::Actor*> actors, SceneSearchResult scenes);
   static void DestroyInstance(std::uint64_t id);
+  static const SceneInstance* GetInstance(std::uint64_t id);
+  static const SceneInstance* GetInstanceForActor(RE::Actor* actor);
   static bool IsActorInScene(RE::Actor* actor);
 
   void UpdateScenes();

@@ -248,7 +248,7 @@ SceneSearchResult SceneManager::SearchScenes(std::vector<RE::Actor*> actors, Sea
 
   for (auto& animPack : animPacks) {
     for (auto& scene : animPack.GetScenes()) {
-      if (scene.GetTags().Has(Define::SceneTags::Type::LeadIn))
+      if (!Settings::bUseLeadIn && scene.GetTags().Has(Define::SceneTags::Type::LeadIn))
         continue;
 
       // Races 掩码快速排除
@@ -412,6 +412,25 @@ void SceneManager::DestroyInstance(std::uint64_t id)
 {
   std::lock_guard<std::mutex> lock(mapMutex);
   sceneInstances.erase(id);
+}
+
+const SceneInstance* SceneManager::GetInstance(std::uint64_t id)
+{
+  std::lock_guard<std::mutex> lock(mapMutex);
+  auto it = sceneInstances.find(id);
+  return it == sceneInstances.end() ? nullptr : &it->second;
+}
+
+const SceneInstance* SceneManager::GetInstanceForActor(RE::Actor* actor)
+{
+  std::lock_guard<std::mutex> lock(mapMutex);
+  for (const auto& [id, instance] : sceneInstances) {
+    (void)id;
+    const auto actors = instance.GetActors();
+    if (std::find(actors.begin(), actors.end(), actor) != actors.end())
+      return &instance;
+  }
+  return nullptr;
 }
 
 bool SceneManager::IsActorInScene(RE::Actor* actor)

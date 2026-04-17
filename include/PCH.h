@@ -17,8 +17,10 @@
 #include <initializer_list>
 #include <limits>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <numbers>
+#include <numeric>
 #include <optional>
 #include <ranges>
 #include <set>
@@ -26,8 +28,10 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 constexpr inline std::string_view PLUGIN_NAME = "SexLabNG";
